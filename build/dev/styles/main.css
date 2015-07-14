@@ -408,6 +408,11 @@ body .feature svg {
 body .feature rect {
   stroke: white;
 }
+body .feature .hoverRect {
+  stroke: red;
+  stroke-width: 6;
+  fill: rgba(0, 0, 0, 0);
+}
 body .feature text {
   fill: white;
 }

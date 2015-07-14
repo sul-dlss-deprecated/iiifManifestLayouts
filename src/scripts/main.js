@@ -76,6 +76,19 @@ var layout = function(options) {
         var column = (i % thumbsPerRow);
         var row = Math.floor(i / thumbsPerRow);
         return 'translate(' + (column * (thumbWidth + thumbMargin)) + ',' + (row * (maxThumbHeight + thumbMargin)) + ')';
+      })
+      .on('mouseenter', function(d) {
+        d3.select(this)
+          .append('rect')
+            .style('width', thumbWidth + 'px')
+            .style('height', function(d) {
+              return  d.scaledHeight + 'px';
+            })
+            .attr('class', 'hoverRect');
+      })
+      .on('mouseleave', function(d) {
+        d3.select(this)
+          .selectAll('.hoverRect').remove();
       });
 
     // Add Rects for thumbnails
