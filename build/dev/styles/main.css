@@ -402,8 +402,18 @@ body .feature h3 {
 body .feature .big-text {
   font-size: 24pt;
 }
+body .feature #d3-example {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
 body .feature .bar {
-  margin: 10px 0;
+  flex-grow: 0;
+  flex-shrink: 0;
+  flex-basis: 100px;
+  width: 100px;
+  margin: 10px;
   padding: 5px;
   color: white;
   border: 2px solid white;

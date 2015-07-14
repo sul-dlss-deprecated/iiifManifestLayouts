@@ -59,5 +59,8 @@ var layout = function(options) {
         .data(layoutData)
         .enter().append('div')
         .classed('bar', true)
-        .text(function(d) { return d.label; });
+        .text(function(d) { return d.label; })
+        .style('height', function(d) {
+          return ((d.height * 100) / d.width) + 'px';
+        });
 };
