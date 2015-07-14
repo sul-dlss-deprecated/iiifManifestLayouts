@@ -1,4 +1,3 @@
-var _ = require('underscore');
 var $ = require('jquery');
 var d3 = require('d3');
 var jsonLd;
@@ -50,14 +49,67 @@ var layout = function(options) {
             id: canvas['@id'],
             label: canvas.label,
             height: canvas.height,
-            width: canvas.width
+            width: canvas.width,
+            scaledHeight: Math.floor((canvas.height * 100) / canvas.width)
         };
     });
 
+    var thumbWidth = 100;
+    var areaWidth = $('#d3-example').width();
+    var thumbMargin = 20;
+    var thumbsPerRow = Math.floor(areaWidth / (thumbWidth + thumbMargin));
+    var numberOfRows = Math.ceil(layoutData.length / thumbsPerRow);
+
+    var maxThumbHeight = d3.max(layoutData, function(d) {
+      return d.scaledHeight;
+    });
+
     d3.select('#d3-example')
-        .selectAll('div')
-        .data(layoutData)
-        .enter().append('div')
-        .classed('bar', true)
-        .text(function(d) { return d.label; });
-};
+      .append('svg')
+      .style('height', ((maxThumbHeight + thumbMargin) * numberOfRows) + 'px');
+        
+    var g = d3.select('svg')
+      .selectAll('g')
+      .data(layoutData)
+      .enter().append('g')
+      .attr('transform', function(d, i) {
+        var column = (i % thumbsPerRow);
+        var row = Math.floor(i / thumbsPerRow);
+        return 'translate(' + (column * (thumbWidth + thumbMargin)) + ',' + (row * (maxThumbHeight + thumbMargin)) + ')';
+      })
+      .on('mouseenter', function(d) {
+        d3.select(this)
+          .append('rect')
+            .style('width', thumbWidth + 'px')
+            .style('height', function(d) {
+              return  d.scaledHeight + 'px';
+            })
+            .attr('class', 'hoverRect');
+      })
+      .on('mouseleave', function(d) {
+        d3.select(this)
+          .selectAll('.hoverRect').remove();
+      });
+
+    // Add Rects for thumbnails
+    g.append('rect')
+      .style('width', thumbWidth + 'px')
+      .style('height', function(d) {
+        return  d.scaledHeight + 'px';
+      });
+    
+    g.append('image')
+    .attr('width', thumbWidth + 'px')
+    .attr('height', function(d) {
+      return  d.scaledHeight + 'px';
+    })
+    .attr('xlink:href', function(d) {
+      return 'http://www.placecage.com/' + thumbWidth + '/' + d.scaledHeight;
+    });
+
+    // Add Labels
+    g.append('text')
+      .text(function(d) { return d.label })
+      .attr('y', thumbMargin + 'px' )
+      .attr('x', thumbMargin + 'px')
+    };
