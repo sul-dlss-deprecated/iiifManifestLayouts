@@ -402,9 +402,12 @@ body .feature h3 {
 body .feature .big-text {
   font-size: 24pt;
 }
-body .feature .bar {
-  margin: 10px 0;
-  padding: 5px;
-  color: white;
-  border: 2px solid white;
+body .feature svg {
+  width: 100%;
+}
+body .feature rect {
+  stroke: white;
+}
+body .feature text {
+  fill: white;
 }
