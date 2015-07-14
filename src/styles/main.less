@@ -1,0 +1,45 @@
+@import (less) "lib/normalize.css"; /* Normalize.css - render elements consistently and in line with standards */
+@import "lib/lesshat.less"; /* LESS Hat - collection of LESS mixins */
+
+
+/* Replace these example styles with your app's styles */
+body {
+    font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+    background-color: black;
+    color: white;
+    margin: 20px;
+
+    a {
+        color: #01579b;
+        text-decoration: none;
+        border-bottom: 1px dotted #01579b;
+    }
+
+    .btn {
+        cursor: pointer;
+        padding: 5px;
+        .border-radius(5px);
+        background-color: #333333;
+        color: #eeeeee;
+        .user-select(none);
+        &:hover { background-color: #555555; }
+        &:active { .box-shadow(inset 0px 1px 3px #111111); }
+    }
+
+    .feature {
+        margin: 20px;
+        padding: 15px;
+        h3 {
+            margin-top: 0;
+        }
+        .big-text {
+            font-size: 24pt;
+        }
+        .bar {
+            margin: 10px 0;
+            padding: 5px;
+            color:white;
+            border: 2px solid white;
+        }
+    }
+}
