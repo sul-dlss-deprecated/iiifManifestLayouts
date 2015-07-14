@@ -83,11 +83,20 @@ var layout = function(options) {
       .style('width', thumbWidth + 'px')
       .style('height', function(d) {
         return  d.scaledHeight + 'px';
-      })
+      });
+    
+    g.append('image')
+    .attr('width', thumbWidth + 'px')
+    .attr('height', function(d) {
+      return  d.scaledHeight + 'px';
+    })
+    .attr('xlink:href', function(d) {
+      return 'http://www.placecage.com/' + thumbWidth + '/' + d.scaledHeight;
+    });
 
     // Add Labels
     g.append('text')
       .text(function(d) { return d.label })
       .attr('y', thumbMargin + 'px' )
       .attr('x', thumbMargin + 'px')
-};
+    };
