@@ -6,6 +6,7 @@
 body {
     font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
     background-color: black;
+    font-weight:normal;
     color: white;
     margin: 20px;
 
@@ -35,11 +36,18 @@ body {
         .big-text {
             font-size: 24pt;
         }
-        .bar {
-            margin: 10px 0;
-            padding: 5px;
+        .frame {
             color:white;
-            border: 2px solid white;
+            box-shadow: 0 0 8px gray;
+            position: absolute;
+            top:0;
+            left:0;
         }
     }
+}
+#d3-example {
+    width:600px;
+    height:600px;
+    margin:0 auto;
+    position: relative;
 }
