@@ -50,14 +50,43 @@ var layout = function(options) {
             id: canvas['@id'],
             label: canvas.label,
             height: canvas.height,
-            width: canvas.width
+            width: canvas.width,
+            scaledHeight: Math.floor((canvas.height * 100) / canvas.width)
         };
     });
 
-    d3.select('#d3-example')
-        .selectAll('div')
-        .data(layoutData)
-        .enter().append('div')
-        .classed('bar', true)
-        .text(function(d) { return d.label; });
+  var thumbWidth = 100;
+  var areaWidth = $('#d3-example').width();
+  var thumbMargin = 30;
+  var thumbsPerRow = Math.floor(areaWidth / (thumbWidth + thumbMargin));
+  var numberOfRows = Math.ceil(layoutData.length / thumbsPerRow);
+
+  var maxThumbHeight = d3.max(layoutData, function(d) {
+    return d.scaledHeight;
+  });
+
+  var thumbs = d3.select('#d3-example')
+    .selectAll('div')
+    .data(layoutData)
+    .enter().append('div')
+    .classed('bar', true)
+    .style('width', thumbWidth +'px')
+    .style('height', function(d) { return d.scaledHeight + 'px'; })
+    .style('top', function(d, i) {
+      var row = Math.floor(i / thumbsPerRow);
+      return (row * (maxThumbHeight + thumbMargin)) + 'px';
+    })
+    .style('left', function(d, i) {
+      var column = (i % thumbsPerRow);
+      return (column * (thumbWidth + thumbMargin)) + 'px';
+    });
+
+    thumbs.append('img')
+      .style('width', thumbWidth +'px')
+      .style('height', function(d) { return d.scaledHeight + 'px'; })
+      .attr('src', function(d) {
+        return 'http://www.placecage.com/' + thumbWidth + '/' + d.scaledHeight;
+      })
+
+    thumbs.append('span').text(function(d) { return d.label; });
 };
