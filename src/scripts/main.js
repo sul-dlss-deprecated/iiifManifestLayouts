@@ -46,12 +46,14 @@ var layout = function(options) {
     }
 
     var layoutData = jsonLd.sequences[0].canvases.map(function(canvas) {
+      console.log(canvas)
         return {
             id: canvas['@id'],
             label: canvas.label,
             height: canvas.height,
             width: canvas.width,
-            scaledHeight: Math.floor((canvas.height * 100) / canvas.width)
+            scaledHeight: Math.floor((canvas.height * 100) / canvas.width),
+            iiifService: canvas.images[0].resource.service['@id']
         };
     });
 
@@ -83,10 +85,9 @@ var layout = function(options) {
 
     thumbs.append('img')
       .style('width', thumbWidth +'px')
-      .style('height', function(d) { return d.scaledHeight + 'px'; })
       .attr('src', function(d) {
-        return 'http://www.placecage.com/' + thumbWidth + '/' + d.scaledHeight;
-      })
+        return d.iiifService + '/full/' + thumbWidth * 2 + ',/0/default.jpg';
+      });
 
     thumbs.append('span').text(function(d) { return d.label; });
 };
