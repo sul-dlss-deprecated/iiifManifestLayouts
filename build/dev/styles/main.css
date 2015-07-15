@@ -402,9 +402,14 @@ body .feature h3 {
 body .feature .big-text {
   font-size: 24pt;
 }
+body .feature #d3-example {
+  position: relative;
+}
 body .feature .bar {
-  margin: 10px 0;
-  padding: 5px;
+  position: absolute;
   color: white;
   border: 2px solid white;
+}
+body .feature .bar:hover {
+  border: 2px solid red;
 }
