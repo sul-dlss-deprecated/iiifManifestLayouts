@@ -39,7 +39,7 @@ var manifestLayout = function(options) {
         framingStrategy = options.framingStrategy || 'contain',
         viewingDirection = options.viewingDirection || 'left-to-right',
         viewingHint = options.viewingHint || null,
-        lineStrategy,
+        lineStrategy = options.viewingHint || 'grid',
 
         // Layout Constants
         // Storing strategies for specific states
@@ -61,7 +61,7 @@ var manifestLayout = function(options) {
         lineStrategies = {
             // fixedWidthColumns: fixedColumnLine,
             // fixedHeightRows: fixedHeightLine,
-            grid: gridLine
+            grid: gridAlign
         };
 
     function pruneCanvas(canvas) {
@@ -104,12 +104,17 @@ var manifestLayout = function(options) {
         // inside of the box. Alternatively, there may be allowed a fixed-size
         // "portrait" or "landscape" view into which the object is scaled
         // depending on its aspect ratio bias.
-        var orientation = canvas.aspectRatio < 1.0 ? 'portrait' : 'landscape',
+        var portrait = canvas.aspectRatio <= 1.0 ? true : false,
             widthScaleFactor = frameWidth/canvas.width,
             heightScaleFactor = frameHeight/canvas.height;
 
-        canvas.width = orientation === 'portrait' ? frameWidth*widthScaleFactor : frameWidth;
-        canvas.height = orientation === 'portrait' ? frameHeight : frameHeight.height*heightScaleFactor;
+        if (portrait) {
+            canvas.width = canvas.width*widthScaleFactor;
+            canvas.height = frameHeight;
+        } else {
+            canvas.width = frameWidth;
+            canvas.height = canvas.height*heightScaleFactor;
+        }
 
         return canvas;
     }
@@ -132,19 +137,43 @@ var manifestLayout = function(options) {
         } else {
             return {
                 width: frames[0].width + padding.left + padding.right,
-                height: frames[1].height + padding.top + padding.bottom,
+                height: frames[0].height + padding.top + padding.bottom,
                 frames: frames
             };
         }
     }
 
-    function gridLine(vantages, frameHeight, frameWidth, lineWidth) {
-        var vantagesPerLine = Math.floor(lineWidth/frameWidth);
-        return vantages.map(function(vantage) {
+    function gridAlign(vantages, frameHeight, frameWidth, lineWidth) {
+        var vantagesPerLine = Math.floor(lineWidth/frameWidth),
+            line = [];
+        return vantages.map(function(vantage, index, vantages) {
+            var line = 0;
+            vantage.x = vantage.width;
+            vantage.y = 0; // y determined by the line;
+            return vantage;
         });
     }
 
-    function bindPages(vantages, viewingHint, facingCanvasPadding) {
+    function bindPages(vantages, viewingHint, viewingDirection, facingCanvasPadding) {
+        if (viewingHint === 'paged') {
+            vantages.filter(function(vantage) {
+                return vantage.viewingHint === 'non-paged' ? false : true;
+            });
+            // TODO: perhaps change the ordering based on viewingDirection
+        }
+
+        return vantages.map(function(vantage, index, vantages) {
+            if ((index + 1) % 2 === 0) {
+                // gets all even pages and makes
+                // their facing page the next page
+                // in the index.
+
+                // only return the bound vantages.
+                // opensedragon needs the particular page data,
+                // so the inside of each frame is updated.
+            }
+            return vantage;
+        });
     }
 
     function layout() {
@@ -152,20 +181,37 @@ var manifestLayout = function(options) {
         // and structures the calculation with
         // the appropriate strategies.
 
+        // Resolve the strategies used for the
+        // calculation based on the combination of
+        // options. These will all be functions
+        // to be run at the appropriate stage
+        // of the layout algorithm.
         var frame = framingStrategies[framingStrategy];
         var align = lineStrategies[lineStrategy];
 
+        // Prepare each node's layout parameters
+        // before passing them into the line-level
+        // functions.
         var vantages = canvases.map(function(canvas) {
-            return vantage(frame(pruneCanvas(canvas),
-                                 maxFrameWidth,
-                                 maxFrameHeight
-                                ),
+            return vantage([frame(pruneCanvas(canvas),
+                                  maxFrameWidth,
+                                  maxFrameHeight
+                                 )],
                            vantagePadding,
                            viewingHint
                           );
         });
 
-        return align(bindPages(vantages, viewingHint, facingCanvasPadding), frameHeight, frameWidth, containerWidth);
+        // Take each vantage and mutate it to encompass
+        // facing pages, then use options to further
+        // mutate their x, y, width, and height coordinates
+        // to position them appropriately.
+        return align(bindPages(vantages, viewingHint, viewingDirection, facingCanvasPadding),
+                     frameHeight,
+                     frameWidth,
+                     containerWidth,
+                     viewingDirection
+                    );
     }
 
     return layout();
@@ -183,15 +229,25 @@ function renderManifest(manifest) {
 
     console.log(layoutData);
 
-    d3.select('#d3-example')
-        .selectAll('div')
-        .data(layoutData)
-        .enter().append('div')
-        .classed('frame', true)
+    var interactionOverlay = d3.select('#d3-example');
+
+    var vantages = interactionOverlay.selectAll('div.vantage')
+            .data(layoutData);
+
+    vantages
+        .transition()
+        .duration(750)
+        .style('width', function(d) { console.log(d.width); return d.width + 'px'; })
+        .style('height', function(d) { return d.height + 'px'; })
+        .style('transform', function(d) { return 'translateX(' + d.x + 'px), translateY(' + d.y + 'px)'; });
+
+    vantages.enter().append('div.vantage')
         .style('width', function(d) { console.log(d.width); return d.width + 'px'; })
         .style('height', function(d) { return d.height + 'px'; })
         .style('transform', function(d) { return 'translateX(' + d.x + 'px), translateY(' + d.y + 'px)'; })
+        .append('li.')
         .text(function(d) {
-            return d.label;
+            console.log(d);
+            return d.frames[0].label;
         });
 }
