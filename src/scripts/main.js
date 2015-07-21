@@ -2,9 +2,6 @@ var _ = require('underscore');
 var $ = require('jquery');
 var d3 = require('d3');
 
-// App javascript goes here
-console.log("loaded main.js, all is well!");
-
 // D3 example
 $.get('http://purl.stanford.edu/fw090jw3474/iiif/manifest.json', function(data) {
     renderManifest(data);
@@ -15,8 +12,8 @@ var manifestLayout = function(options) {
         maxFrameWidth = options.maxFrameWidth ||  300, // screen pixels
         minFrameWidth = options.minFrameWidth ||  30,  // screen pixels
         minFrameHeight = options.minFrameHeight ||  30,  // screen pixels
-        frameHeight = options.minFrameHeight ||  30,  // screen pixels
-        frameWidth = options.minFrameWidth ||  30,  // screen pixels
+        frameHeight = options.frameHeight ||  30,  // screen pixels
+        frameWidth = options.frameWidth ||  30,  // screen pixels
         scaleFactor = options.scaleFactor || 1,
         columns = options.columns || 8,
         containerPadding = {
@@ -26,10 +23,10 @@ var manifestLayout = function(options) {
             right: options.topPadding || 0
         },
         vantagePadding = {
-            top: options.topPadding || 0,
-            bottom: options.topPadding || 0,
-            left: options.topPadding || 0,
-            right: options.topPadding || 0
+            top: options.vantagePadding.top || 0,
+            bottom: options.vantagePadding.bottom || 0,
+            left: options.vantagePadding.left || 0,
+            right: options.vantagePadding.right || 0
         },
         facingCanvasPadding,  // screen pixels
         viewportPadding,     // screen pixels
@@ -109,35 +106,44 @@ var manifestLayout = function(options) {
             heightScaleFactor = frameHeight/canvas.height;
 
         if (portrait) {
-            canvas.width = canvas.width*widthScaleFactor;
             canvas.height = frameHeight;
+            // we forced the height to fit, so the width
+            // must be scaled according to the height.
+            canvas.width = canvas.width*heightScaleFactor;
         } else {
             canvas.width = frameWidth;
-            canvas.height = canvas.height*heightScaleFactor;
+            // we forced the width to fit, so the height
+            // must be scaled according to the width.
+            canvas.height = canvas.height*widthScaleFactor;
         }
 
+        console.log(canvas);
         return canvas;
     }
 
     function hybrid(canvas, maxFrameWidth, maxFrameHeight) {
+        // Fixed height layout with auto-fitting
+        // of extremely long or extremeley tall
+        // objects into a maximum width.
     }
 
     function vantage(frames, padding) {
         // A vantage can wrap several book pages
         // into what will become a single higlight,
         // hover, or click target.
+        console.log(padding);
         if (frames[1]) {
             return {
-                width: (frames[0].width + frames[1].width)
-                    + padding.left + padding.right + facingCanvasPadding,
-                height: (frames[0].height + frames[1].height)
-                    + padding.top + padding.bottom + facingCanvasPadding,
-                frames: frames
+                // width: (frames[0].width + frames[1].width)
+                //     + padding.left + padding.right + facingCanvasPadding,
+                // height: (frames[0].height + frames[1].height)
+                //     + padding.top + padding.bottom + facingCanvasPadding,
+                // frames: frames
             };
         } else {
             return {
-                width: frames[0].width + padding.left + padding.right,
-                height: frames[0].height + padding.top + padding.bottom,
+                width: frameWidth + padding.left + padding.right,
+                height: frameHeight + padding.top + padding.bottom,
                 frames: frames
             };
         }
@@ -145,11 +151,28 @@ var manifestLayout = function(options) {
 
     function gridAlign(vantages, frameHeight, frameWidth, lineWidth) {
         var vantagesPerLine = Math.floor(lineWidth/frameWidth),
-            line = [];
-        return vantages.map(function(vantage, index, vantages) {
-            var line = 0;
-            vantage.x = vantage.width;
-            vantage.y = 0; // y determined by the line;
+        vantagesLength = vantages.length;
+
+        return vantages.map(function(vantage, index) {
+            var lineNumber = Math.floor((index)/vantagesPerLine),
+                lineIndex = index%vantagesPerLine;
+            // console.log('currentItemWidth: ' + vantage.width);
+            // console.log('lineWidth: ' +lineWidth);
+            // console.log('total items: ' + vantagesLength);
+            // console.log('itemsPerLine: ' + vantagesPerLine);
+            // console.log('lineNumber: ' + lineNumber);
+            // The frames must get their x and y properties
+            // after the vantage (the parent) props are set.
+            vantage.x = vantage.width*lineIndex;
+            vantage.y = lineNumber*vantage.height; // y determined by the line;
+
+            vantage.frames.forEach(function(frame) {
+                frame.localX = vantage.leftPadding,
+                frame.localY = vantage.topPadding,
+                frame.x = vantage.x + vantage.leftPadding,
+                frame.y = vantage.y + vantage.topPadding;
+            });
+
             return vantage;
         });
     }
@@ -194,8 +217,8 @@ var manifestLayout = function(options) {
         // functions.
         var vantages = canvases.map(function(canvas) {
             return vantage([frame(pruneCanvas(canvas),
-                                  maxFrameWidth,
-                                  maxFrameHeight
+                                  frameWidth,
+                                  frameHeight
                                  )],
                            vantagePadding,
                            viewingHint
@@ -224,30 +247,45 @@ function renderManifest(manifest) {
     var layoutData = manifestLayout({
         canvases: manifest.sequences[0].canvases,
         width: container.width(),
-        height: container.height()
+        height: container.height(),
+        frameHeight: 100,
+        frameWidth: 100,
+        vantagePadding: {
+            top: 0,
+            bottom: 50
+        }
     });
 
-    console.log(layoutData);
+    // console.log(layoutData);
 
     var interactionOverlay = d3.select('#d3-example');
 
-    var vantages = interactionOverlay.selectAll('div.vantage')
-            .data(layoutData);
+    // To understand this layout, read: http://bost.ocks.org/mike/nest/
+    var vantages = interactionOverlay.selectAll('.vantage')
+            .data(layoutData)
+            .enter().append('li')
+            .attr('class', 'vantage')
+            .style('width', function(d) { return d.width + 'px'; })
+            .style('height', function(d) { return d.height + 'px'; })
+            .style('transform', function(d) { return 'translateX(' + d.x + 'px) translateY(' + d.y + 'px)'; });
 
-    vantages
-        .transition()
-        .duration(750)
-        .style('width', function(d) { console.log(d.width); return d.width + 'px'; })
+    // Now that the parents are bound, bind children.
+    // These are the official canvas placeholders, and
+    // will be filled with images on a promise.
+    vantages.selectAll('.frame')
+        .data(function(d) { return d.frames;})
+    // new enter selection specifically dealing with this data set.
+        .enter()
+        .append('div')
+        .attr('class', 'frame')
+        .style('width', function(d) { return d.width + 'px'; })
         .style('height', function(d) { return d.height + 'px'; })
-        .style('transform', function(d) { return 'translateX(' + d.x + 'px), translateY(' + d.y + 'px)'; });
+        .style('transform', function(d) { return 'translateX(' + d.x + 'px) translateY(' + d.y + 'px)'; });
 
-    vantages.enter().append('div.vantage')
-        .style('width', function(d) { console.log(d.width); return d.width + 'px'; })
-        .style('height', function(d) { return d.height + 'px'; })
-        .style('transform', function(d) { return 'translateX(' + d.x + 'px), translateY(' + d.y + 'px)'; })
-        .append('li.')
-        .text(function(d) {
-            console.log(d);
-            return d.frames[0].label;
-        });
+    // Canvas labels, again the data is a nested subset of the vantages.
+    vantages.selectAll('h4')
+        .data(function(d) { return d.frames;})
+    // New enter selection specifically dealing with this data set.
+        .enter()
+        .append('h4').text(function(d) {return d.label;});
 }
