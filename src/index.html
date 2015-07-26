@@ -15,8 +15,28 @@
     <![endif]-->
 
     <!-- CONTENT BEGIN - replace the following with your app content -->
-    <h1>iiif manifest d3 osd layout by Anonymous</h1>
+    <div id="controls">
+        <h2>Layout Parameters</h2>
+        <label for=scale>Thumb Size</label>
+        <input id="scale" name="scale" type="range" min=50 max=200 value=100 step=1/>
+        <br/>
+        <label for=strategy>Layout Strategy</label>
+        <select id="strategy" name="strategy">
+            <option value="value1">Fixed Height</option> 
+            <option value="value2" selected>Grid</option>
+            <option value="value3">Hybrid</option>
+        </select>
+        <label for=strategy>Canvas Padding</label>
+        <label for=strategy>Canvas Positioning</label>
+        <select id="strategy" name="strategy">
+            <option value="value1">Top</option> 
+            <option value="value2" selected>Centered</option>
+            <option value="value3">Bottom</option>
+        </select>
+
+    </div>
     <div class="feature">
+        <h1>IIIF manifest d3 osd layout by Anonymous</h1>
         <div id="d3-example"></div>
     </div>
 
