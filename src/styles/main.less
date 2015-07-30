@@ -45,11 +45,14 @@ body {
             left:0;
             border: 1px solid deepPink;
             box-sizing: border-box;
+            img {
+                height: 100%;
+                width:100%;
+            }
         }
     }
 }
 .vantage {
-    border: 1px solid white;
     position: absolute;
     display: block;
     box-sizing: border-box;
@@ -60,6 +63,17 @@ body {
         width:100%;
     }
 }
+.vantage:hover {
+    .frame {
+        box-shadow: 0 0 8px 3px white;
+        border:1px solid white;
+    }
+    h4 {
+        font-weight:bold;
+        font-size:90%;
+        letter-spacing:0;
+    }
+}
 #controls {
     width: 20%;
     float: left;
@@ -67,10 +81,21 @@ body {
     height: 100%;
 }
 #d3-example {
-    width:600px;
+    width:90%;
     height:600px;
     margin:0 auto;
     position: relative;
+    overflow-y:scroll;
+    oeverflow-x: hidden;
+    border: 1px solid white;
+    padding: 30px;
+}
+#osd-container {
+    position: absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
 }
 h1, h2, h3, h4 {
     font-weight: 100;

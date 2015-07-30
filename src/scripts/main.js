@@ -1,11 +1,15 @@
-var _ = require('underscore');
 var $ = require('jquery');
 var d3 = require('d3');
 var osd = require('./openseadragon');
 
+var manifest,
+    viewer;
+
 // D3 example
 $.get('http://purl.stanford.edu/fw090jw3474/iiif/manifest.json', function(data) {
-    renderManifest(data);
+    manifest = data;
+    initOSD();
+    renderManifest(manifest);
 });
 
 var manifestLayout = function(options) {
@@ -68,7 +72,8 @@ var manifestLayout = function(options) {
             label: canvas.label,
             height: canvas.height,
             width: canvas.width,
-            aspectRatio: canvas.width/canvas.height
+            aspectRatio: canvas.width/canvas.height,
+            iiifService: canvas.images[0].resource.service['@id']
         };
     }
 
@@ -163,11 +168,6 @@ var manifestLayout = function(options) {
         return vantages.map(function(vantage, index) {
             var lineNumber = Math.floor((index)/vantagesPerLine),
                 lineIndex = index%vantagesPerLine;
-            // console.log('currentItemWidth: ' + vantage.width);
-            // console.log('lineWidth: ' +lineWidth);
-            // console.log('total items: ' + vantagesLength);
-            // console.log('itemsPerLine: ' + vantagesPerLine);
-            // console.log('lineNumber: ' + lineNumber);
             // The frames must get their x and y properties
             // after the vantage (the parent) props are set.
             vantage.x = vantage.width*lineIndex;
@@ -301,6 +301,7 @@ var manifestLayout = function(options) {
 
 function renderManifest(manifest) {
     var container = $('#d3-example');
+    console.log(manifest);
 
     var layoutData = manifestLayout({
         canvases: manifest.sequences[0].canvases,
@@ -311,8 +312,8 @@ function renderManifest(manifest) {
         vantagePadding: {
             top: 0,
             bottom: 50,
-            left: 20,
-            right:20
+            left: 5,
+            right: 5
         }
     });
 
@@ -321,72 +322,62 @@ function renderManifest(manifest) {
     var interactionOverlay = d3.select('#d3-example');
 
     // To understand this layout, read: http://bost.ocks.org/mike/nest/
-    var vantages = interactionOverlay.selectAll('.vantage')
-            .data(layoutData)
+    var vantage = interactionOverlay.selectAll('.vantage')
+            .data(layoutData);
+
+    var vantageUpdated = vantage
+            .style('width', function(d) { return d.width + 'px'; })
+            .style('height', function(d) { return d.height + 'px'; })
+            .transition()
+            .styleTween('transform', function(d) {
+                return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
+            })
+            .styleTween('-webkit-transform', function(d) {
+                return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
+            });
+    // name an item that is moving left or right only
+    // vs an item that is moving up or down a line.
+    // Items that are moving within their line stay on top,
+    // those shifting up and down shuffle in from befhind.
+
+    var vantageEnter = vantage
             .enter().append('div')
             .attr('class', 'vantage')
             .style('width', function(d) { return d.width + 'px'; })
             .style('height', function(d) { return d.height + 'px'; })
-            .style('transform', function(d) { return 'translateX(' + d.x + 'px) translateY(' + d.y + 'px)'; });
+            .style('transform', function(d) { return 'translate(' + d.x + 'px,' + d.y + 'px)'; })
+            .style('-webkit-transform', function(d) { return 'translate(' + d.x + 'px,' + d.y + 'px)'; });
 
-    vantages
+    vantageEnter
         .append('div')
         .attr('class', 'frame')
-        .style('width', function(d) { return d.frame.width + 'px'; })
+        .style('width', function(d) { console.log(d); return d.frame.width + 'px'; })
         .style('height', function(d) { return d.frame.height + 'px'; })
-        .style('transform', function(d) { return 'translateX(' + d.frame.localX + 'px) translateY(' + d.frame.localY + 'px)'; });
+        .style('transform', function(d) { return 'translateX(' + d.frame.localX + 'px) translateY(' + d.frame.localY + 'px)'; })
+        .append('img')
+        .attr('src', function(d) { return d.frame.iiifService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg';});
 
-    vantages
+    vantageEnter
         .append('h4').text(function(d) { return d.frame.label; });
+
+
+
+    // Staged animations
+    // * Takes viewport into account
+    // From Thumb to single-page
+    // moving left and right
+    // scroll view <=> book view <=> top-to-bottom view <=> single page view
+    // * Does not care about viewport
+    // In thumb mode, changing to book, scroll, or top-bottom view
+    // focus to thumb: book, scroll, single;
 }
 
-// function renderManifest(manifest) {
-//     var container = $('#d3-example');
+var initOSD = function() {
+    viewer = OpenSeadragon({
+            id: "osd-container",
+            autoResize:true,
+            showHomeControl: false
+        });
+}
 
-//     var layoutData = manifestLayout({
-//         canvases: manifest.sequences[0].canvases,
-//         width: container.width(),
-//         height: container.height(),
-//         frameHeight: 100,
-//         frameWidth: 100,
-//         vantagePadding: {
-//             top: 0,
-//             bottom: 50,
-//             left: 20,
-//             right:20
-//         }
-//     });
-
-//     // console.log(layoutData);
-
-//     var interactionOverlay = d3.select('#d3-example');
-
-//     // To understand this layout, read: http://bost.ocks.org/mike/nest/
-//     var vantages = interactionOverlay.selectAll('.vantage')
-//             .data(layoutData)
-//             .enter().append('li')
-//             .attr('class', 'vantage')
-//             .style('width', function(d) { return d.width + 'px'; })
-//             .style('height', function(d) { return d.height + 'px'; })
-//             .style('transform', function(d) { return 'translateX(' + d.x + 'px) translateY(' + d.y + 'px)'; });
-
-//     // Now that the parents are bound, bind children.
-//     // These are the official canvas placeholders, and
-//     // will be filled with images on a promise.
-//     vantages.selectAll('.frame')
-//         .data(function(d) { return d.frames;})
-//     // new enter selection specifically dealing with this data set.
-//         .enter()
-//         .append('div')
-//         .attr('class', 'frame')
-//         .style('width', function(d) { return d.width + 'px'; })
-//         .style('height', function(d) { return d.height + 'px'; })
-//         .style('transform', function(d) { return 'translateX(' + d.x + 'px) translateY(' + d.y + 'px)'; });
-
-//     // Canvas labels, again the data is a nested subset of the vantages.
-//     vantages.selectAll('h4')
-//         .data(function(d) { return d.frames;})
-//     // New enter selection specifically dealing with this data set.
-//         .enter()
-//         .append('h4').text(function(d) {return d.label;});
-// }
+$(window).on('resize', function(){renderManifest(manifest);});
