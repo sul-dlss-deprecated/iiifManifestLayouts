@@ -61,6 +61,7 @@ body {
         position: absolute;
         text-align: center;
         width:100%;
+        margin-bottom:10px;
     }
 }
 .vantage:hover {
@@ -76,9 +77,17 @@ body {
 }
 #controls {
     width: 20%;
-    float: left;
+    position:fixed;
+    left:0;
+    top:0;
+    bottom:0;
     border-right: 1px solid gray;
     height: 100%;
+    padding: 0 0 0 20px;
+    box-sizing:border-box;
+}
+input[type="text"] {
+    margin: 5px 0;
 }
 #d3-example {
     width:90%;
@@ -89,6 +98,14 @@ body {
     oeverflow-x: hidden;
     border: 1px solid white;
     padding: 30px;
+}
+#bottom-panel {
+    height:10%;
+    position:absolute;
+    border-top: 1px solid gray;
+    bottom:0;
+    margin-left:20%;
+    width:80%;
 }
 #osd-container {
     position: absolute;
