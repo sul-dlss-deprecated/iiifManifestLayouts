@@ -1,0 +1,83 @@
+@import (less) "lib/normalize.css"; /* Normalize.css - render elements consistently and in line with standards */
+@import "lib/lesshat.less"; /* LESS Hat - collection of LESS mixins */
+
+
+/* Replace these example styles with your app's styles */
+body {
+    font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+    background-color: black;
+    font-weight:normal;
+    color: white;
+    position: absolute;
+    width:100%;
+    height:100%;
+
+    a {
+        color: #01579b;
+        text-decoration: none;
+        border-bottom: 1px dotted #01579b;
+    }
+
+    .btn {
+        cursor: pointer;
+        padding: 5px;
+        .border-radius(5px);
+        background-color: #333333;
+        color: #eeeeee;
+        .user-select(none);
+        &:hover { background-color: #555555; }
+        &:active { .box-shadow(inset 0px 1px 3px #111111); }
+    }
+
+    .feature {
+        padding: 15px;
+        margin-left: 20%;
+        h3 {
+            margin-top: 0;
+        }
+        .big-text {
+            font-size: 24pt;
+        }
+        .frame {
+            color:white;
+            position: absolute;
+            top:0;
+            left:0;
+            border: 1px solid deepPink;
+            box-sizing: border-box;
+        }
+    }
+}
+.vantage {
+    border: 1px solid white;
+    position: absolute;
+    display: block;
+    box-sizing: border-box;
+    h4 {
+        bottom: 0;
+        position: absolute;
+        text-align: center;
+        width:100%;
+    }
+}
+#controls {
+    width: 20%;
+    float: left;
+    border-right: 1px solid gray;
+    height: 100%;
+}
+#d3-example {
+    width:600px;
+    height:600px;
+    margin:0 auto;
+    position: relative;
+}
+h1, h2, h3, h4 {
+    font-weight: 100;
+    letter-spacing: 1px;
+}
+label {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    display:block;
+}
