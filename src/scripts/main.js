@@ -12,7 +12,8 @@ var manifest,
 $.get('http://purl.stanford.edu/fw090jw3474/iiif/manifest.json', function(data) {
     manifest = data;
     initOSD();
-    renderManifest(manifest);
+    // renderManifest(manifest);
+    renderOSD(manifest);
 });
 
 var manifestStore = function() {
@@ -103,6 +104,28 @@ function renderManifest(manifest, viewingd) {
         .append('h4').text(function(d) { return d.frame.label; });
 };
 
+var renderOSD = function(manifest, viewingd) {
+    var container = $('#d3-example');
+    console.log(manifest);
+
+    var layoutData = manifestLayout({
+        canvases: manifest.sequences[0].canvases,
+        width: container.width(),
+        height: container.height(),
+        viewingDirection: viewingd || 'right-to-left',
+        frameHeight: 100,
+        frameWidth: 100,
+        vantagePadding: {
+            top: 10,
+            bottom: 40,
+            left: 5,
+            right: 5
+        }
+    });
+
+    console.log(layoutData);
+};
+
 var initOSD = function() {
     viewer = OpenSeadragon({
         id: "osd-container",
@@ -127,10 +150,12 @@ var actions = [
     'tileSourceFinishedLoading'
 ];
 
-$(window).on('resize', function(){renderManifest(manifest);});
+$(window).on('resize', function(){renderManifest(manifest, $('readingDirection').val());});
+
 $('#readingDirection').on('change', function() {
     renderManifest(manifest, $(this).val());
 });
+
 $('#scale').on('input', function() {
     renderManifest(manifest, $(this).val());
 });
