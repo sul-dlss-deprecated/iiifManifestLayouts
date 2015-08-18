@@ -6,11 +6,13 @@ var osd = require('./openseadragon');
 var manifestLayout = require('./manifestLayout');
 
 var manifest,
-    container,
-    _canvasState;
+    _canvasState,
+    _canvasImageStates,
+    container = $('#d3-example');
 
-$.get('http://purl.stanford.edu/fw090jw3474/iiif/manifest.json', function(data) {
+$.get('http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', function(data) {
     manifest = data;
+    buildCanvasStates(manifest.sequences[0].canvases);
     initOSD();
     canvasState({
         selectedItem: null, // @id of the canvas:
@@ -18,36 +20,6 @@ $.get('http://purl.stanford.edu/fw090jw3474/iiif/manifest.json', function(data) 
         viewingMode: 'single' // manifest derived or user specified (iiif viewingHint)
     });
 });
-
-
-var manifestStore = function() {
-    // Event Handlers (receiving objects from)
-    // action creation; no public setters allowed.
-
-    function requestComplete() {
-    }
-
-    function requestPending() {
-    }
-
-    function sequenceAdded() {
-    }
-
-    function rangeAdded() {
-    }
-
-    function canvasAdded() {
-    }
-
-    function resourceAdded() {
-    }
-
-    return {
-        registerForChange: registerForChange
-    };
-};
-
-container = $('#d3-example');
 
 function render() {
     renderManifest(manifest);
@@ -64,10 +36,17 @@ function canvasState(state) {
     // }
 
     render();
+
+    return _canvasState;
 }
 
 function getData() {
     var userState = canvasState();
+
+    // Layout is configured from current user state. The
+    // layout algorithm, viewing hints, animations (such as
+    // initial layout without animation) are all
+    // functions of the current user state.
 
     var layoutData = manifestLayout({
         canvases: manifest.sequences[0].canvases,
@@ -85,14 +64,31 @@ function getData() {
         }
     });
 
-    // console.log(layoutData);
+    var constraints = ''; // The constraint bounds to use.
+    var events = ''; // The set of events that are valid on the canvas.
+
     return layoutData;
+}
+
+function canvasImageStates(state) {
+
+    if (!arguments.length) return _canvasImageStates;
+    _canvasImageStates = state;
+
+    // if (!initial) {
+    //     jQuery.publish('annotationsTabStateUpdated' + this.windowId, this.tabState);
+    // }
+
+    return _canvasImageStates;
 }
 
 function renderManifest() {
     var layoutData = getData();
     // To understand this layout, read: http://bost.ocks.org/mike/nest/
-    var interactionOverlay = d3.select('#overlays');
+    var interactionOverlay = d3.select('#overlays')
+            .attr('class', function(d) {
+                return canvasState().focus === 'detail' ? 'zoomed' : false;
+            });
     var vantage = interactionOverlay.selectAll('.vantage')
             .data(layoutData);
 
@@ -107,7 +103,13 @@ function renderManifest() {
             })
             .styleTween('-webkit-transform', function(d) {
                 return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
-            }).each(updateTile);
+            }).each(updateImages);
+
+    vantageUpdated.select('.frame')
+        .attr('class', function(d) {
+            var selected = d.frame.selected;
+            return selected ? 'frame selected' : 'frame';
+        });
 
     var vantageEnter = vantage
             .enter().append('div')
@@ -126,10 +128,10 @@ function renderManifest() {
         .attr('data-id', function(d) {
             return d.frame.id;
         })
-        .style('width', function(d) { console.log(d); return d.frame.width + 'px'; })
+        .style('width', function(d) { return d.frame.width + 'px'; })
         .style('height', function(d) { return d.frame.height + 'px'; })
         .style('transform', function(d) { return 'translateX(' + d.frame.localX + 'px) translateY(' + d.frame.localY + 'px)'; })
-        .each(enterTile);
+        .each(enterImages);
         // .append('img')
         // .attr('src', function(d) { return d.frame.iiifService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg';});
 
@@ -137,19 +139,44 @@ function renderManifest() {
         .append('h4').text(function(d) { return d.frame.label; });
 };
 
-function updateTile(d) {
+function updateImages(d) {
+    var frameData = d.frame,
+        canvasImageState = canvasImageStates()[frameData.id];
+
+    if (canvasState().focus === 'detail' && canvasState().selectedItem === frameData.id) {
+        viewer.addTiledImage({
+            x: frameData.x,
+            y: frameData.y,
+            width: frameData.width,
+            tileSource: canvasImageState.tileSourceUrl,
+            index: 0, // Add the new image below the stand-in.
+            success: function(event) {
+                var fullImage = event.item;
+
+                // The changeover will look better if we wait for the first tile to be drawn.
+                var tileDrawnHandler = function(event) {
+                    if (event.tiledImage === fullImage) {
+                        viewer.removeHandler('tile-drawn', tileDrawnHandler);
+                        viewer.world.removeItem(canvasImageState.dummyObj);
+                    }
+                };
+
+                viewer.addHandler('tile-drawn', tileDrawnHandler);
+            }
+        });
+    }
 }
 
-function enterTile(d) {
-    console.log(d);
-    console.log('running');
-    var frameData = d.frame;
+function enterImages(d) {
+
+    var frameData = d.frame,
+        canvasImageState = canvasImageStates()[frameData.id];
 
     var dummy = {
         type: 'legacy-image-pyramid',
         levels: [
             {
-                url: frameData.iiifService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg',
+                url: frameData.thumbService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg',
                 width: frameData.width,
                 height: frameData.height
             }
@@ -160,8 +187,37 @@ function enterTile(d) {
         tileSource: dummy,
         x: frameData.x,
         y: frameData.y,
-        width: frameData.width
+        width: frameData.width,
+        success: function(event) {
+            addDummyObj(frameData.id, event.item);
+        }
     });
+
+    if (canvasState().focus === 'detail' && canvasState().selectedItem === frameData.id) {
+        viewer.addTiledImage({
+            x: frameData.x,
+            y: frameData.y,
+            width: frameData.width,
+            tileSource: canvasImageState.tileSourceUrl,
+            index: 0, // Add the new image below the stand-in.
+            success: function(event) {
+                var fullImage = event.item;
+
+                // The changeover will look better if we wait for the first tile to be drawn.
+                var tileDrawnHandler = function(event) {
+                    if (event.tiledImage === fullImage) {
+                        viewer.removeHandler('tile-drawn', tileDrawnHandler);
+                        viewer.world.removeItem();
+                    }
+                };
+
+                viewer.addHandler('tile-drawn', tileDrawnHandler);
+            }
+        });
+    }
+}
+
+function removeImages(d) {
 }
 
 var renderOSD = function() {
@@ -198,23 +254,18 @@ var initOSD = function() {
 };
 
 function synchroniseZoom() {
-    var p = viewer.viewport.pixelFromPoint(new OpenSeadragon.Point(0, 0), true);
+    var viewerWidth = viewer.container.clientWidth;
+    var viewerHeight = viewer.container.clientHeight;
+    var center = viewer.viewport.getCenter(true);
+    var p = center.minus(new OpenSeadragon.Point(viewerWidth / 2, viewerHeight / 2));
     var zoom = viewer.viewport.getZoom(true);
-    var scale = viewer.container.clientWidth * zoom;
+    var scale = viewerWidth * zoom;
 
-    console.log($('#overlays').width() + ', ' + viewer.container.clientWidth + ', ' + $('#d3-example').width());
-    console.log(scale);
-    console.log(p.x);
-    console.log(p.y);
-
-    var transform = 'translate(' + -p.x + 'px,' + -p.y + 'px) scale(' + scale + ')';
-    var origin = '50% 50%';
+    var transform = 'scale(' + scale + ') translate(' + -p.x + 'px,' + -p.y + 'px)';
 
     d3.select('#overlays')
         .style('transform', transform)
-        .style('-webkit-transform', transform)
-        .style('transform-origin', origin)
-        .style('-webkit-transform-origin', origin);
+        .style('-webkit-transform', transform);
 }
 
 var actions = [
@@ -238,6 +289,34 @@ function selectItem(item) {
     state.focus = 'detail';
 
     canvasState(state);
+}
+
+function addImageCluster(id) {
+    var canvases = canvasImageStates();
+
+    canvases[id] = {
+    };
+}
+
+function addDummyObj(id, osdTileObj) {
+    var canvasStates = canvasImageStates();
+
+    canvasStates[id].dummyObj = osdTileObj;
+
+    canvasImageStates(canvasStates);
+}
+
+function buildCanvasStates(canvases) {
+    var canvasStates = {};
+
+    canvases.forEach(function(canvas) {
+        console.log(canvas);
+        canvasStates[canvas['@id']] = {
+            tileSourceUrl: canvas.images[0].resource.service['@id'] + '/info.json'
+        };
+    });
+
+    canvasImageStates(canvasStates);
 }
 
 $(window).on('resize', function() {

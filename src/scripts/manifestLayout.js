@@ -60,15 +60,16 @@ var manifestLayout = function(options) {
     }
 
     function pruneCanvas(canvas) {
-        return {
+        var prunedCanvas = {
             id: canvas['@id'],
             label: canvas.label,
             height: canvas.height,
             width: canvas.width,
             aspectRatio: canvas.width/canvas.height,
-            iiifService: canvas.images[0].resource.service['@id'],
+            thumbService: canvas.images[0].resource.service['@id'],
             selected: canvas['@id'] === selectedCanvas ? true : false
         };
+        return prunedCanvas;
     }
 
     // The following framingStrategies specify how a canvas fits inside its "frame".
