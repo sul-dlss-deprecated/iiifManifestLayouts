@@ -14,7 +14,7 @@ $.get('http://purl.stanford.edu/fw090jw3474/iiif/manifest.json', function(data) 
     initOSD();
     canvasState({
         selectedItem: null, // @id of the canvas:
-        overview: true, // or particular item
+        focus: 'overview', // can be 'overview' or 'detail'
         viewingMode: 'single' // manifest derived or user specified (iiif viewingHint)
     });
 });
@@ -92,7 +92,7 @@ function getData() {
 function renderManifest() {
     var layoutData = getData();
     // To understand this layout, read: http://bost.ocks.org/mike/nest/
-    var interactionOverlay = d3.select('#d3-example');
+    var interactionOverlay = d3.select('#overlays');
     var vantage = interactionOverlay.selectAll('.vantage')
             .data(layoutData);
 
@@ -107,7 +107,7 @@ function renderManifest() {
             })
             .styleTween('-webkit-transform', function(d) {
                 return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
-            });
+            }).each(updateTile);
 
     var vantageEnter = vantage
             .enter().append('div')
@@ -119,16 +119,17 @@ function renderManifest() {
 
     vantageEnter
         .append('div')
-        .attr('class', 'frame')
+        .attr('class', function(d) {
+            var selected = d.frame.selected;
+            return selected ? 'frame selected' : 'frame';
+        })
         .attr('data-id', function(d) {
             return d.frame.id;
         })
-        .classed('selected', function(d) {
-            return d.frame.selected;
-        })
         .style('width', function(d) { console.log(d); return d.frame.width + 'px'; })
         .style('height', function(d) { return d.frame.height + 'px'; })
-        .style('transform', function(d) { return 'translateX(' + d.frame.localX + 'px) translateY(' + d.frame.localY + 'px)'; });
+        .style('transform', function(d) { return 'translateX(' + d.frame.localX + 'px) translateY(' + d.frame.localY + 'px)'; })
+        .each(enterTile);
         // .append('img')
         // .attr('src', function(d) { return d.frame.iiifService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg';});
 
@@ -136,41 +137,51 @@ function renderManifest() {
         .append('h4').text(function(d) { return d.frame.label; });
 };
 
-var renderOSD = function() {
-    var layoutData = getData();
+function updateTile(d) {
+}
 
-    viewer.viewport.fitBounds( new OpenSeadragon.Rect(0,0, container.width(), container.height()), true);
+function enterTile(d) {
+    console.log(d);
+    console.log('running');
+    var frameData = d.frame;
 
-    var interactionOverlay = d3.select('#d3-example');
+    var dummy = {
+        type: 'legacy-image-pyramid',
+        levels: [
+            {
+                url: frameData.iiifService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg',
+                width: frameData.width,
+                height: frameData.height
+            }
+        ]
+    };
 
-    // To understand this layout, read: http://bost.ocks.org/mike/nest/
-    var frame = interactionOverlay.selectAll('.frame');
-
-    frame.each(function(d) {
-        console.log(d);
-        console.log('running');
-        var frameData = d.frame;
-
-        var dummy = {
-            type: 'legacy-image-pyramid',
-            levels: [
-                {
-                    url: frameData.iiifService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg',
-                    width: frameData.width,
-                    height: frameData.height
-                }
-            ]
-        };
-
-        viewer.addTiledImage({
-            tileSource: dummy,
-            x: frameData.x,
-            y: frameData.y,
-            width: frameData.width
-        });
+    viewer.addTiledImage({
+        tileSource: dummy,
+        x: frameData.x,
+        y: frameData.y,
+        width: frameData.width
     });
+}
 
-    console.log(layoutData);
+var renderOSD = function() {
+    var layoutData = getData(),
+        viewBounds =  layoutData.filter(function(vantage){
+            return vantage.frame.selected;
+        });
+
+    if (viewBounds.length !== 0 && canvasState().focus === 'detail') {
+        viewBounds = new OpenSeadragon.Rect(
+            viewBounds[0].frame.x,
+            viewBounds[0].frame.y,
+            viewBounds[0].frame.width,
+            viewBounds[0].frame.height
+        );
+    } else {
+        viewBounds = new OpenSeadragon.Rect(0,0, container.width(), container.height());
+    }
+
+    viewer.viewport.fitBounds(viewBounds, false);
 };
 
 var initOSD = function() {
@@ -180,7 +191,31 @@ var initOSD = function() {
         showNavigationControl: false,
         preserveViewport: true
     });
+
+    viewer.addHandler('animation', function(event) {
+        synchroniseZoom();
+    });
 };
+
+function synchroniseZoom() {
+    var p = viewer.viewport.pixelFromPoint(new OpenSeadragon.Point(0, 0), true);
+    var zoom = viewer.viewport.getZoom(true);
+    var scale = viewer.container.clientWidth * zoom;
+
+    console.log($('#overlays').width() + ', ' + viewer.container.clientWidth + ', ' + $('#d3-example').width());
+    console.log(scale);
+    console.log(p.x);
+    console.log(p.y);
+
+    var transform = 'translate(' + -p.x + 'px,' + -p.y + 'px) scale(' + scale + ')';
+    var origin = '50% 50%';
+
+    d3.select('#overlays')
+        .style('transform', transform)
+        .style('-webkit-transform', transform)
+        .style('transform-origin', origin)
+        .style('-webkit-transform-origin', origin);
+}
 
 var actions = [
     'pan',
@@ -200,6 +235,7 @@ var actions = [
 function selectItem(item) {
     var state = canvasState();
     state.selectedItem = item;
+    state.focus = 'detail';
 
     canvasState(state);
 }
@@ -213,7 +249,7 @@ $('#readingDirection').on('change', function() {
     renderOSD(manifest, 'left-to-right', viewer);
 });
 
-$('.frame').on('click', function(event) {
+container.on('click', '.frame', function(event) {
     selectItem($(this).data('id'));
 });
 
