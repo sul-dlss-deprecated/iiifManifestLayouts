@@ -144,27 +144,31 @@ function updateImages(d) {
         canvasImageState = canvasImageStates()[frameData.id];
 
     if (canvasState().focus === 'detail' && canvasState().selectedItem === frameData.id) {
-        viewer.addTiledImage({
-            x: frameData.x,
-            y: frameData.y,
-            width: frameData.width,
-            tileSource: canvasImageState.tileSourceUrl,
-            index: 0, // Add the new image below the stand-in.
-            success: function(event) {
-                var fullImage = event.item;
-
-                // The changeover will look better if we wait for the first tile to be drawn.
-                var tileDrawnHandler = function(event) {
-                    if (event.tiledImage === fullImage) {
-                        viewer.removeHandler('tile-drawn', tileDrawnHandler);
-                        viewer.world.removeItem(canvasImageState.dummyObj);
-                    }
-                };
-
-                viewer.addHandler('tile-drawn', tileDrawnHandler);
-            }
-        });
+        substitute(frameData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
     }
+}
+
+function substitute(frameData, dummyObj, tileSourceUrl) {
+    viewer.addTiledImage({
+        x: frameData.x,
+        y: frameData.y,
+        width: frameData.width,
+        tileSource: tileSourceUrl,
+        index: 0, // Add the new image below the stand-in.
+        success: function(event) {
+            var fullImage = event.item;
+
+            // The changeover will look better if we wait for the first tile to be drawn.
+            var tileDrawnHandler = function(event) {
+                if (event.tiledImage === fullImage) {
+                    viewer.removeHandler('tile-drawn', tileDrawnHandler);
+                    fade(dummyObj, 0, function() { viewer.world.removeItem(dummyObj); });
+                }
+            };
+
+            viewer.addHandler('tile-drawn', tileDrawnHandler);
+        }
+    });
 }
 
 function enterImages(d) {
@@ -194,28 +198,32 @@ function enterImages(d) {
     });
 
     if (canvasState().focus === 'detail' && canvasState().selectedItem === frameData.id) {
-        viewer.addTiledImage({
-            x: frameData.x,
-            y: frameData.y,
-            width: frameData.width,
-            tileSource: canvasImageState.tileSourceUrl,
-            index: 0, // Add the new image below the stand-in.
-            success: function(event) {
-                var fullImage = event.item;
-
-                // The changeover will look better if we wait for the first tile to be drawn.
-                var tileDrawnHandler = function(event) {
-                    if (event.tiledImage === fullImage) {
-                        viewer.removeHandler('tile-drawn', tileDrawnHandler);
-                        viewer.world.removeItem();
-                    }
-                };
-
-                viewer.addHandler('tile-drawn', tileDrawnHandler);
-            }
-        });
+        substitute(frameData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
     }
 }
+
+function fade(image, targetOpacity, callback) {
+    var currentOpacity = image.getOpacity();
+    var step = (targetOpacity - currentOpacity) / 10;
+    if (step === 0) {
+        callback();
+        return;
+    }
+
+    var frame = function() {
+        currentOpacity += step;
+        if ((step > 0 && currentOpacity >= targetOpacity) || (step < 0 && currentOpacity <= targetOpacity)) {
+            image.setOpacity(targetOpacity);
+            callback();
+            return;
+        }
+
+        image.setOpacity(currentOpacity);
+        OpenSeadragon.requestAnimationFrame(frame);
+    };
+    OpenSeadragon.requestAnimationFrame(frame);
+};
+
 
 function removeImages(d) {
 }
