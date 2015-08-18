@@ -6,15 +6,19 @@ var osd = require('./openseadragon');
 var manifestLayout = require('./manifestLayout');
 
 var manifest,
-    viewer;
+    container,
+    _canvasState;
 
-// D3 example
 $.get('http://purl.stanford.edu/fw090jw3474/iiif/manifest.json', function(data) {
     manifest = data;
     initOSD();
-    // renderManifest(manifest);
-    renderOSD(manifest);
+    canvasState({
+        selectedItem: null, // @id of the canvas:
+        overview: true, // or particular item
+        viewingMode: 'single' // manifest derived or user specified (iiif viewingHint)
+    });
 });
+
 
 var manifestStore = function() {
     // Event Handlers (receiving objects from)
@@ -43,17 +47,36 @@ var manifestStore = function() {
     };
 };
 
-function renderManifest(manifest, viewingd) {
-    var container = $('#d3-example');
-    console.log(manifest);
+container = $('#d3-example');
+
+function render() {
+    renderManifest(manifest);
+    renderOSD(manifest, 'left-to-right', viewer);
+}
+
+function canvasState(state) {
+
+    if (!arguments.length) return _canvasState;
+    _canvasState = state;
+
+    // if (!initial) {
+    //     jQuery.publish('annotationsTabStateUpdated' + this.windowId, this.tabState);
+    // }
+
+    render();
+}
+
+function getData() {
+    var userState = canvasState();
 
     var layoutData = manifestLayout({
         canvases: manifest.sequences[0].canvases,
         width: container.width(),
         height: container.height(),
-        viewingDirection: viewingd || 'right-to-left',
+        viewingDirection: userState.viewingd || 'left-to-right',
         frameHeight: 100,
         frameWidth: 100,
+        selectedCanvas: userState.selectedItem,
         vantagePadding: {
             top: 10,
             bottom: 40,
@@ -62,11 +85,14 @@ function renderManifest(manifest, viewingd) {
         }
     });
 
-    console.log(layoutData);
+    // console.log(layoutData);
+    return layoutData;
+}
 
-    var interactionOverlay = d3.select('#d3-example');
-
+function renderManifest() {
+    var layoutData = getData();
     // To understand this layout, read: http://bost.ocks.org/mike/nest/
+    var interactionOverlay = d3.select('#d3-example');
     var vantage = interactionOverlay.selectAll('.vantage')
             .data(layoutData);
 
@@ -94,40 +120,61 @@ function renderManifest(manifest, viewingd) {
     vantageEnter
         .append('div')
         .attr('class', 'frame')
+        .attr('data-id', function(d) {
+            return d.frame.id;
+        })
+        .classed('selected', function(d) {
+            return d.frame.selected;
+        })
         .style('width', function(d) { console.log(d); return d.frame.width + 'px'; })
         .style('height', function(d) { return d.frame.height + 'px'; })
-        .style('transform', function(d) { return 'translateX(' + d.frame.localX + 'px) translateY(' + d.frame.localY + 'px)'; })
-        .append('img')
-        .attr('src', function(d) { return d.frame.iiifService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg';});
+        .style('transform', function(d) { return 'translateX(' + d.frame.localX + 'px) translateY(' + d.frame.localY + 'px)'; });
+        // .append('img')
+        // .attr('src', function(d) { return d.frame.iiifService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg';});
 
     vantageEnter
         .append('h4').text(function(d) { return d.frame.label; });
 };
 
-var renderOSD = function(manifest, viewingd) {
-    var container = $('#d3-example');
-    console.log(manifest);
+var renderOSD = function() {
+    var layoutData = getData();
 
-    var layoutData = manifestLayout({
-        canvases: manifest.sequences[0].canvases,
-        width: container.width(),
-        height: container.height(),
-        viewingDirection: viewingd || 'right-to-left',
-        frameHeight: 100,
-        frameWidth: 100,
-        vantagePadding: {
-            top: 10,
-            bottom: 40,
-            left: 5,
-            right: 5
-        }
+    viewer.viewport.fitBounds( new OpenSeadragon.Rect(0,0, container.width(), container.height()), true);
+
+    var interactionOverlay = d3.select('#d3-example');
+
+    // To understand this layout, read: http://bost.ocks.org/mike/nest/
+    var frame = interactionOverlay.selectAll('.frame');
+
+    frame.each(function(d) {
+        console.log(d);
+        console.log('running');
+        var frameData = d.frame;
+
+        var dummy = {
+            type: 'legacy-image-pyramid',
+            levels: [
+                {
+                    url: frameData.iiifService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg',
+                    width: frameData.width,
+                    height: frameData.height
+                }
+            ]
+        };
+
+        viewer.addTiledImage({
+            tileSource: dummy,
+            x: frameData.x,
+            y: frameData.y,
+            width: frameData.width
+        });
     });
 
     console.log(layoutData);
 };
 
 var initOSD = function() {
-    viewer = OpenSeadragon({
+    window.viewer = OpenSeadragon({
         id: "osd-container",
         autoResize:true,
         showNavigationControl: false,
@@ -150,10 +197,24 @@ var actions = [
     'tileSourceFinishedLoading'
 ];
 
-$(window).on('resize', function(){renderManifest(manifest, $('readingDirection').val());});
+function selectItem(item) {
+    var state = canvasState();
+    state.selectedItem = item;
+
+    canvasState(state);
+}
+
+$(window).on('resize', function() {
+    renderManifest(manifest, $('readingDirection').val());
+});
 
 $('#readingDirection').on('change', function() {
     renderManifest(manifest, $(this).val());
+    renderOSD(manifest, 'left-to-right', viewer);
+});
+
+$('.frame').on('click', function(event) {
+    selectItem($(this).data('id'));
 });
 
 $('#scale').on('input', function() {

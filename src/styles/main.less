@@ -44,9 +44,16 @@ body {
             top:0;
             left:0;
             border: 1px solid deepPink;
-            box-sizing: border-box;
+            &:hover {
+                border-color: white;
+                box-shadow: 0, 0, 8px white;
+            }
         }
     }
+}
+.selected {
+    border-color: cyan;
+    border-width:3px;
 }
 .vantage {
     position: absolute;
@@ -65,11 +72,16 @@ body {
     border-right: 1px solid gray;
     height: 100%;
 }
-#d3-example {
+#osd-container {
+    position:absolute;
     width:100%;
     height:100%;
+}
+#d3-example {
+    width:80%;
+    height:100%;
     margin:0 auto;
-    position: relative;
+    position: absolute;
 }
 h1, h2, h3, h4 {
     font-weight: 100;
