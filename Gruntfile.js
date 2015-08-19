@@ -7,10 +7,10 @@ module.exports = function(grunt) {
     require('load-grunt-tasks')(grunt);
 
     var config = {
-        src: 'src',
-        dist: 'dist',
-        buildDev: 'build/dev',
-        buildDist: 'build/dist',
+        srcDir: 'src',
+        distDir: 'dist',
+        testDir: 'test',
+        exampleScriptDir: 'example/scripts/',
         filesToCopy: [
             // for performance we only match one level down: 'test/spec/{,*/}*.js'
             // if you want to recursively match all subfolders: 'test/spec/**/*.js'
@@ -18,18 +18,18 @@ module.exports = function(grunt) {
             '{,*/}*.html',
             'fonts/{,*/}*.*'
         ],
+        distName:'manifestor.js',
         // add any additional js/less/html files to build here:
-        jsToBuild: ['scripts/main.js'],
-        lessToBuild: ['styles/main.less'],
-        htmlToBuild: ['index.html']
+        jsToBuild: ['example/src/scripts/manifestor.js'],
+        lessToBuild: ['example/src/styles/main.less'],
+        htmlToBuild: ['example/src/index.html']
     };
 
     // helper functions for munging paths
     var prependPath = function(fileName, path) { return [path, '/', fileName].join(''); };
-    var prependSrc =       function(fileName) { return prependPath(fileName, config.src); };
-    var prependBuildDev =  function(fileName) { return prependPath(fileName, config.buildDev); };
-    var prependBuildDist = function(fileName) { return prependPath(fileName, config.buildDist); };
-    var builtExtension = function(fileName) {  return fileName.replace(/\.less$/, '.css').replace(/\.jsx$/, '.js') };
+    var prependSrc = function(fileName) { return prependPath(fileName, config.src); };
+    var prependExample =  function(fileName) { return prependPath(fileName, config.example); };
+    var builtExtension = function(fileName) {  return fileName.replace(/\.less$/, '.css').replace(/\.jsx$/, '.js'); };
 
     // some tasks expect object format {'[built file path]': '[source file path]'}
     var makeBuildSrcPathObj = function(fileNames, buildDir) {
@@ -51,29 +51,29 @@ module.exports = function(grunt) {
 
         // clean out old files from build folders
         clean: {
-            dev: {
+            example: {
                 files: [{
                     dot: true,
-                    src: ['<%= config.buildDev %>/*', '!<%= config.buildDev %>/.git*']
+                    src: ['<%= config.example %>/manifestor.js']
                 }]
             },
             dist: {
                 files: [{
                     dot: true,
-                    src: ['<%= config.buildDist %>/*', '!<%= config.buildDist %>/.git*']
+                    src: ['<%= config.dist %>/*', '!<%= config.dist %>/.git*']
                 }]
             }
         },
 
-        // copy static asset files from src/ to build/[dev or dist]
+        // copy static asset files from src/ to build/[Example or dist]
         copy: {
-            dev: {
+            example: {
                 files: [
                     {
                         expand: true,
                         dot: true,
                         cwd: config.src,
-                        dest: config.buildDev,
+                        dest: config.example,
                         src: config.filesToCopy
                     }
                 ]
@@ -93,11 +93,11 @@ module.exports = function(grunt) {
 
         // bundle JS with browserify
         browserify: {
-            dev: {
+            example: {
                 options: {
                     bundleOptions: { debug: true }
                 },
-                files: makeBuildSrcPathObj(config.jsToBuild, config.buildDev)
+                files: makeBuildSrcPathObj(config.jsToBuild, config.example)
             },
             dist: {
                 options: {
@@ -108,8 +108,8 @@ module.exports = function(grunt) {
 
         // compile LESS to CSS
         less: {
-            dev: {
-                files: makeBuildSrcPathObj(config.lessToBuild, config.buildDev)
+            example: {
+                files: makeBuildSrcPathObj(config.lessToBuild, config.buildExample)
             },
             dist: {
                 options: {
@@ -121,13 +121,13 @@ module.exports = function(grunt) {
 
         // replace placeholder tags in index.html to point to built js/css
         htmlbuild: {
-            dev: {
-                src: config.htmlToBuild.map(prependBuildDev),
-                dest: '<%= config.buildDev %>/',
+            example: {
+                src: config.htmlToBuild.map(prependBuildExample),
+                dest: '<%= config.buildExample %>/',
                 options: {
                     beautify: true,
-                    scripts: { js: config.jsToBuild.map(prependBuildDev).map(builtExtension) },
-                    styles: { css: config.lessToBuild.map(prependBuildDev).map(builtExtension) }
+                    scripts: { js: config.jsToBuild.map(prependBuildExample).map(builtExtension) },
+                    styles: { css: config.lessToBuild.map(prependBuildExample).map(builtExtension) }
                 }
             },
             dist: {
@@ -147,12 +147,12 @@ module.exports = function(grunt) {
             }
         },
 
-        // web server for serving files from build/[dev or dist]
+        // web server for serving files from build/[Example or dist]
         connect: {
-            dev: {
+            example: {
                 options: {
                     port: '4000',
-                    base: config.buildDev
+                    base: config.buildExample
                 }
             },
             dist: {
@@ -163,44 +163,44 @@ module.exports = function(grunt) {
             }
         },
 
-        // watch files for changes and run appropriate tasks to rebuild build/dev
+        // watch files for changes and run appropriate tasks to rebuild build/Example
         watch: {
             grunt: {
                 files: 'Gruntfile.js'
             },
             less: {
                 files: '<%= config.src %>/styles/**/*.*',
-                tasks: ['less:dev']
+                tasks: ['less:example']
             },
             browserify: {
                 files: '<%= config.src %>/scripts/**/*.*',
-                tasks: ['browserify:dev']
+                tasks: ['browserify:example']
             },
             copy: {
                 files: [
                     '<%= config.src %>/{,*/}*.{gif,jpeg,jpg,png,webp,gif,ico}',
                     '<%= config.src %>/fonts/{,*/}*.*'
                 ],
-                tasks: ['copy:dev']
+                tasks: ['copy:example']
             },
             html: {
                 files: '<%= config.src %>/**/*.html',
-                tasks: ['buildDev']
+                tasks: ['buildExample']
             }
         }
     });
 
-    // Dev tasks
-    grunt.registerTask('buildDev', [
-        'clean:dev',      // clean old files out of build/dev
-        'copy:dev',       // copy static asset files from app/ to build/dev
-        'browserify:dev', // bundle JS with browserify
-        'less:dev',       // compile LESS to CSS
-        'htmlbuild:dev'   // replace tags in index.html to point to built js/css
+    // Example tasks
+    grunt.registerTask('buildExample', [
+        'clean:example',      // clean old files out of build/Example
+        'copy:example',       // copy static asset files from app/ to build/Example
+        'browserify:example', // bundle JS with browserify
+        'less:example',       // compile LESS to CSS
+        'htmlbuild:example'   // replace tags in index.html to point to built js/css
     ]);
-    grunt.registerTask('serveDev', [
-        'buildDev',
-        'connect:dev',     // web server for serving files from build/dev
+    grunt.registerTask('serveExample', [
+        'buildExample',    // steps to run before refresh
+        'connect:example', // web server for serving files from build/Example
         'watch'            // watch src files for changes and rebuild when necessary
     ]);
 
@@ -215,12 +215,12 @@ module.exports = function(grunt) {
     ]);
     grunt.registerTask('serveDist', [
         'buildDist',
-        'connect:dev',     // web server for serving files from build/dev
+        'connect:example',     // web server for serving files from build/Example
         'watch'            // watch src files for changes and rebuild when necessary
     ]);
 
     // Task aliases
     grunt.registerTask('build', ['buildDist']);
-    grunt.registerTask('serve', ['serveDev']);
-    grunt.registerTask('debug', ['serveDev']);
+    grunt.registerTask('serve', ['serveExample']);
+    grunt.registerTask('debug', ['serveExample']);
 };
