@@ -10,6 +10,7 @@ module.exports = function(grunt) {
         srcDir: 'src',
         distDir: 'dist',
         testDir: 'test',
+        exampleDir: 'example',
         exampleScriptDir: 'example/scripts/',
         filesToCopy: [
             // for performance we only match one level down: 'test/spec/{,*/}*.js'
@@ -20,9 +21,10 @@ module.exports = function(grunt) {
         ],
         distName:'manifestor.js',
         // add any additional js/less/html files to build here:
-        jsToBuild: ['example/src/scripts/manifestor.js'],
-        lessToBuild: ['example/src/styles/main.less'],
-        htmlToBuild: ['example/src/index.html']
+        jsToBuild: ['src/main.js'],
+        lessToBuild: ['example/styles/main.less'],
+        exampleStylesDir: 'example/styles',
+        htmlToBuild: ['example/index.html']
     };
 
     // helper functions for munging paths
@@ -51,41 +53,30 @@ module.exports = function(grunt) {
 
         // clean out old files from build folders
         clean: {
-            example: {
-                files: [{
-                    dot: true,
-                    src: ['<%= config.example %>/manifestor.js']
-                }]
-            },
             dist: {
                 files: [{
                     dot: true,
-                    src: ['<%= config.dist %>/*', '!<%= config.dist %>/.git*']
+                    src: ['<%= config.distDir %>/*', '!<%= config.distDir %>/.git*']
                 }]
-            }
+            },
+            example: {
+                files: [{
+                    dot: true,
+                    src: ['<%= config.exampleScriptDir %>/manifestor.js', '!<%= config.exampleScriptDir %>/.git*']
+                }]
+            },
         },
 
-        // copy static asset files from src/ to build/[Example or dist]
+        // copy static asset files from dist/ to example/scripts/ for demoing/dev work
         copy: {
             example: {
                 files: [
                     {
                         expand: true,
                         dot: true,
-                        cwd: config.src,
-                        dest: config.example,
-                        src: config.filesToCopy
-                    }
-                ]
-            },
-            dist: {
-                files: [
-                    {
-                        expand: true,
-                        dot: true,
-                        cwd: config.src,
-                        dest: config.buildDist,
-                        src: config.filesToCopy
+                        cwd: config.distDir,
+                        dest: config.exampleScriptDir,
+                        src: config.distName
                     }
                 ]
             }
@@ -93,72 +84,36 @@ module.exports = function(grunt) {
 
         // bundle JS with browserify
         browserify: {
-            example: {
-                options: {
-                    bundleOptions: { debug: true }
-                },
-                files: makeBuildSrcPathObj(config.jsToBuild, config.example)
-            },
             dist: {
                 options: {
                 },
-                files: makeBuildSrcPathObj(config.jsToBuild, config.buildDist)
+                files: makeBuildSrcPathObj(config.jsToBuild, config.distDir)
             }
         },
 
         // compile LESS to CSS
         less: {
             example: {
-                files: makeBuildSrcPathObj(config.lessToBuild, config.buildExample)
-            },
-            dist: {
                 options: {
                     cleancss: true
                 },
-                files: makeBuildSrcPathObj(config.lessToBuild, config.buildDist)
-            }
-        },
-
-        // replace placeholder tags in index.html to point to built js/css
-        htmlbuild: {
-            example: {
-                src: config.htmlToBuild.map(prependBuildExample),
-                dest: '<%= config.buildExample %>/',
-                options: {
-                    beautify: true,
-                    scripts: { js: config.jsToBuild.map(prependBuildExample).map(builtExtension) },
-                    styles: { css: config.lessToBuild.map(prependBuildExample).map(builtExtension) }
-                }
-            },
-            dist: {
-                src: config.htmlToBuild.map(prependBuildDist),
-                dest: '<%= config.buildDist %>/',
-                options: {
-                    scripts: { js: config.jsToBuild.map(prependBuildDist).map(builtExtension) },
-                    styles: { css: config.lessToBuild.map(prependBuildDist).map(builtExtension) }
-                }
+                files: makeBuildSrcPathObj(config.lessToBuild, config.exampleStylesDir)
             }
         },
 
         // run uglify on JS to minify it
         uglify: {
             dist: {
-                files: makeBuildBuildPathObj(config.jsToBuild, config.buildDist)
+                files: makeBuildBuildPathObj(['manifestor.js'], config.distDir)
             }
         },
 
-        // web server for serving files from build/[Example or dist]
+        // web server for serving files from example
         connect: {
             example: {
                 options: {
                     port: '4000',
-                    base: config.buildExample
-                }
-            },
-            dist: {
-                options: {
-                    port: '4000',
-                    base: config.buildDist
+                    base: config.exampleDir
                 }
             }
         },
@@ -169,12 +124,12 @@ module.exports = function(grunt) {
                 files: 'Gruntfile.js'
             },
             less: {
-                files: '<%= config.src %>/styles/**/*.*',
+                files: '<%= config.exampleDir %>/styles/**/*.*',
                 tasks: ['less:example']
             },
             browserify: {
                 files: '<%= config.src %>/scripts/**/*.*',
-                tasks: ['browserify:example']
+                tasks: ['browserify:dist']
             },
             copy: {
                 files: [
@@ -192,12 +147,13 @@ module.exports = function(grunt) {
 
     // Example tasks
     grunt.registerTask('buildExample', [
+        'clean:dist',      // clean old files out of build/Example
         'clean:example',      // clean old files out of build/Example
+        'browserify:dist', // bundle JS with browserify
         'copy:example',       // copy static asset files from app/ to build/Example
-        'browserify:example', // bundle JS with browserify
         'less:example',       // compile LESS to CSS
-        'htmlbuild:example'   // replace tags in index.html to point to built js/css
     ]);
+
     grunt.registerTask('serveExample', [
         'buildExample',    // steps to run before refresh
         'connect:example', // web server for serving files from build/Example
@@ -207,16 +163,10 @@ module.exports = function(grunt) {
     // Distribution tasks
     grunt.registerTask('buildDist', [
         'clean:dist',      // clean old files out of build/dist
-        'copy:dist',       // copy static asset files from app/ to build/dist
+        'copy:example',       // copy static asset files from app/ to build/dist
         'browserify:dist', // bundle JS with browserify
-        'less:dist',       // compile LESS to CSS
-        'htmlbuild:dist',  // replace tags in index.html to point to built js/css
+        'less:example',       // compile LESS to CSS
         'uglify:dist',     // minify JS files
-    ]);
-    grunt.registerTask('serveDist', [
-        'buildDist',
-        'connect:example',     // web server for serving files from build/Example
-        'watch'            // watch src files for changes and rebuild when necessary
     ]);
 
     // Task aliases
