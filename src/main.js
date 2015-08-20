@@ -91,29 +91,18 @@ var manifestor = function(options) {
         var viewingDirection = userState.viewingDirection,
             viewingMode = userState.viewingMode,
             perspective = userState.perspective,
-            selectedCanvas = userState.selectedCanvas;
-
-
-
-        switch (viewingDirection) {
-        case 'left-to-right':
-
-            break;
-        case 'right-to-left':
-            break;
-        case 'top-to-bottom':
-            break;
-        default: // the viewingDirection is bottom to top.
-            break;
-        }
+            selectedCanvas = userState.selectedCanvas,
+            layoutOptions = {
+                canvases: canvases
+            };
 
         var layoutData = manifestLayout({
             canvases: canvases,
             width: container.width(),
             height: container.height(),
             viewingDirection: userState.viewingd,
-            frameHeight: 100,
-            frameWidth: 100,
+            canvasHeight: 100,
+            canvasWidth: 100,
             selectedCanvas: userState.selectedCanvas,
             vantagePadding: {
                 top: 10,
@@ -124,7 +113,7 @@ var manifestor = function(options) {
             containerPadding: {
                 top: 50,
                 bottom: 130,
-                left: 10,
+                left: 200,
                 right: 10
             }
         });
@@ -171,10 +160,10 @@ var manifestor = function(options) {
                 .tween('translateTilesources', translateTilesources)
                 .each(updateImages);
 
-        vantageUpdated.select('.frame')
+        vantageUpdated.select('.canvas')
             .attr('class', function(d) {
-                var selected = d.frame.selected;
-                return selected ? 'frame selected' : 'frame';
+                var selected = d.canvas.selected;
+                return selected ? 'canvas selected' : 'canvas';
             });
 
         var vantageEnter = vantage
@@ -188,30 +177,30 @@ var manifestor = function(options) {
         vantageEnter
             .append('div')
             .attr('class', function(d) {
-                var selected = d.frame.selected;
-                return selected ? 'frame selected' : 'frame';
+                var selected = d.canvas.selected;
+                return selected ? 'canvas selected' : 'canvas';
             })
             .attr('data-id', function(d) {
-                return d.frame.id;
+                return d.canvas.id;
             })
-            .style('width', function(d) { return d.frame.width + 'px'; })
-            .style('height', function(d) { return d.frame.height + 'px'; })
-            .style('transform', function(d) { return 'translateX(' + d.frame.localX + 'px) translateY(' + d.frame.localY + 'px)'; })
+            .style('width', function(d) { return d.canvas.width + 'px'; })
+            .style('height', function(d) { return d.canvas.height + 'px'; })
+            .style('transform', function(d) { return 'translateX(' + d.canvas.localX + 'px) translateY(' + d.canvas.localY + 'px)'; })
             .each(enterImages);
         // .append('img')
-        // .attr('src', function(d) { return d.frame.iiifService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg';});
+        // .attr('src', function(d) { return d.canvas.iiifService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
 
         vantageEnter
-            .append('h4').text(function(d) { return d.frame.label; });
+            .append('h4').text(function(d) { return d.canvas.label; });
     };
 
     function translateTilesources(d, i) {
-        var canvasId = d.frame.id,
+        var canvasId = d.canvas.id,
             dummyObj = canvasImageStates()[canvasId].dummyObj;
 
         var currentBounds = dummyObj.getBounds(true),
-            xi = d3.interpolate(currentBounds.x, d.frame.x),
-            yi = d3.interpolate(currentBounds.y, d.frame.y);
+            xi = d3.interpolate(currentBounds.x, d.canvas.x),
+            yi = d3.interpolate(currentBounds.y, d.canvas.y);
 
         return function(t) {
             dummyObj.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
@@ -221,19 +210,19 @@ var manifestor = function(options) {
     }
 
     function updateImages(d) {
-        var frameData = d.frame,
-            canvasImageState = canvasImageStates()[frameData.id];
+        var canvasData = d.canvas,
+            canvasImageState = canvasImageStates()[canvasData.id];
 
-        if (canvasState().focus === 'detail' && canvasState().selectedCanvas === frameData.id) {
-            substitute(frameData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
+        if (canvasState().focus === 'detail' && canvasState().selectedCanvas === canvasData.id) {
+            substitute(canvasData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
         }
     }
 
-    function substitute(frameData, dummyObj, tileSourceUrl) {
+    function substitute(canvasData, dummyObj, tileSourceUrl) {
         viewer.addTiledImage({
-            x: frameData.x,
-            y: frameData.y,
-            width: frameData.width,
+            x: canvasData.x,
+            y: canvasData.y,
+            width: canvasData.width,
             tileSource: tileSourceUrl,
             index: 0, // Add the new image below the stand-in.
             success: function(event) {
@@ -254,32 +243,32 @@ var manifestor = function(options) {
 
     function enterImages(d) {
 
-        var frameData = d.frame,
-            canvasImageState = canvasImageStates()[frameData.id];
+        var canvasData = d.canvas,
+            canvasImageState = canvasImageStates()[canvasData.id];
 
         var dummy = {
             type: 'legacy-image-pyramid',
             levels: [
                 {
-                    url: frameData.thumbService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg',
-                    width: frameData.width,
-                    height: frameData.height
+                    url: canvasData.thumbService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg',
+                    width: canvasData.width,
+                    height: canvasData.height
                 }
             ]
         };
 
         viewer.addTiledImage({
             tileSource: dummy,
-            x: frameData.x,
-            y: frameData.y,
-            width: frameData.width,
+            x: canvasData.x,
+            y: canvasData.y,
+            width: canvasData.width,
             success: function(event) {
-                addDummyObj(frameData.id, event.item);
+                addDummyObj(canvasData.id, event.item);
             }
         });
 
-        if (canvasState().focus === 'detail' && canvasState().selectedCanvas === frameData.id) {
-            substitute(frameData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
+        if (canvasState().focus === 'detail' && canvasState().selectedCanvas === canvasData.id) {
+            substitute(canvasData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
         }
     }
 
@@ -311,15 +300,15 @@ var manifestor = function(options) {
 
     function renderOSD(layoutData) {
         var viewBounds =  layoutData.filter(function(vantage){
-            return vantage.frame.selected;
+            return vantage.canvas.selected;
         });
 
         if (viewBounds.length !== 0 && canvasState().focus === 'detail') {
             viewBounds = new OpenSeadragon.Rect(
-                viewBounds[0].frame.x,
-                viewBounds[0].frame.y,
-                viewBounds[0].frame.width,
-                viewBounds[0].frame.height
+                viewBounds[0].canvas.x,
+                viewBounds[0].canvas.y,
+                viewBounds[0].canvas.width,
+                viewBounds[0].canvas.height
             );
         } else {
             viewBounds = new OpenSeadragon.Rect(0,0, container.width(), container.height());
@@ -394,7 +383,7 @@ var manifestor = function(options) {
         render();
     }
 
-    container.on('click', '.frame', function(event) {
+    container.on('click', '.canvas', function(event) {
         selectCanvas($(this).data('id'));
     });
 
