@@ -66,8 +66,9 @@
         <script>window.jQuery || document.write('<script src="../../bower_components/jquery/dist/jquery.min.js"><\/script>')</script>
         <script type="text/javascript" src="scripts/manifestor.js"></script>
         <script>
-         $.get('http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', function(manifest) {
-
+         $.get('http://manifests.ydc2.yale.edu/manifest/Osbornfa1v2', function(manifest) {
+         /* http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json */
+             console.log(manifest);
              viewer = manifestor({
                  manifest: manifest,
                  container: $('#example-container')

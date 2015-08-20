@@ -5,19 +5,36 @@ var d3 = require('d3');
 var osd = require('./lib/openseadragon');
 var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
+var iiif = require('./iiifUtils');
 
 var manifestor = function(options) {
     var manifest = options.manifest,
+        sequence = options.sequence,
+        canvases = options.sequence ? options.sequence.canvases : manifest.sequences[0].canvases,
         container = options.container,
-        viewingDirection = options.viewingDirection, // || getViewingDirection(manifest),
-        layoutMode = options.layoutMode,
-        perspective = options.perspective || 'overview',
+        viewingDirection = options.viewingDirection ? options.viewingDirection : getViewingDirection(),
+        viewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
+        perspective = options.perspective ? options.perspective : 'overview',
         selectedCanvas = options.selectedCanvas,
         viewer,
         _canvasState,
         _canvasImageStates;
 
-    buildCanvasStates(manifest.sequences[0].canvases);
+    function getViewingDirection() {
+        if (sequence && sequence.viewingDirection) {
+            return sequence.viewingDirection;
+        }
+        return manifest.viewingDirection ? manifest.viewingDirection : 'left-to-right';
+    };
+
+    function getViewingHint() {
+        if (sequence && sequence.viewingHint) {
+            return sequence.viewingHint;
+        }
+        return manifest.viewingHint ? manifest.viewingHint : 'individuals';
+    };
+
+    buildCanvasStates(canvases);
 
     var overlays = $('<div class="overlaysContainer">').css(
         {'width': '100%',
@@ -44,8 +61,10 @@ var manifestor = function(options) {
     });
 
     function render() {
-        renderManifest(manifest);
-        renderOSD(manifest, 'left-to-right', viewer);
+        var layoutData = getData();
+
+        renderManifest(layoutData);
+        renderOSD(layoutData);
     }
 
     function canvasState(state) {
@@ -69,10 +88,27 @@ var manifestor = function(options) {
         // layout algorithm, viewing hints, animations (such as
         // initial layout without animation) are all
         // functions of the current user state.
+        var viewingDirection = userState.viewingDirection,
+            viewingMode = userState.viewingMode,
+            perspective = userState.perspective,
+            selectedCanvas = userState.selectedCanvas;
 
+
+
+        switch (viewingDirection) {
+        case 'left-to-right':
+
+            break;
+        case 'right-to-left':
+            break;
+        case 'top-to-bottom':
+            break;
+        default: // the viewingDirection is bottom to top.
+            break;
+        }
 
         var layoutData = manifestLayout({
-            canvases: manifest.sequences[0].canvases,
+            canvases: canvases,
             width: container.width(),
             height: container.height(),
             viewingDirection: userState.viewingd,
@@ -111,8 +147,7 @@ var manifestor = function(options) {
         return _canvasImageStates;
     }
 
-    function renderManifest() {
-        var layoutData = getData();
+    function renderManifest(layoutData) {
         // To understand this layout, read: http://bost.ocks.org/mike/nest/
         var interactionOverlay = d3.select(overlays[0])
                 .attr('class', function(d) {
@@ -274,11 +309,10 @@ var manifestor = function(options) {
     function removeImages(d) {
     }
 
-    function renderOSD() {
-        var layoutData = getData(),
-            viewBounds =  layoutData.filter(function(vantage){
-                return vantage.frame.selected;
-            });
+    function renderOSD(layoutData) {
+        var viewBounds =  layoutData.filter(function(vantage){
+            return vantage.frame.selected;
+        });
 
         if (viewBounds.length !== 0 && canvasState().focus === 'detail') {
             viewBounds = new OpenSeadragon.Rect(
@@ -297,9 +331,7 @@ var manifestor = function(options) {
     function initOSD() {
         viewer = OpenSeadragon({
             element: osdContainer[0],
-            autoResize:true,
-            showNavigationControl: false,
-            preserveViewport: true
+            showNavigationControl: false
         });
 
         viewer.addHandler('animation', function(event) {
@@ -349,6 +381,7 @@ var manifestor = function(options) {
         var canvasStates = {};
 
         canvases.forEach(function(canvas) {
+            console.log(canvas);
             canvasStates[canvas['@id']] = {
                 tileSourceUrl: canvas.images[0].resource.service['@id'] + '/info.json'
             };
@@ -366,7 +399,7 @@ var manifestor = function(options) {
     });
 
     return {
-//        selectMode: selectMode,
+        //        selectMode: selectMode,
         // selectPerspective: selectPerspective,
         // next: next,
         // previous: previous,

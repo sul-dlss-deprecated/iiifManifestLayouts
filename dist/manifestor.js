@@ -18436,6 +18436,82 @@ var canvasLayout = function(canvas) {
 module.exports = canvasLayout;
 
 },{}],4:[function(require,module,exports){
+'use strict';
+
+var iiifUtils = {
+
+    getImageUrl: function(image) {
+
+        if (!image.images[0].resource.service) {
+            id = image.images[0].resource['default'].service['@id'];
+            id = id.replace(/\/$/, "");
+            return id;
+        }
+
+        var id = image.images[0].resource.service['@id'];
+        id = id.replace(/\/$/, "");
+
+        return id;
+    },
+
+    getVersionFromContext: function(context) {
+        if (context == "http://iiif.io/api/image/2/context.json") {
+            return "2.0";
+        } else {
+            return "1.1";
+        }
+    },
+
+    makeUriWithWidth: function(uri, width, version) {
+        uri = uri.replace(/\/$/, '');
+        if (version[0] == '1') {
+            return uri + '/full/' + width + ',/0/native.jpg';
+        } else {
+            return uri + '/full/' + width + ',/0/default.jpg';
+        }
+    },
+
+    getThumbnailForCanvas : function(canvas, dimensions) {
+      var version = "1.1",
+      service,
+      thumbnailUrl;
+
+      // Ensure width is an integer...
+        dimensions.forEach(function(dimension) {
+            parseInt(dimension, 10);
+        });
+
+      // Respecting the Model...
+      if (canvas.hasOwnProperty('thumbnail')) {
+        // use the thumbnail image, prefer via a service
+        if (typeof(canvas.thumbnail) == 'string') {
+          thumbnailUrl = canvas.thumbnail;
+        } else if (canvas.thumbnail.hasOwnProperty('service')) {
+          // Get the IIIF Image API via the @context
+          service = canvas.thumbnail.service;
+          if (service.hasOwnProperty('@context')) {
+            version = this.getVersionFromContext(service['@context']);
+          }
+            thumbnailUrl = this.makeUriWithWidth(service['@id'], width, version);
+        } else {
+          thumbnailUrl = canvas.thumbnail['@id'];
+        }
+      } else {
+        // No thumbnail, use main image
+        var resource = canvas.images[0].resource;
+        service = resource['default'] ? resource['default'].service : resource.service;
+        if (service.hasOwnProperty('@context')) {
+            version = this.iiif.getVersionFromContext(service['@context']);
+        }
+          thumbnailUrl = this.iiif.makeUriWithWidth(service['@id'], width, version);
+      }
+      return thumbnailUrl;
+    }
+};
+
+module.exports = iiifUtils;
+
+},{}],5:[function(require,module,exports){
 //! OpenSeadragon 2.0.0
 //! Built on 2015-05-26
 //! Git commit: v2.0.0-0-472ab42
@@ -37232,7 +37308,7 @@ $.extend( $.World.prototype, $.EventSource.prototype, /** @lends OpenSeadragon.W
 
 }( OpenSeadragon ));
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 'use strict';
 
 var $ = require('jquery');
@@ -37240,19 +37316,36 @@ var d3 = require('d3');
 var osd = require('./lib/openseadragon');
 var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
+var iiif = require('./iiifUtils');
 
 var manifestor = function(options) {
     var manifest = options.manifest,
+        sequence = options.sequence,
+        canvases = options.sequence ? options.sequence.canvases : manifest.sequences[0].canvases,
         container = options.container,
-        viewingDirection = options.viewingDirection, // || getViewingDirection(manifest),
-        layoutMode = options.layoutMode,
-        perspective = options.perspective || 'overview',
+        viewingDirection = options.viewingDirection ? options.viewingDirection : getViewingDirection(),
+        viewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
+        perspective = options.perspective ? options.perspective : 'overview',
         selectedCanvas = options.selectedCanvas,
         viewer,
         _canvasState,
         _canvasImageStates;
 
-    buildCanvasStates(manifest.sequences[0].canvases);
+    function getViewingDirection() {
+        if (sequence && sequence.viewingDirection) {
+            return sequence.viewingDirection;
+        }
+        return manifest.viewingDirection ? manifest.viewingDirection : 'left-to-right';
+    };
+
+    function getViewingHint() {
+        if (sequence && sequence.viewingHint) {
+            return sequence.viewingHint;
+        }
+        return manifest.viewingHint ? manifest.viewingHint : 'individuals';
+    };
+
+    buildCanvasStates(canvases);
 
     var overlays = $('<div class="overlaysContainer">').css(
         {'width': '100%',
@@ -37279,8 +37372,10 @@ var manifestor = function(options) {
     });
 
     function render() {
-        renderManifest(manifest);
-        renderOSD(manifest, 'left-to-right', viewer);
+        var layoutData = getData();
+
+        renderManifest(layoutData);
+        renderOSD(layoutData);
     }
 
     function canvasState(state) {
@@ -37304,10 +37399,27 @@ var manifestor = function(options) {
         // layout algorithm, viewing hints, animations (such as
         // initial layout without animation) are all
         // functions of the current user state.
+        var viewingDirection = userState.viewingDirection,
+            viewingMode = userState.viewingMode,
+            perspective = userState.perspective,
+            selectedCanvas = userState.selectedCanvas;
 
+
+
+        switch (viewingDirection) {
+        case 'left-to-right':
+
+            break;
+        case 'right-to-left':
+            break;
+        case 'top-to-bottom':
+            break;
+        default: // the viewingDirection is bottom to top.
+            break;
+        }
 
         var layoutData = manifestLayout({
-            canvases: manifest.sequences[0].canvases,
+            canvases: canvases,
             width: container.width(),
             height: container.height(),
             viewingDirection: userState.viewingd,
@@ -37346,8 +37458,7 @@ var manifestor = function(options) {
         return _canvasImageStates;
     }
 
-    function renderManifest() {
-        var layoutData = getData();
+    function renderManifest(layoutData) {
         // To understand this layout, read: http://bost.ocks.org/mike/nest/
         var interactionOverlay = d3.select(overlays[0])
                 .attr('class', function(d) {
@@ -37509,11 +37620,10 @@ var manifestor = function(options) {
     function removeImages(d) {
     }
 
-    function renderOSD() {
-        var layoutData = getData(),
-            viewBounds =  layoutData.filter(function(vantage){
-                return vantage.frame.selected;
-            });
+    function renderOSD(layoutData) {
+        var viewBounds =  layoutData.filter(function(vantage){
+            return vantage.frame.selected;
+        });
 
         if (viewBounds.length !== 0 && canvasState().focus === 'detail') {
             viewBounds = new OpenSeadragon.Rect(
@@ -37532,9 +37642,7 @@ var manifestor = function(options) {
     function initOSD() {
         viewer = OpenSeadragon({
             element: osdContainer[0],
-            autoResize:true,
-            showNavigationControl: false,
-            preserveViewport: true
+            showNavigationControl: false
         });
 
         viewer.addHandler('animation', function(event) {
@@ -37584,6 +37692,7 @@ var manifestor = function(options) {
         var canvasStates = {};
 
         canvases.forEach(function(canvas) {
+            console.log(canvas);
             canvasStates[canvas['@id']] = {
                 tileSourceUrl: canvas.images[0].resource.service['@id'] + '/info.json'
             };
@@ -37601,7 +37710,7 @@ var manifestor = function(options) {
     });
 
     return {
-//        selectMode: selectMode,
+        //        selectMode: selectMode,
         // selectPerspective: selectPerspective,
         // next: next,
         // previous: previous,
@@ -37614,7 +37723,7 @@ var manifestor = function(options) {
 };
 module.exports = manifestor;
 
-},{"./canvasLayout":3,"./lib/openseadragon":4,"./manifestLayout":6,"d3":1,"jquery":2}],6:[function(require,module,exports){
+},{"./canvasLayout":3,"./iiifUtils":4,"./lib/openseadragon":5,"./manifestLayout":7,"d3":1,"jquery":2}],7:[function(require,module,exports){
 'use strict';
 
 var manifestLayout = function(options) {
@@ -38015,5 +38124,5 @@ var manifestLayout = function(options) {
 
 module.exports = manifestLayout;
 
-},{}]},{},[5])(5)
+},{}]},{},[6])(6)
 });
