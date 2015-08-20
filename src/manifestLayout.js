@@ -26,6 +26,7 @@ var manifestLayout = function(options) {
         containerHeight = options.height,
         containerWidth = options.width,
         canvases = options.canvases,
+        selectedCanvas = options.selectedCanvas || getFirst(),
         framingStrategy = options.framingStrategy || 'contain',
         viewingDirection = options.viewingDirection || 'left-to-right',
         viewingHint = options.viewingHint || null,
@@ -54,15 +55,21 @@ var manifestLayout = function(options) {
             grid: gridAlign
         };
 
+    function getFirst() {
+        return canvases[0]['@id'];
+    }
+
     function pruneCanvas(canvas) {
-        return {
+        var prunedCanvas = {
             id: canvas['@id'],
             label: canvas.label,
             height: canvas.height,
             width: canvas.width,
             aspectRatio: canvas.width/canvas.height,
-            iiifService: canvas.images[0].resource.service['@id']
+            thumbService: canvas.images[0].resource.service['@id'],
+            selected: canvas['@id'] === selectedCanvas ? true : false
         };
+        return prunedCanvas;
     }
 
     // The following framingStrategies specify how a canvas fits inside its "frame".
