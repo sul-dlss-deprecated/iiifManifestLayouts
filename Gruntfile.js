@@ -35,6 +35,8 @@ module.exports = function(grunt) {
 
     // some tasks expect object format {'[built file path]': '[source file path]'}
     var makeBuildSrcPathObj = function(fileNames, buildDir) {
+        console.log(fileNames);
+        console.log(buildDir);
         return _.object(fileNames.map(function(fileName) {
             return [prependPath(builtExtension(fileName), buildDir), prependSrc(fileName)];
         }));
@@ -72,9 +74,8 @@ module.exports = function(grunt) {
             example: {
                 files: [
                     {
+                        cwd: 'dist/',
                         expand: true,
-                        dot: true,
-                        cwd: config.distDir,
                         dest: config.exampleScriptDir,
                         src: config.distName
                     }
@@ -84,10 +85,16 @@ module.exports = function(grunt) {
 
         // bundle JS with browserify
         browserify: {
-            dist: {
-                options: {
+            options: {
+                browserifyOptions: {
+                    standAlone: 'manifestor'
                 },
-                files: makeBuildSrcPathObj(config.jsToBuild, config.distDir)
+                standalone: 'manifestor'
+            },
+            dist: {
+                files: {
+                    'dist/manifestor.js': ['src/main.js']
+                }
             }
         },
 
@@ -97,14 +104,18 @@ module.exports = function(grunt) {
                 options: {
                     cleancss: true
                 },
-                files: makeBuildSrcPathObj(config.lessToBuild, config.exampleStylesDir)
+                files: {
+                    'example/styles/main.css': [config.lessToBuild]
+                }
             }
         },
 
         // run uglify on JS to minify it
         uglify: {
             dist: {
-                files: makeBuildBuildPathObj(['manifestor.js'], config.distDir)
+                files: {
+                    'dist/manifestor.min.js': 'dist/manifestor.js'
+                }
             }
         },
 
@@ -163,8 +174,9 @@ module.exports = function(grunt) {
     // Distribution tasks
     grunt.registerTask('buildDist', [
         'clean:dist',      // clean old files out of build/dist
-        'copy:example',       // copy static asset files from app/ to build/dist
+        'clean:example',      // clean old files out of build/dist
         'browserify:dist', // bundle JS with browserify
+        'copy:example',       // copy static asset files from app/ to build/dist
         'less:example',       // compile LESS to CSS
         'uglify:dist',     // minify JS files
     ]);
