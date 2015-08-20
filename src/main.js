@@ -13,6 +13,7 @@ var manifestor = function(options) {
         layoutMode = options.layoutMode,
         perspective = options.perspective || 'overview',
         selectedCanvas = options.selectedCanvas,
+        viewer,
         _canvasState,
         _canvasImageStates;
 
@@ -180,6 +181,7 @@ var manifestor = function(options) {
         return function(t) {
             dummyObj.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
             viewer.forceRedraw();
+            viewer.drawNow();
         };
     }
 
@@ -293,7 +295,7 @@ var manifestor = function(options) {
     };
 
     function initOSD() {
-        window.viewer = OpenSeadragon({
+        viewer = OpenSeadragon({
             element: osdContainer[0],
             autoResize:true,
             showNavigationControl: false,
@@ -320,22 +322,7 @@ var manifestor = function(options) {
             .style('-webkit-transform', transform);
     }
 
-    var actions = [
-        'pan',
-        'zoom',
-        'changePage',
-        'next',
-        'previous',
-        'scrollThumbs',
-        'hoverCanvas',
-        'selectMode',
-        'windowResize',
-        'elementResize',
-        'requestTilesource',
-        'tileSourceFinishedLoading'
-    ];
-
-    function selectItem(item) {
+    function selectCanvas(item) {
         var state = canvasState();
         state.selectedCanvas = item;
         state.focus = 'detail';
@@ -370,13 +357,24 @@ var manifestor = function(options) {
         canvasImageStates(canvasStates);
     }
 
+    function resize() {
+        render();
+    }
+
+    container.on('click', '.frame', function(event) {
+        selectCanvas($(this).data('id'));
+    });
+
     return {
-        selectMode: '',
-        next: '',
-        previous: '',
-        scrollThumbs: '',
-        resize: '',
-        selectedCanvas: ''
+//        selectMode: selectMode,
+        // selectPerspective: selectPerspective,
+        // next: next,
+        // previous: previous,
+        // scrollThumbs: scrollThumbs,
+        resize: resize,
+        selectCanvas: selectCanvas
+        // hoverCanvas: hoverCanvas
     };
+
 };
 module.exports = manifestor;

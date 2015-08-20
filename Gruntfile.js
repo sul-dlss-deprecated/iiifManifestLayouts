@@ -85,16 +85,14 @@ module.exports = function(grunt) {
 
         // bundle JS with browserify
         browserify: {
-            options: {
-                browserifyOptions: {
-                    standAlone: 'manifestor'
-                },
-                standalone: 'manifestor'
-            },
             dist: {
-                files: {
-                    'dist/manifestor.js': ['src/main.js']
-                }
+                options: {
+                    browserifyOptions: {
+                        standalone: 'manifestor'
+                    }
+                },
+                src: ['src/main.js'],
+                dest: 'dist/manifestor.js'
             }
         },
 
@@ -121,7 +119,7 @@ module.exports = function(grunt) {
 
         // web server for serving files from example
         connect: {
-            example: {
+            example : {
                 options: {
                     port: '4000',
                     base: config.exampleDir
@@ -132,7 +130,8 @@ module.exports = function(grunt) {
         // watch files for changes and run appropriate tasks to rebuild build/Example
         watch: {
             grunt: {
-                files: 'Gruntfile.js'
+                files: 'Gruntfile.js',
+                tasks: ['less:example', 'browserify:dist', 'copy:example']
             },
             less: {
                 files: '<%= config.exampleDir %>/styles/**/*.*',
@@ -143,15 +142,8 @@ module.exports = function(grunt) {
                 tasks: ['browserify:dist']
             },
             copy: {
-                files: [
-                    '<%= config.src %>/{,*/}*.{gif,jpeg,jpg,png,webp,gif,ico}',
-                    '<%= config.src %>/fonts/{,*/}*.*'
-                ],
+                files: '<%= config.distDir %>/*',
                 tasks: ['copy:example']
-            },
-            html: {
-                files: '<%= config.src %>/**/*.html',
-                tasks: ['buildExample']
             }
         }
     });

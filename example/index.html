@@ -68,24 +68,19 @@
         <script>
          $.get('http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', function(manifest) {
 
-             var viewer = manifestor({
+             viewer = manifestor({
                  manifest: manifest,
                  container: $('#example-container')
              });
          });
 
          $(window).on('resize', function() {
-             /*              renderManifest(manifest, $('readingDirection').val()); */
-             /*              renderOSD(manifest, 'left-to-right', viewer); */
+             viewer.resize();
          });
 
          $('#readingDirection').on('change', function() {
              /*              renderManifest(manifest, $(this).val()); */
              /*              renderOSD(manifest, 'left-to-right', viewer); */
-         });
-
-         $('#example-container').on('click', '.frame', function(event) {
-             /*              selectItem($(this).data('id')); */
          });
 
          $('#scale').on('input', function() {
