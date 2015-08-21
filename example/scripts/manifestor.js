@@ -37254,13 +37254,13 @@ var manifestor = function(options) {
 
     buildCanvasStates(manifest.sequences[0].canvases);
 
-    var overlays = $('<div class="overlaysContainer">').css(
-        {'width': '100%',
-         'height': '100%',
-         'position': 'absolute',
-         'top': 0,
-         'left': 0
-        });
+    var overlays = $('<div class="overlaysContainer">');// .css(
+        // {'width': '100%',
+        //  'height': '100%',
+        //  'position': 'absolute',
+        //  'top': 0,
+        //  'left': 0
+        // });
     var osdContainer = $('<div class="osd-container">').css(
         {'width': '100%',
          'height': '100%',
@@ -37268,14 +37268,30 @@ var manifestor = function(options) {
          'top': 0,
          'left': 0
         });
+    var scrollContainer = $('<div class="scroll-container">').css(
+        {'width': '100%',
+         'height': '100%',
+         'position': 'absolute',
+         'top': 0,
+         'left': 0,
+         'overflow-x': 'hidden',
+         'overflow-y': 'scroll'
+        });
+
     container.append(osdContainer);
-    container.append(overlays);
+    container.append(scrollContainer);
+    scrollContainer.append(overlays);
 
     initOSD();
     canvasState({
         selectedCanvas: null, // @id of the canvas:
-        focus: 'overview', // can be 'overview' or 'detail'
+        perspective: 'overview', // can be 'overview' or 'detail'
         viewingMode: 'single' // manifest derived or user specified (iiif viewingHint)
+    });
+
+    d3.timer(function() {
+        viewer.drawNow();
+        viewer.forceRedraw();
     });
 
     function render() {
@@ -37351,7 +37367,7 @@ var manifestor = function(options) {
         // To understand this layout, read: http://bost.ocks.org/mike/nest/
         var interactionOverlay = d3.select(overlays[0])
                 .attr('class', function(d) {
-                    return 'overlaysContainer ' + canvasState().focus === 'detail' ? 'zoomed' : '';
+                    return 'overlaysContainer ' + canvasState().perspective === 'detail' ? 'zoomed' : '';
                 });
         var vantage = interactionOverlay.selectAll('.vantage')
                 .data(layoutData);
@@ -37415,8 +37431,6 @@ var manifestor = function(options) {
 
         return function(t) {
             dummyObj.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
-            viewer.forceRedraw();
-            viewer.drawNow();
         };
     }
 
@@ -37424,7 +37438,7 @@ var manifestor = function(options) {
         var frameData = d.frame,
             canvasImageState = canvasImageStates()[frameData.id];
 
-        if (canvasState().focus === 'detail' && canvasState().selectedCanvas === frameData.id) {
+        if (canvasState().perspective === 'detail' && canvasState().selectedCanvas === frameData.id) {
             substitute(frameData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
         }
     }
@@ -37478,7 +37492,7 @@ var manifestor = function(options) {
             }
         });
 
-        if (canvasState().focus === 'detail' && canvasState().selectedCanvas === frameData.id) {
+        if (canvasState().perspective === 'detail' && canvasState().selectedCanvas === frameData.id) {
             substitute(frameData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
         }
     }
@@ -37505,7 +37519,6 @@ var manifestor = function(options) {
         OpenSeadragon.requestAnimationFrame(frame);
     };
 
-
     function removeImages(d) {
     }
 
@@ -37515,7 +37528,7 @@ var manifestor = function(options) {
                 return vantage.frame.selected;
             });
 
-        if (viewBounds.length !== 0 && canvasState().focus === 'detail') {
+        if (viewBounds.length !== 0 && canvasState().perspective === 'detail') {
             viewBounds = new OpenSeadragon.Rect(
                 viewBounds[0].frame.x,
                 viewBounds[0].frame.y,
@@ -37538,7 +37551,9 @@ var manifestor = function(options) {
         });
 
         viewer.addHandler('animation', function(event) {
-            synchroniseZoom();
+            if (canvasState().perspective === 'detail') {
+                synchroniseZoom();
+            }
         });
     };
 
@@ -37557,10 +37572,17 @@ var manifestor = function(options) {
             .style('-webkit-transform', transform);
     }
 
+    function synchronisePan(panTop, width, height) {
+        console.log(panTop);
+        var x = width/2;
+        var y = panTop + height/2;
+        viewer.viewport.panTo(new OpenSeadragon.Point(x,y), true);
+    }
+
     function selectCanvas(item) {
         var state = canvasState();
         state.selectedCanvas = item;
-        state.focus = 'detail';
+        state.perspective = 'detail';
 
         canvasState(state);
     }
@@ -37598,6 +37620,11 @@ var manifestor = function(options) {
 
     container.on('click', '.frame', function(event) {
         selectCanvas($(this).data('id'));
+    });
+    scrollContainer.on('scroll', function(event) {
+        if (canvasState().perspective === 'overview') {
+            synchronisePan($(this).scrollTop(), $(this).width(), $(this).height());
+        }
     });
 
     return {

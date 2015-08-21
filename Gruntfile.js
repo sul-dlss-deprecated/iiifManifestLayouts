@@ -129,6 +129,10 @@ module.exports = function(grunt) {
 
         // watch files for changes and run appropriate tasks to rebuild build/Example
         watch: {
+            js: {
+                files: '<%= config.srcDir %>/**/*.*',
+                tasks: ['browserify:dist', 'copy:example']
+            },
             grunt: {
                 files: 'Gruntfile.js',
                 tasks: ['less:example', 'browserify:dist', 'copy:example']
