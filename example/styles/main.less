@@ -43,23 +43,25 @@ body {
         }
     }
 }
-.frame {
+.canvas {
     color:white;
     position: absolute;
     top:0;
     left:0;
     cursor: pointer;
-        border: 2px solid deepPink;
-    &:hover {
-        border: 1px solid white;
-        box-shadow: 0 0 12px white;
-    }
-    &.selected {
-        border: 2px solid deepskyblue;
-        box-shadow: 0 0 12px deepskyblue;
-    }
+    // box-sizing: border-box;
+    // border: 1px solid deepPink;
+    // box-shadow: 0 0 0 2px deepPink;
+    // &:hover {
+    //     border: 1px solid white;
+    //     box-shadow: 0 0 12px white;
+    // }
+    // &.selected {
+    //     border: 2px solid deepskyblue;
+    //     box-shadow: 0 0 12px deepskyblue;
+    // }
 }
-.vantage {
+.frame{
     position: absolute;
     display: block;
     box-sizing: border-box;
@@ -106,7 +108,7 @@ img {
     width:100%;
     height:100%;
 }
-.overlays {
+.overlaysContainer {
     position: absolute;
     top:0;
     left:0;

@@ -8,10 +8,12 @@ var canvasLayout = require('./canvasLayout');
 
 var manifestor = function(options) {
     var manifest = options.manifest,
+        sequence = options.sequence,
+        canvases = options.sequence ? options.sequence.canvases : manifest.sequences[0].canvases,
         container = options.container,
-        viewingDirection = options.viewingDirection, // || getViewingDirection(manifest),
-        layoutMode = options.layoutMode,
-        perspective = options.perspective || 'overview',
+        viewingDirection = options.viewingDirection ? options.viewingDirection : getViewingDirection(),
+        viewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
+        perspective = options.perspective ? options.perspective : 'overview',
         selectedCanvas = options.selectedCanvas,
         viewer,
         _canvasState,
@@ -20,12 +22,12 @@ var manifestor = function(options) {
     buildCanvasStates(manifest.sequences[0].canvases);
 
     var overlays = $('<div class="overlaysContainer">');// .css(
-        // {'width': '100%',
-        //  'height': '100%',
-        //  'position': 'absolute',
-        //  'top': 0,
-        //  'left': 0
-        // });
+    // {'width': '100%',
+    //  'height': '100%',
+    //  'position': 'absolute',
+    //  'top': 0,
+    //  'left': 0
+    // });
     var osdContainer = $('<div class="osd-container">').css(
         {'width': '100%',
          'height': '100%',
@@ -43,11 +45,15 @@ var manifestor = function(options) {
          'overflow-y': 'scroll'
         });
 
+    console.log(overlays);
+
     container.append(osdContainer);
     container.append(scrollContainer);
     scrollContainer.append(overlays);
 
+
     initOSD();
+    // set the initial state, which triggers the first rendering.
     canvasState({
         selectedCanvas: null, // @id of the canvas:
         perspective: 'overview', // can be 'overview' or 'detail'
@@ -55,11 +61,25 @@ var manifestor = function(options) {
     });
 
     d3.timer(function() {
-        viewer.drawNow();
         viewer.forceRedraw();
     });
 
+
+    function getViewingDirection() {
+        if (sequence && sequence.viewingDirection) {
+            return sequence.viewingDirection;
+        }
+        return manifest.viewingDirection ? manifest.viewingDirection : 'left-to-right';
+    };
+
+    function getViewingHint() {
+        if (sequence && sequence.viewingHint) {
+            return sequence.viewingHint;
+        }
+        return manifest.viewingHint ? manifest.viewingHint : 'individuals';
+    };
     function render() {
+        // if ()
         renderManifest(manifest);
         renderOSD(manifest, 'left-to-right', viewer);
     }
@@ -88,14 +108,14 @@ var manifestor = function(options) {
 
 
         var layoutData = manifestLayout({
-            canvases: manifest.sequences[0].canvases,
+            canvases: canvases,
             width: container.width(),
             height: container.height(),
             viewingDirection: userState.viewingd,
-            frameHeight: 100,
-            frameWidth: 100,
+            canvasHeight: 100,
+            canvasWidth: 100,
             selectedCanvas: userState.selectedCanvas,
-            vantagePadding: {
+            framePadding: {
                 top: 10,
                 bottom: 40,
                 left: 10,
@@ -106,8 +126,10 @@ var manifestor = function(options) {
                 bottom: 130,
                 left: 10,
                 right: 10
+            },
+            minimumImageGap: {
             }
-        });
+        }).overview();
 
         var homeConstraints = ''; // The constraint bounds to use.
         var eventBinding = ''; // The set of events that are valid on the canvas.
@@ -134,10 +156,10 @@ var manifestor = function(options) {
                 .attr('class', function(d) {
                     return 'overlaysContainer ' + canvasState().perspective === 'detail' ? 'zoomed' : '';
                 });
-        var vantage = interactionOverlay.selectAll('.vantage')
+        var frame = interactionOverlay.selectAll('.frame')
                 .data(layoutData);
 
-        var vantageUpdated = vantage
+        var frameUpdated = frame
                 .style('width', function(d) { return d.width + 'px'; })
                 .style('height', function(d) { return d.height + 'px'; })
                 .transition()
@@ -152,47 +174,47 @@ var manifestor = function(options) {
                 .tween('translateTilesources', translateTilesources)
                 .each(updateImages);
 
-        vantageUpdated.select('.frame')
+        frameUpdated.select('.canvas')
             .attr('class', function(d) {
-                var selected = d.frame.selected;
-                return selected ? 'frame selected' : 'frame';
+                var selected = d.canvas.selected;
+                return selected ? 'canvas selected' : 'canvas';
             });
 
-        var vantageEnter = vantage
+        var frameEnter = frame
                 .enter().append('div')
-                .attr('class', 'vantage')
+                .attr('class', 'frame')
                 .style('width', function(d) { return d.width + 'px'; })
                 .style('height', function(d) { return d.height + 'px'; })
                 .style('transform', function(d) { return 'translate(' + d.x + 'px,' + d.y + 'px)'; })
                 .style('-webkit-transform', function(d) { return 'translate(' + d.x + 'px,' + d.y + 'px)'; });
 
-        vantageEnter
+        frameEnter
             .append('div')
             .attr('class', function(d) {
-                var selected = d.frame.selected;
-                return selected ? 'frame selected' : 'frame';
+                var selected = d.canvas.selected;
+                return selected ? 'canvas selected' : 'canvas';
             })
             .attr('data-id', function(d) {
-                return d.frame.id;
+                return d.canvas.id;
             })
-            .style('width', function(d) { return d.frame.width + 'px'; })
-            .style('height', function(d) { return d.frame.height + 'px'; })
-            .style('transform', function(d) { return 'translateX(' + d.frame.localX + 'px) translateY(' + d.frame.localY + 'px)'; })
+            .style('width', function(d) { return d.canvas.width + 'px'; })
+            .style('height', function(d) { return d.canvas.height + 'px'; })
+            .style('transform', function(d) { return 'translateX(' + d.canvas.localX + 'px) translateY(' + d.canvas.localY + 'px)'; })
             .each(enterImages);
         // .append('img')
-        // .attr('src', function(d) { return d.frame.iiifService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg';});
+        // .attr('src', function(d) { return d.canvas.iiifService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
 
-        vantageEnter
-            .append('h4').text(function(d) { return d.frame.label; });
+        frameEnter
+            .append('h4').text(function(d) { return d.canvas.label; });
     };
 
     function translateTilesources(d, i) {
-        var canvasId = d.frame.id,
+        var canvasId = d.canvas.id,
             dummyObj = canvasImageStates()[canvasId].dummyObj;
 
         var currentBounds = dummyObj.getBounds(true),
-            xi = d3.interpolate(currentBounds.x, d.frame.x),
-            yi = d3.interpolate(currentBounds.y, d.frame.y);
+            xi = d3.interpolate(currentBounds.x, d.canvas.x),
+            yi = d3.interpolate(currentBounds.y, d.canvas.y);
 
         return function(t) {
             dummyObj.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
@@ -200,19 +222,19 @@ var manifestor = function(options) {
     }
 
     function updateImages(d) {
-        var frameData = d.frame,
-            canvasImageState = canvasImageStates()[frameData.id];
+        var canvasData = d.canvas,
+            canvasImageState = canvasImageStates()[canvasData.id];
 
-        if (canvasState().perspective === 'detail' && canvasState().selectedCanvas === frameData.id) {
-            substitute(frameData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
+        if (canvasState().perspective === 'detail' && canvasState().selectedCanvas === canvasData.id) {
+            substitute(canvasData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
         }
     }
 
-    function substitute(frameData, dummyObj, tileSourceUrl) {
+    function substitute(canvasData, dummyObj, tileSourceUrl) {
         viewer.addTiledImage({
-            x: frameData.x,
-            y: frameData.y,
-            width: frameData.width,
+            x: canvasData.x,
+            y: canvasData.y,
+            width: canvasData.width,
             tileSource: tileSourceUrl,
             index: 0, // Add the new image below the stand-in.
             success: function(event) {
@@ -233,32 +255,32 @@ var manifestor = function(options) {
 
     function enterImages(d) {
 
-        var frameData = d.frame,
-            canvasImageState = canvasImageStates()[frameData.id];
+        var canvasData = d.canvas,
+            canvasImageState = canvasImageStates()[canvasData.id];
 
         var dummy = {
             type: 'legacy-image-pyramid',
             levels: [
                 {
-                    url: frameData.thumbService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg',
-                    width: frameData.width,
-                    height: frameData.height
+                    url: canvasData.thumbService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg',
+                    width: canvasData.width,
+                    height: canvasData.height
                 }
             ]
         };
 
         viewer.addTiledImage({
             tileSource: dummy,
-            x: frameData.x,
-            y: frameData.y,
-            width: frameData.width,
+            x: canvasData.x,
+            y: canvasData.y,
+            width: canvasData.width,
             success: function(event) {
-                addDummyObj(frameData.id, event.item);
+                addDummyObj(canvasData.id, event.item);
             }
         });
 
-        if (canvasState().perspective === 'detail' && canvasState().selectedCanvas === frameData.id) {
-            substitute(frameData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
+        if (canvasState().perspective === 'detail' && canvasState().selectedCanvas === canvasData.id) {
+            substitute(canvasData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
         }
     }
 
@@ -289,22 +311,23 @@ var manifestor = function(options) {
 
     function renderOSD() {
         var layoutData = getData(),
-            viewBounds =  layoutData.filter(function(vantage){
-                return vantage.frame.selected;
+            viewBounds =  layoutData.filter(function(frame){
+                return frame.canvas.selected;
             });
 
         if (viewBounds.length !== 0 && canvasState().perspective === 'detail') {
             viewBounds = new OpenSeadragon.Rect(
-                viewBounds[0].frame.x,
-                viewBounds[0].frame.y,
-                viewBounds[0].frame.width,
-                viewBounds[0].frame.height
+                viewBounds[0].canvas.x,
+                viewBounds[0].canvas.y,
+                viewBounds[0].canvas.width,
+                viewBounds[0].canvas.height
             );
+            viewer.viewport.fitBounds(viewBounds, false);
         } else {
             viewBounds = new OpenSeadragon.Rect(0,0, container.width(), container.height());
+            viewer.viewport.fitBounds(viewBounds,true);
         }
 
-        viewer.viewport.fitBounds(viewBounds,false);
     };
 
     function initOSD() {
@@ -348,7 +371,29 @@ var manifestor = function(options) {
         var state = canvasState();
         state.selectedCanvas = item;
         state.perspective = 'detail';
+        canvasState(state);
+    }
 
+    function selectPerspective(perspective) {
+        var state = canvasState();
+        state.perspective = perspective;
+        canvasState(state);
+    }
+
+    function selectViewingMode(item) {
+        var state = canvasState();
+        state.selectedCanvas = item;
+        state.perspective = 'detail';
+
+        canvasState(state);
+    }
+
+    function refreshState(newState) {
+        var state = canvasState();
+
+        // for blah in blah overwrite blah
+        // rather than just setting a specific
+        // property.
         canvasState(state);
     }
 
@@ -383,7 +428,7 @@ var manifestor = function(options) {
         render();
     }
 
-    container.on('click', '.frame', function(event) {
+    container.on('click', '.canvas', function(event) {
         selectCanvas($(this).data('id'));
     });
     scrollContainer.on('scroll', function(event) {
@@ -393,14 +438,16 @@ var manifestor = function(options) {
     });
 
     return {
-//        selectMode: selectMode,
+        // selectMode: selectMode,
         // selectPerspective: selectPerspective,
         // next: next,
         // previous: previous,
         // scrollThumbs: scrollThumbs,
         resize: resize,
-        selectCanvas: selectCanvas
-        // hoverCanvas: hoverCanvas
+        selectCanvas: selectCanvas,
+        selectPerspective: selectPerspective,
+        selectViewingMode: selectViewingMode,
+        refreshState: refreshState
     };
 
 };

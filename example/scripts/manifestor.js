@@ -37243,10 +37243,12 @@ var canvasLayout = require('./canvasLayout');
 
 var manifestor = function(options) {
     var manifest = options.manifest,
+        sequence = options.sequence,
+        canvases = options.sequence ? options.sequence.canvases : manifest.sequences[0].canvases,
         container = options.container,
-        viewingDirection = options.viewingDirection, // || getViewingDirection(manifest),
-        layoutMode = options.layoutMode,
-        perspective = options.perspective || 'overview',
+        viewingDirection = options.viewingDirection ? options.viewingDirection : getViewingDirection(),
+        viewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
+        perspective = options.perspective ? options.perspective : 'overview',
         selectedCanvas = options.selectedCanvas,
         viewer,
         _canvasState,
@@ -37255,12 +37257,12 @@ var manifestor = function(options) {
     buildCanvasStates(manifest.sequences[0].canvases);
 
     var overlays = $('<div class="overlaysContainer">');// .css(
-        // {'width': '100%',
-        //  'height': '100%',
-        //  'position': 'absolute',
-        //  'top': 0,
-        //  'left': 0
-        // });
+    // {'width': '100%',
+    //  'height': '100%',
+    //  'position': 'absolute',
+    //  'top': 0,
+    //  'left': 0
+    // });
     var osdContainer = $('<div class="osd-container">').css(
         {'width': '100%',
          'height': '100%',
@@ -37278,11 +37280,15 @@ var manifestor = function(options) {
          'overflow-y': 'scroll'
         });
 
+    console.log(overlays);
+
     container.append(osdContainer);
     container.append(scrollContainer);
     scrollContainer.append(overlays);
 
+
     initOSD();
+    // set the initial state, which triggers the first rendering.
     canvasState({
         selectedCanvas: null, // @id of the canvas:
         perspective: 'overview', // can be 'overview' or 'detail'
@@ -37290,11 +37296,25 @@ var manifestor = function(options) {
     });
 
     d3.timer(function() {
-        viewer.drawNow();
         viewer.forceRedraw();
     });
 
+
+    function getViewingDirection() {
+        if (sequence && sequence.viewingDirection) {
+            return sequence.viewingDirection;
+        }
+        return manifest.viewingDirection ? manifest.viewingDirection : 'left-to-right';
+    };
+
+    function getViewingHint() {
+        if (sequence && sequence.viewingHint) {
+            return sequence.viewingHint;
+        }
+        return manifest.viewingHint ? manifest.viewingHint : 'individuals';
+    };
     function render() {
+        // if ()
         renderManifest(manifest);
         renderOSD(manifest, 'left-to-right', viewer);
     }
@@ -37323,14 +37343,14 @@ var manifestor = function(options) {
 
 
         var layoutData = manifestLayout({
-            canvases: manifest.sequences[0].canvases,
+            canvases: canvases,
             width: container.width(),
             height: container.height(),
             viewingDirection: userState.viewingd,
-            frameHeight: 100,
-            frameWidth: 100,
+            canvasHeight: 100,
+            canvasWidth: 100,
             selectedCanvas: userState.selectedCanvas,
-            vantagePadding: {
+            framePadding: {
                 top: 10,
                 bottom: 40,
                 left: 10,
@@ -37341,8 +37361,10 @@ var manifestor = function(options) {
                 bottom: 130,
                 left: 10,
                 right: 10
+            },
+            minimumImageGap: {
             }
-        });
+        }).overview();
 
         var homeConstraints = ''; // The constraint bounds to use.
         var eventBinding = ''; // The set of events that are valid on the canvas.
@@ -37369,10 +37391,10 @@ var manifestor = function(options) {
                 .attr('class', function(d) {
                     return 'overlaysContainer ' + canvasState().perspective === 'detail' ? 'zoomed' : '';
                 });
-        var vantage = interactionOverlay.selectAll('.vantage')
+        var frame = interactionOverlay.selectAll('.frame')
                 .data(layoutData);
 
-        var vantageUpdated = vantage
+        var frameUpdated = frame
                 .style('width', function(d) { return d.width + 'px'; })
                 .style('height', function(d) { return d.height + 'px'; })
                 .transition()
@@ -37387,47 +37409,47 @@ var manifestor = function(options) {
                 .tween('translateTilesources', translateTilesources)
                 .each(updateImages);
 
-        vantageUpdated.select('.frame')
+        frameUpdated.select('.canvas')
             .attr('class', function(d) {
-                var selected = d.frame.selected;
-                return selected ? 'frame selected' : 'frame';
+                var selected = d.canvas.selected;
+                return selected ? 'canvas selected' : 'canvas';
             });
 
-        var vantageEnter = vantage
+        var frameEnter = frame
                 .enter().append('div')
-                .attr('class', 'vantage')
+                .attr('class', 'frame')
                 .style('width', function(d) { return d.width + 'px'; })
                 .style('height', function(d) { return d.height + 'px'; })
                 .style('transform', function(d) { return 'translate(' + d.x + 'px,' + d.y + 'px)'; })
                 .style('-webkit-transform', function(d) { return 'translate(' + d.x + 'px,' + d.y + 'px)'; });
 
-        vantageEnter
+        frameEnter
             .append('div')
             .attr('class', function(d) {
-                var selected = d.frame.selected;
-                return selected ? 'frame selected' : 'frame';
+                var selected = d.canvas.selected;
+                return selected ? 'canvas selected' : 'canvas';
             })
             .attr('data-id', function(d) {
-                return d.frame.id;
+                return d.canvas.id;
             })
-            .style('width', function(d) { return d.frame.width + 'px'; })
-            .style('height', function(d) { return d.frame.height + 'px'; })
-            .style('transform', function(d) { return 'translateX(' + d.frame.localX + 'px) translateY(' + d.frame.localY + 'px)'; })
+            .style('width', function(d) { return d.canvas.width + 'px'; })
+            .style('height', function(d) { return d.canvas.height + 'px'; })
+            .style('transform', function(d) { return 'translateX(' + d.canvas.localX + 'px) translateY(' + d.canvas.localY + 'px)'; })
             .each(enterImages);
         // .append('img')
-        // .attr('src', function(d) { return d.frame.iiifService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg';});
+        // .attr('src', function(d) { return d.canvas.iiifService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
 
-        vantageEnter
-            .append('h4').text(function(d) { return d.frame.label; });
+        frameEnter
+            .append('h4').text(function(d) { return d.canvas.label; });
     };
 
     function translateTilesources(d, i) {
-        var canvasId = d.frame.id,
+        var canvasId = d.canvas.id,
             dummyObj = canvasImageStates()[canvasId].dummyObj;
 
         var currentBounds = dummyObj.getBounds(true),
-            xi = d3.interpolate(currentBounds.x, d.frame.x),
-            yi = d3.interpolate(currentBounds.y, d.frame.y);
+            xi = d3.interpolate(currentBounds.x, d.canvas.x),
+            yi = d3.interpolate(currentBounds.y, d.canvas.y);
 
         return function(t) {
             dummyObj.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
@@ -37435,19 +37457,19 @@ var manifestor = function(options) {
     }
 
     function updateImages(d) {
-        var frameData = d.frame,
-            canvasImageState = canvasImageStates()[frameData.id];
+        var canvasData = d.canvas,
+            canvasImageState = canvasImageStates()[canvasData.id];
 
-        if (canvasState().perspective === 'detail' && canvasState().selectedCanvas === frameData.id) {
-            substitute(frameData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
+        if (canvasState().perspective === 'detail' && canvasState().selectedCanvas === canvasData.id) {
+            substitute(canvasData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
         }
     }
 
-    function substitute(frameData, dummyObj, tileSourceUrl) {
+    function substitute(canvasData, dummyObj, tileSourceUrl) {
         viewer.addTiledImage({
-            x: frameData.x,
-            y: frameData.y,
-            width: frameData.width,
+            x: canvasData.x,
+            y: canvasData.y,
+            width: canvasData.width,
             tileSource: tileSourceUrl,
             index: 0, // Add the new image below the stand-in.
             success: function(event) {
@@ -37468,32 +37490,32 @@ var manifestor = function(options) {
 
     function enterImages(d) {
 
-        var frameData = d.frame,
-            canvasImageState = canvasImageStates()[frameData.id];
+        var canvasData = d.canvas,
+            canvasImageState = canvasImageStates()[canvasData.id];
 
         var dummy = {
             type: 'legacy-image-pyramid',
             levels: [
                 {
-                    url: frameData.thumbService + '/full/' + Math.ceil(d.frame.width * 2) + ',/0/default.jpg',
-                    width: frameData.width,
-                    height: frameData.height
+                    url: canvasData.thumbService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg',
+                    width: canvasData.width,
+                    height: canvasData.height
                 }
             ]
         };
 
         viewer.addTiledImage({
             tileSource: dummy,
-            x: frameData.x,
-            y: frameData.y,
-            width: frameData.width,
+            x: canvasData.x,
+            y: canvasData.y,
+            width: canvasData.width,
             success: function(event) {
-                addDummyObj(frameData.id, event.item);
+                addDummyObj(canvasData.id, event.item);
             }
         });
 
-        if (canvasState().perspective === 'detail' && canvasState().selectedCanvas === frameData.id) {
-            substitute(frameData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
+        if (canvasState().perspective === 'detail' && canvasState().selectedCanvas === canvasData.id) {
+            substitute(canvasData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
         }
     }
 
@@ -37524,22 +37546,23 @@ var manifestor = function(options) {
 
     function renderOSD() {
         var layoutData = getData(),
-            viewBounds =  layoutData.filter(function(vantage){
-                return vantage.frame.selected;
+            viewBounds =  layoutData.filter(function(frame){
+                return frame.canvas.selected;
             });
 
         if (viewBounds.length !== 0 && canvasState().perspective === 'detail') {
             viewBounds = new OpenSeadragon.Rect(
-                viewBounds[0].frame.x,
-                viewBounds[0].frame.y,
-                viewBounds[0].frame.width,
-                viewBounds[0].frame.height
+                viewBounds[0].canvas.x,
+                viewBounds[0].canvas.y,
+                viewBounds[0].canvas.width,
+                viewBounds[0].canvas.height
             );
+            viewer.viewport.fitBounds(viewBounds, false);
         } else {
             viewBounds = new OpenSeadragon.Rect(0,0, container.width(), container.height());
+            viewer.viewport.fitBounds(viewBounds,true);
         }
 
-        viewer.viewport.fitBounds(viewBounds,false);
     };
 
     function initOSD() {
@@ -37583,7 +37606,29 @@ var manifestor = function(options) {
         var state = canvasState();
         state.selectedCanvas = item;
         state.perspective = 'detail';
+        canvasState(state);
+    }
 
+    function selectPerspective(perspective) {
+        var state = canvasState();
+        state.perspective = perspective;
+        canvasState(state);
+    }
+
+    function selectViewingMode(item) {
+        var state = canvasState();
+        state.selectedCanvas = item;
+        state.perspective = 'detail';
+
+        canvasState(state);
+    }
+
+    function refreshState(newState) {
+        var state = canvasState();
+
+        // for blah in blah overwrite blah
+        // rather than just setting a specific
+        // property.
         canvasState(state);
     }
 
@@ -37618,7 +37663,7 @@ var manifestor = function(options) {
         render();
     }
 
-    container.on('click', '.frame', function(event) {
+    container.on('click', '.canvas', function(event) {
         selectCanvas($(this).data('id'));
     });
     scrollContainer.on('scroll', function(event) {
@@ -37628,14 +37673,16 @@ var manifestor = function(options) {
     });
 
     return {
-//        selectMode: selectMode,
+        // selectMode: selectMode,
         // selectPerspective: selectPerspective,
         // next: next,
         // previous: previous,
         // scrollThumbs: scrollThumbs,
         resize: resize,
-        selectCanvas: selectCanvas
-        // hoverCanvas: hoverCanvas
+        selectCanvas: selectCanvas,
+        selectPerspective: selectPerspective,
+        selectViewingMode: selectViewingMode,
+        refreshState: refreshState
     };
 
 };
@@ -37645,12 +37692,12 @@ module.exports = manifestor;
 'use strict';
 
 var manifestLayout = function(options) {
-    var maxFrameHeight = options.maxFrameHeight || 130, // screen pixels
-        maxFrameWidth = options.maxFrameWidth ||  30, // screen pixels
-        minFrameWidth = options.minFrameWidth ||  30,  // screen pixels
-        minFrameHeight = options.minFrameHeight ||  30,  // screen pixels
-        frameHeight = options.frameHeight ||  100,  // screen pixels
-        frameWidth = options.frameWidth ||  30,  // screen pixels
+    var maxCanvasHeight = options.maxCanvasHeight || 130, // screen pixels
+        maxCanvasWidth = options.maxCanvasWidth ||  30, // screen pixels
+        minCanvasWidth = options.minCanvasWidth ||  30,  // screen pixels
+        minCanvasHeight = options.minCanvasHeight ||  30,  // screen pixels
+        canvasHeight = options.canvasHeight ||  100,  // screen pixels
+        canvasWidth = options.canvasWidth ||  30,  // screen pixels
         scaleFactor = options.scaleFactor || 1,
         columns = options.columns || 8,
         containerPadding = {
@@ -37659,11 +37706,11 @@ var manifestLayout = function(options) {
             left: options.topPadding || 0,
             right: options.topPadding || 0
         },
-        vantagePadding = {
-            top: options.vantagePadding.top || 0,
-            bottom: options.vantagePadding.bottom || 0,
-            left: options.vantagePadding.left || 0,
-            right: options.vantagePadding.right || 0
+        framePadding = {
+            top: options.framePadding.top || 0,
+            bottom: options.framePadding.bottom || 0,
+            left: options.framePadding.left || 0,
+            right: options.framePadding.right || 0
         },
         facingCanvasPadding,  // screen pixels
         viewportPadding,     // screen pixels
@@ -37680,8 +37727,8 @@ var manifestLayout = function(options) {
         // Storing strategies for specific states
         framingStrategies = {
             // different ways the canvas
-            // will be forced into its frame
-            // or be allowed to shape its frame
+            // will be forced into its canvas
+            // or be allowed to shape its canvas
             contain: contain,
             // fitHeight: fitHeight,
             // fitWidth: fitHeight,
@@ -37697,6 +37744,13 @@ var manifestLayout = function(options) {
             // fixedWidthColumns: fixedColumnLine,
             // fixedHeightRows: fixedHeightLine,
             grid: gridAlign
+        },
+        viewport = {
+            margins: {},
+            overviewPadding: {},
+            detailPadding: {},
+            width: containerWidth,
+            height: containerHeight
         };
 
     function getFirst() {
@@ -37716,15 +37770,15 @@ var manifestLayout = function(options) {
         return prunedCanvas;
     }
 
-    // The following framingStrategies specify how a canvas fits inside its "frame".
-    // A "frame" is an abstract target that the user may click on.
+    // The following framingStrategies specify how a canvas fits inside its "canvas".
+    // A "canvas" is an abstract target that the user may click on.
     // #Terminology
-    // ##Vantage
-    // The hoverable and clickable target area that will fill the viewport if it is clicked.
-    // In the case of a book object, a vantage will contain both pages. It contains the
-    // "Frame" for the eventual zooming canvas object.
     // ##Frame
-    // The frame is an html element that can be styled with properties such as "background color",
+    // The hoverable and clickable target area that will fill the viewport if it is clicked.
+    // In the case of a book object, a frame will contain both pages. It contains the
+    // "Canvas" for the eventual zooming canvas object.
+    // ##Canvas
+    // The canvas is an html element that can be styled with properties such as "background color",
     // "drop-shadow", and "transform: scale" for effect. It provides a visible and interactive
     // placeholder until the thumbnail or actual canvas tilesources are loaded.
     // ##Canvas
@@ -37740,30 +37794,30 @@ var manifestLayout = function(options) {
     // provided they can be freely styled with css (An interesting possiblity is to use
     // flowType.js for varying the font size by the element width).
 
-    function contain(canvas, frameWidth, frameHeight) {
+    function contain(canvas, canvasWidth, canvasHeight) {
         // The item target is the same regardless of the object inside of it,
         // and the canvas is scaled down on its longest side in order to fit
         // inside of the box. Alternatively, there may be allowed a fixed-size
         // "portrait" or "landscape" view into which the object is scaled
         // depending on its aspect ratio bias.
         var portrait = canvas.aspectRatio <= 1.0 ? true : false,
-            widthScaleFactor = frameWidth/canvas.width,
-            heightScaleFactor = frameHeight/canvas.height;
+            widthScaleFactor = canvasWidth/canvas.width,
+            heightScaleFactor = canvasHeight/canvas.height;
 
         if (portrait) {
-            fitHeight(canvas, frameHeight);
+            fitHeight(canvas, canvasHeight);
         } else {
-            fitWidth(canvas, frameWidth);
+            fitWidth(canvas, canvasWidth);
         }
 
         return canvas;
     }
 
-    function fitHeight(canvas, frameHeight) {
+    function fitHeight(canvas, canvasHeight) {
         var portrait = canvas.aspectRatio <= 1.0 ? true : false,
-            scaleFactor = frameHeight/canvas.height;
+            scaleFactor = canvasHeight/canvas.height;
 
-        canvas.height = frameHeight;
+        canvas.height = canvasHeight;
         // we forced the height to fit, so the width
         // must be scaled according to the height.
         canvas.width = canvas.width*scaleFactor;
@@ -37771,11 +37825,11 @@ var manifestLayout = function(options) {
         return canvas;
     }
 
-    function fitWidth(canvas, frameWidth) {
+    function fitWidth(canvas, canvasWidth) {
         var portrait = canvas.aspectRatio <= 1.0 ? true : false,
-            scaleFactor = frameHeight/canvas.width;
+            scaleFactor = canvasHeight/canvas.width;
 
-        canvas.width = frameWidth;
+        canvas.width = canvasWidth;
         // we forced the width to fit, so the height
         // must be scaled according to the width.
         canvas.height = canvas.height*scaleFactor;
@@ -37783,108 +37837,71 @@ var manifestLayout = function(options) {
         return canvas;
     }
 
-    function hybrid(canvas, maxFrameWidth, maxFrameHeight) {
+    function hybrid(canvas, maxCanvasWidth, maxCanvasHeight) {
         // Fixed height layout with auto-fitting
         // of extremely long or extremeley tall
         // objects into a maximum width.
     }
 
-    function vantage(frame, padding) {
-        // A vantage can wrap several book pages
+    function frame(canvas, padding) {
+        // A frame can wrap several book pages
         // into what will become a single higlight,
         // hover, or click target.
-        frame.localX = padding.left;
-        frame.localY = padding.top;
+        canvas.localX = padding.left;
+        canvas.localY = padding.top;
         return {
-            width: frame.width + padding.left + padding.right,
-            height: frame.height + padding.top + padding.bottom,
-            frame: frame
+            width: canvas.width + padding.left + padding.right,
+            height: canvas.height + padding.top + padding.bottom,
+            canvas: canvas
         };
     }
 
-    function gridAlign(vantages, frameHeight, frameWidth, lineWidth) {
-        var vantagesPerLine = Math.floor(lineWidth/frameWidth),
-        vantagesLength = vantages.length;
+    function gridAlign(frames, canvasHeight, canvasWidth, lineWidth) {
+        var framesPerLine = Math.floor(lineWidth/canvasWidth),
+        framesLength = frames.length;
 
-        return vantages.map(function(vantage, index) {
-            var lineNumber = Math.floor((index)/vantagesPerLine),
-                lineIndex = index%vantagesPerLine;
-            // The frames must get their x and y properties
-            // after the vantage (the parent) props are set.
-            vantage.x = vantage.width*lineIndex;
-            vantage.y = lineNumber*vantage.height; // y determined by the line;
+        return frames.map(function(frame, index) {
+            var lineNumber = Math.floor((index)/framesPerLine),
+                lineIndex = index%framesPerLine;
+            // The canvass must get their x and y properties
+            // after the frame (the parent) props are set.
+            frame.x = frame.width*lineIndex;
+            frame.y = lineNumber*frame.height; // y determined by the line;
 
-            vantage.frames.forEach(function(frame, index) {
-                frame.localX = vantage.leftPadding,
-                frame.localY = vantage.topPadding,
-                frame.x = vantage.x + vantage.leftPadding,
-                frame.y = vantage.y + vantage.topPadding;
+            frame.canvases.forEach(function(canvas, index) {
+                canvas.localX = frame.leftPadding,
+                canvas.localY = frame.topPadding,
+                canvas.x = frame.x + frame.leftPadding,
+                canvas.y = frame.y + frame.topPadding;
             });
 
-            return vantage;
+            return frame;
         });
     }
 
-    function bindPages(vantages, viewingHint, viewingDirection, facingCanvasPadding) {
+    function bindPages(frames, viewingHint, viewingDirection, facingCanvasPadding) {
         if (viewingHint === 'paged') {
-            vantages.filter(function(vantage) {
-                return vantage.viewingHint === 'non-paged' ? false : true;
+            frames.filter(function(frame) {
+                return frame.viewingHint === 'non-paged' ? false : true;
             });
             // TODO: perhaps change the ordering based on viewingDirection
         }
 
-        return vantages.map(function(vantage, index, vantages) {
+        return frames.map(function(frame, index, frames) {
             if ((index + 1) % 2 === 0) {
                 // gets all even pages and makes
                 // their facing page the next page
                 // in the index.
 
-                // only return the bound vantages.
+                // only return the bound frames.
                 // opensedragon needs the particular page data,
-                // so the inside of each frame is updated.
+                // so the inside of each canvas is updated.
             }
-            return vantage;
+            return frame;
         });
     }
 
-    // function layout() {
-    //     // Reads the configuration
-    //     // and structures the calculation with
-    //     // the appropriate strategies.
-
-    //     // Resolve the strategies used for the
-    //     // calculation based on the combination of
-    //     // options. These will all be functions
-    //     // to be run at the appropriate stage
-    //     // of the layout algorithm.
-    //     var frame = framingStrategies[framingStrategy];
-    //     var align = lineStrategies[lineStrategy];
-
-    //     // Prepare each node's layout parameters
-    //     // before passing them into the line-level
-    //     // functions.
-    //     var vantages = canvases.map(function(canvas) {
-    //         return vantage([frame(pruneCanvas(canvas),
-    //                               frameWidth,
-    //                               frameHeight
-    //                              )],
-    //                        vantagePadding,
-    //                        viewingHint
-    //                       );
-    //     });
-
-    //     // Take each vantage and mutate it to encompass
-    //     // facing pages, then use options to further
-    //     // mutate their x, y, width, and height coordinates
-    //     // to position them appropriately.
-    //     return align(bindPages(vantages, viewingHint, viewingDirection, facingCanvasPadding),
-    //                  frameHeight,
-    //                  frameWidth,
-    //                  containerWidth,
-    //                  viewingDirection
-    //                 );
-    // }
-    function fixedHeightAlign(vantages, lineWidth, viewingDirection) {
+    function fixedHeightAlign(frames, lineWidth, viewingDirection) {
         var lines = [];
 
 
@@ -37897,60 +37914,52 @@ var manifestLayout = function(options) {
             return line;
         };
 
-        lines.addItem = function(vantage) {
+        lines.addItem = function(frame) {
             var line = this[this.currentLine];
 
             if (!line) { line = this.addLine(); }
 
-            if (line.remaining >= vantage.width) {
+            if (line.remaining >= frame.width) {
                 var x = lineWidth - line.remaining;
                 if (viewingDirection === 'right-to-left') {
-                    x = line.remaining - vantage.width;
+                    x = line.remaining - frame.width;
                 };
-                line.remaining -= vantage.width;
+                line.remaining -= frame.width;
                 return [x, lines.currentLine];
             }
 
             this.currentLine += 1;
             line = lines.addLine();
-            x = viewingDirection === 'right-to-left' ? vantage.width : line.remaining;
-            line.remaining -= vantage.width;
+            x = viewingDirection === 'right-to-left' ? frame.width : line.remaining;
+            line.remaining -= frame.width;
             return [lineWidth - x, this.currentLine];
         };
 
-        return vantages.map(function(vantage) {
-            var lineStats = lines.addItem(vantage);
-            vantage.x = lineStats[0];
-            vantage.y = lineStats[1]*vantage.height;
-            vantage.frame.x = vantage.x + vantage.frame.localX;
-            vantage.frame.y = vantage.y + vantage.frame.localY;
-            return vantage;
+        return frames.map(function(frame) {
+            var lineStats = lines.addItem(frame);
+            frame.x = lineStats[0];
+            frame.y = lineStats[1]*frame.height;
+            frame.canvas.x = frame.x + frame.canvas.localX;
+            frame.canvas.y = frame.y + frame.canvas.localY;
+            return frame;
         });
     }
 
-    function layout() {
-        var vantages = canvases.map(pruneCanvas).map(function(canvas) {
-            return vantage(fitHeight(canvas, frameHeight), vantagePadding);
-        });
+    function group(frames, selected) {
 
-        return fixedHeightAlign(vantages, containerWidth, viewingDirection);
-    }
-
-    function group(vantages, selected) {
-
-        var focusIndex = vantages.indexOf(selected),
+        var focusIndex = frames.indexOf(selected),
             lineStart = function(focus) {
                 // we need only iterate in one direction.
                 // Binary search not appropriate; use an
                 // exponential backoff instead.
 
-                vantages.slice(focusIndex - 10, focusIndex).forEach(function() {
+                frames.slice(focusIndex - 10, focusIndex).forEach(function() {
                 });
                 return 'int';
             },
             lineEnd = function(focus) {
                 // we need only iterate in one direction.
-                // vantages.
+                // frames.
                 return 'int';
             };
 
@@ -37959,7 +37968,7 @@ var manifestLayout = function(options) {
         // resultant indices.
 
         return {
-            // Map over the vantages using the stopcodes.
+            // Map over the frames using the stopcodes.
             // Do benchmark on 4 loops versus .reduce()?
             // Can this be done with a reduce?
             left: [],
@@ -37969,25 +37978,58 @@ var manifestLayout = function(options) {
         };
     }
 
-    function intermediateLayout(viewport) {
-        group(layout(), selected);
-        return layout().map(function(vantage, index, vantages) {
-            // search vantages for those in the same line.
-            // those to the left, decrease X by the proper amount.
-            // those to the right, increase X by the proper amount.
-            // those above, decrease Y to push them out of frame.
-            // those below, increase Y to push them out of frame.
-            var frame = vantage.frame;
+    function intermediateLayout() {
+        // configure for viewingDirection, viewingHint,
+        // and alignment Style (scaling).
+    }
 
-            vantage.x = 'some function',
-            vantage.y = 'somethingototehr',
-            frame.x = '',
-            frame.y = '';
+    function detailLayout() {
+        // configure for viewingDirection, viewingHint,
+        // and alignment Style (scaling).
+        return detailLayoutHorizontal(overviewLayout(), selectedCanvas, [containerWidth, containerHeight]);
+    }
+
+    function overviewLayout() {
+        // configure for viewingDirection, viewingHint, framing technique,
+        // and alignment Style.
+        var frames = canvases.map(pruneCanvas).map(function(canvas) {
+            return frame(fitHeight(canvas, canvasHeight), framePadding);
+        });
+
+        return fixedHeightAlign(frames, containerWidth, viewingDirection);
+    }
+
+    function getDetailFrame(canvas, viewport) {
+    }
+
+    function detailLayoutHorizontal(frames, selected, viewport) {
+        // builds a viewbox (bounds) for each of the items, and
+        // updates their positions so that when they are panned
+        // to, the "camera" moves along the reading direction.
+        var currentCanvas = '',
+            previousCanvases = '',
+            nextCanvases = '';
+
+        return detailFrames.map(function(frame) {
+            // 1.) Find the current canvas and increase the frame
+            // paddings to match the target viewport.
+            return frame;
         });
     }
 
-    function focusLayout(vantages, selected, viewport) {
-        return vantages.map
+    function detailLayoutVertical(frames, selected, viewport) {
+        return frames.map();
+    }
+
+    function indicesOfParentLine(selectedCanvas) {
+    };
+
+    function intermediateLayoutVertical(frames, selected, viewport) {
+        return frames.map();
+    }
+
+    function intermediateLayoutHorizontal(frames, selected, viewport) {
+        return frames.map();
     }
 
     // Book
@@ -38004,7 +38046,7 @@ var manifestLayout = function(options) {
 
     // Left-to-right Intermediate (Smoothly animate translations, pan, and zoom simultaneously)
     // - Take the result of the left-to-right layout algorithm and adjust all
-    //   vantages such that those in the lines above and below the current line
+    //   frames such that those in the lines above and below the current line
     //   translated up and down respectively by an amount calculated from the
     //   viewport properties. At the end of the transition they should be invisible
     //   to the user.
@@ -38019,7 +38061,7 @@ var manifestLayout = function(options) {
 
     // Right-to-left Intermediate (Smoothly animate translations, pan, and zoom simultaneously)
     // - Take the result of the right-to-left layout algorithm and adjust all
-    //   vantages such that those in the lines above and below the current line
+    //   frames such that those in the lines above and below the current line
     //   translated up and down respectively by an amount calculated from the
     //   viewport properties. At the end of the transition they should be invisible
     //   to the user.
@@ -38036,7 +38078,11 @@ var manifestLayout = function(options) {
     // Bottom-to-top Intermediate (Smoothly animate translations, pan, and zoom simultaneously)
     // Bottom-to-top Focused (This change occurs instantaneously, out of frame (the viewport))
 
-    return layout();
+    return {
+        overview: overviewLayout,
+        intermediate: intermediateLayout,
+        detail: detailLayout
+    };
 
 };
 
