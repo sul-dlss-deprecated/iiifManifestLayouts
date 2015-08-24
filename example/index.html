@@ -70,7 +70,12 @@
         <script type="text/javascript" src="scripts/manifestor.js"></script>
         <script type="text/javascript" src="scripts/keymaster.js"></script>
         <script>
+         var manifest;
+
          $.get('http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', function(manifest) {
+
+             manifest = manifest;
+
              /* http://iiif.io/api/presentation/2.0/example/fixtures/24/manifest.json */
              /* http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json */
              viewer = manifestor({
@@ -78,8 +83,20 @@
                  container: $('#example-container'),
                  selectedCanvas: manifest.sequences[0].canvases[10]['@id']
              });
+
+             key('h, left', function() {
+                 currentCanvas -= 1
+                 viewer.selectCanvas(manifest.sequences[0].canvases[currentCanvas]['@id']);
+             });
+             /*          key('j, down') */
+             /*          key('k, up') */
+             key('l, right', function() {
+                 currentCanvas += 1
+                 viewer.selectCanvas(manifest.sequences[0].canvases[currentCanvas]['@id']);
+             });
          });
 
+         var currentCanvas = 10;
 
          // We can set events outside of the component.
          $(window).on('resize', function() {
@@ -95,13 +112,6 @@
              // we must convert.
              viewer.updateThumbSize($(this).val()*(1/100));
          });
-
-         key('h, left', 'overview', function() {
-             /*            viewer.accurseNextCanvas(''); */
-         });
-         /*          key('j, down') */
-         /*          key('k, up') */
-         key('l, right', function() {});
 
          key('shift+j', function() {
              viewer.selectPerspective('detail');

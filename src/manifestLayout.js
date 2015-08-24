@@ -21,7 +21,8 @@ var manifestLayout = function(options) {
             left: options.framePadding.left || 0,
             right: options.framePadding.right || 0
         },
-        facingCanvasPadding,  // screen pixels
+        facingCanvasPadding = options.facingCanvasPadding,  // screen pixels
+        minimumImageGap = options.minimumImageGap,
         viewportPadding,     // screen pixels
         containerHeight = options.height,
         containerWidth = options.width,
@@ -29,9 +30,8 @@ var manifestLayout = function(options) {
         selectedCanvas = options.selectedCanvas || getFirst(),
         framingStrategy = options.framingStrategy || 'contain',
         viewingDirection = options.viewingDirection || 'left-to-right',
-        viewingHint = options.viewingHint || null,
-        lineStrategy = options.viewingHint || 'grid',
-        minimumImageGap = options.minimumImageGap,
+        viewingMode = options.viewingMode || 'individuals',
+        lineStrategy = options.viewingMode || 'grid',
 
         // Layout Constants
         // Storing strategies for specific states
@@ -159,7 +159,7 @@ var manifestLayout = function(options) {
         // A frame can wrap several book pages
         // into what will become a single higlight,
         // hover, or click target.
-        canvas.localX = padding.left;
+        canvas.localX = canvas.localX ? canvas.localX : padding.left;
         canvas.localY = padding.top;
         return {
             width: canvas.width + padding.left + padding.right,
@@ -191,32 +191,55 @@ var manifestLayout = function(options) {
         });
     }
 
-    function bindPages(frames, viewingHint, viewingDirection, facingCanvasPadding) {
-        if (viewingHint === 'paged') {
-            return frames.filter(function(frame) {
-                return frame.canvas.viewingHint === 'non-paged' ? false : true;
-            }).map(function(frame, index) {
+    function bindCanvases(canvases, viewingMode, viewingDirection, framePadding, facingCanvasPadding) {
+
+        if (viewingMode === 'paged') {
+            return canvases.filter(function(canvas) {
+                return canvas.viewingHint === 'non-paged' ? false : true;
+            }).map(function(canvas, index) {
+                var boundPagePadding;
                 if (index === 0) {
-                    return frame;
+                    return frame(canvas, framePadding);
                 }
 
                 if ((index + 1) % 2 === 0) {
+                    console.log(index + ' even');
                     // gets all even pages and makes
                     // their facing page the next page
                     // in the index.
-                    return frame;
+                    boundPagePadding = {
+                        top: framePadding.top,
+                        bottom: framePadding.bottom,
+                        left: framePadding.left,
+                        right: canvas.width * facingCanvasPadding/100/2
+                    };
 
-                    // only return the bound frames.
-                    // opensedragon needs the particular page data,
-                    // so the inside of each canvas is updated.
+                    return frame(canvas, framePadding);
+
                 } else {
-                    return frame;
+
+                    boundPagePadding = {
+                        top: framePadding.top,
+                        bottom: framePadding.bottom,
+                        left: canvas.width * facingCanvasPadding/100/2,
+                        right: framePadding.right
+                    };
+                    console.log(index + ' odd');
+                    console.log(boundPagePadding);
+
+                    return frame(canvas, framePadding);
                 }
             });
-        } else if (viewingHint === 'continuous') {
-            return frames;
+        } else if (viewingMode === 'continuous') {
+            console.log('continuous');
+            return canvases.map(function(canvas){
+                return frame(canvas, framePadding);
+            });
         } else {
-            return frames;
+            console.log('individuals');
+            return canvases.map(function(canvas){
+                return frame(canvas, framePadding);
+            });
         }
     }
 
@@ -265,23 +288,25 @@ var manifestLayout = function(options) {
     }
 
     function overviewLayout() {
-        // configure for viewingDirection, viewingHint, framing technique,
+        // configure for viewingDirection, viewingMode, framing technique,
         // and alignment Style.
-        var frames = canvases.map(pruneCanvas).map(function(canvas) {
-            return frame(fitHeight(canvas, canvasHeight), framePadding);
-        });
+        var frames = bindCanvases(canvases.map(pruneCanvas).map(function(canvas) {
+            // resizes canvases for the chosen layout strategy.
+            return fitHeight(canvas, canvasHeight);
+        }), viewingMode, viewingDirection, framePadding, facingCanvasPadding);
+        console.log(frames);
 
         return fixedHeightAlign(frames, containerWidth, viewingDirection);
     }
 
     function intermediateLayout() {
-        // configure for viewingDirection, viewingHint,
+        // configure for viewingDirection, viewingMode,
         // and alignment Style (scaling).
         return intermediateLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
     }
 
     function detailLayout() {
-        // TODO: configure for viewingDirection, viewingHint,
+        // TODO: configure for viewingDirection, viewingMode,
         // and alignment Style (scaling).
         // return detailLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
 
@@ -297,7 +322,7 @@ var manifestLayout = function(options) {
             minimumViewportPadding = 5, // units in %
             selectionBoundingBox;
 
-        if (viewingHint === 'paged') {
+        if (viewingMode === 'paged') {
             // If we're in book mode, the vantage needs
             // to take into account the matching page
             // as well as the configured page margin.

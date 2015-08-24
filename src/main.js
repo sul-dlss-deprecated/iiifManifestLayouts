@@ -56,8 +56,9 @@ var manifestor = function(options) {
     // set the initial state, which triggers the first rendering.
     canvasState({
         selectedCanvas: selectedCanvas, // @id of the canvas:
-        perspective: 'overview', // can be 'overview' or 'detail'
-        viewingMode: 'individuals', // manifest derived or user specified (iiif viewingHint)
+        perspective: initialPerspective, // can be 'overview' or 'detail'
+        viewingMode: initialViewingMode, // manifest derived or user specified (iiif viewingHint)
+        viewingDirection: initialViewingDirection, // manifest derived or user specified (iiif viewingHint)
         width: container.width(),
         height: container.height()
     });
@@ -105,6 +106,7 @@ var manifestor = function(options) {
             height: userState.height,
             scaleFactor: userState.scaleFactor,
             viewingDirection: userState.viewingd,
+            viewingMode: userState.viewingMode,
             canvasHeight: 100,
             canvasWidth: 100,
             selectedCanvas: userState.selectedCanvas,
@@ -120,7 +122,8 @@ var manifestor = function(options) {
                 left: 10,
                 right: 10
             },
-            minimumImageGap: 3 // precent of viewport
+            minimumImageGap: 5, // precent of viewport
+            facingCanvasPadding: 1 // precent of viewport
         });
 
         // if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
@@ -154,7 +157,6 @@ var manifestor = function(options) {
             } else if (userState.perspective === 'detail' && userState.perspective === 'detail'){
                 renderLayout(layout.intermediate(), false);
             } else {
-                console.log(userState.perspective);
                 renderLayout(layout.overview(), true);
             }
 
