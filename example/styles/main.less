@@ -49,9 +49,9 @@ body {
     top:0;
     left:0;
     cursor: pointer;
-    // box-sizing: border-box;
-    // border: 1px solid deepPink;
-    // box-shadow: 0 0 0 2px deepPink;
+    box-sizing: border-box;
+    border: 1px solid deepskyblue;
+    box-shadow: 0 0 0 1px deepskyblue;
     // &:hover {
     //     border: 1px solid white;
     //     box-shadow: 0 0 12px white;
@@ -61,17 +61,19 @@ body {
     //     box-shadow: 0 0 12px deepskyblue;
     // }
 }
-.frame{
+
+.frame {
     position: absolute;
     display: block;
     box-sizing: border-box;
+    border: 1px solid white;
     h4 {
         bottom: 0;
         position: absolute;
         text-align: center;
         width:100%;
         margin-bottom:0;
-        height:40px;
+        height:35px;
     }
 }
 #controls {
@@ -81,11 +83,6 @@ body {
     height: 100%;
     box-sizing: border-box;
     padding: 0 15px;
-}
-#osd-container {
-    position:absolute;
-    width:100%;
-    height:100%;
 }
 #example-container {
     width:80%;
@@ -104,22 +101,6 @@ label {
     margin-bottom: 5px;
     display:block;
 }
-img {
+select {
     width:100%;
-    height:100%;
-}
-.overlaysContainer {
-    position: absolute;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    transition: opacity 0.7s ease-out;
-    opacity:1;
-    pointer-events: all;
-    &.zoomed {
-        transition: opacity 0.7s ease-out;
-        pointer-events: none;
-        opacity:0;
-    }
 }

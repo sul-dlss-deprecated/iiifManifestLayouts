@@ -37246,9 +37246,9 @@ var manifestor = function(options) {
         sequence = options.sequence,
         canvases = options.sequence ? options.sequence.canvases : manifest.sequences[0].canvases,
         container = options.container,
-        viewingDirection = options.viewingDirection ? options.viewingDirection : getViewingDirection(),
-        viewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
-        perspective = options.perspective ? options.perspective : 'overview',
+        initialViewingDirection = options.viewingDirection ? options.viewingDirection : getViewingDirection(),
+        initialViewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
+        initialPerspective = options.perspective ? options.perspective : 'overview',
         selectedCanvas = options.selectedCanvas,
         viewer,
         _canvasState,
@@ -37292,7 +37292,9 @@ var manifestor = function(options) {
     canvasState({
         selectedCanvas: null, // @id of the canvas:
         perspective: 'overview', // can be 'overview' or 'detail'
-        viewingMode: 'single' // manifest derived or user specified (iiif viewingHint)
+        viewingMode: 'individuals', // manifest derived or user specified (iiif viewingHint)
+        width: container.width(),
+        height: container.height()
     });
 
     d3.timer(function() {
@@ -37313,27 +37315,18 @@ var manifestor = function(options) {
         }
         return manifest.viewingHint ? manifest.viewingHint : 'individuals';
     };
-    function render() {
-        // if ()
-        renderManifest(manifest);
-        renderOSD(manifest, 'left-to-right', viewer);
-    }
 
     function canvasState(state) {
 
         if (!arguments.length) return _canvasState;
         _canvasState = state;
 
-        // if (!initial) {
-        //     jQuery.publish('annotationsTabStateUpdated' + this.windowId, this.tabState);
-        // }
-
         render();
 
         return _canvasState;
     }
 
-    function getData() {
+    function render() {
         var userState = canvasState();
 
         // Layout is configured from current user state. The
@@ -37341,11 +37334,11 @@ var manifestor = function(options) {
         // initial layout without animation) are all
         // functions of the current user state.
 
-
-        var layoutData = manifestLayout({
+        var layout = manifestLayout({
             canvases: canvases,
-            width: container.width(),
-            height: container.height(),
+            width: userState.width,
+            height: userState.height,
+            scaleFactor: userState.scaleFactor,
             viewingDirection: userState.viewingd,
             canvasHeight: 100,
             canvasWidth: 100,
@@ -37362,14 +37355,38 @@ var manifestor = function(options) {
                 left: 10,
                 right: 10
             },
-            minimumImageGap: {
-            }
-        }).overview();
+            minimumImageGap: 5 // precent of viewport
+        });
 
-        var homeConstraints = ''; // The constraint bounds to use.
-        var eventBinding = ''; // The set of events that are valid on the canvas.
+        // disable events during transition
+        // Set layout according to perspective, viewingMode,
+        // and viewingDirection.
+        // overview->intermediate=>then
+        // var targetLayout = layout[userState.perspective]();
 
-        return layoutData;
+        // if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
+        //     var endCallback = function() {console.log('rendered overview from detail'); renderLayout(layout.overview(), true);};
+        //     renderLayout(layout.intermediate(), false, endCallback);
+        // } else if (userState.perspective === 'overview' && userState.preserveViewport === 'detail'){
+        //     endCallback = function() {console.log('rendered overview from detail'); renderLayout(layout.detail(), false);};
+        //     renderLayout(targetLayout, true, endCallback);
+        // } else {
+        //     renderLayout(targetLayout, true);
+        // }
+
+        renderLayout(layout.intermediate(), true);
+
+        // calculate and zoom to new bounds (if relevant)
+        // Set appropriate events for mode.
+
+        // var viewBounds = targetLayout.filter(function(frame) {
+        //     return frame.canvas.selected.viewBounds;
+        // });
+
+        // viewer.viewport.fitBounds(viewBounds, false);
+
+        var viewBounds = new OpenSeadragon.Rect(0,0, canvasState().width, canvasState().height);
+        viewer.viewport.fitBounds(viewBounds, true);
     }
 
     function canvasImageStates(state) {
@@ -37384,13 +37401,17 @@ var manifestor = function(options) {
         return _canvasImageStates;
     }
 
-    function renderManifest() {
-        var layoutData = getData();
+    // function detailTransition(detailLayout) {
+    //     renderLayout(detailLayout);
+    // }
+    // function overviewTransition(selection) {
+    //     renderLayout(detailLayout);
+    // }
+
+    function renderLayout(layoutData, animate, callback) {
         // To understand this layout, read: http://bost.ocks.org/mike/nest/
-        var interactionOverlay = d3.select(overlays[0])
-                .attr('class', function(d) {
-                    return 'overlaysContainer ' + canvasState().perspective === 'detail' ? 'zoomed' : '';
-                });
+        var interactionOverlay = d3.select(overlays[0]),
+            animationTiming = animate ? 1000 : 0;
         var frame = interactionOverlay.selectAll('.frame')
                 .data(layoutData);
 
@@ -37398,7 +37419,7 @@ var manifestor = function(options) {
                 .style('width', function(d) { return d.width + 'px'; })
                 .style('height', function(d) { return d.height + 'px'; })
                 .transition()
-                .duration(1100)
+                .duration(animationTiming)
                 .ease('cubic-out')
                 .styleTween('transform', function(d) {
                     return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
@@ -37407,9 +37428,12 @@ var manifestor = function(options) {
                     return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
                 })
                 .tween('translateTilesources', translateTilesources)
-                .each(updateImages);
+                .each(updateImages)
+                .each('end', callback);
 
         frameUpdated.select('.canvas')
+            .style('width', function(d) { return d.canvas.width + 'px'; })
+            .style('height', function(d) { return d.canvas.height + 'px'; })
             .attr('class', function(d) {
                 var selected = d.canvas.selected;
                 return selected ? 'canvas selected' : 'canvas';
@@ -37441,6 +37465,7 @@ var manifestor = function(options) {
 
         frameEnter
             .append('h4').text(function(d) { return d.canvas.label; });
+
     };
 
     function translateTilesources(d, i) {
@@ -37544,31 +37569,10 @@ var manifestor = function(options) {
     function removeImages(d) {
     }
 
-    function renderOSD() {
-        var layoutData = getData(),
-            viewBounds =  layoutData.filter(function(frame){
-                return frame.canvas.selected;
-            });
-
-        if (viewBounds.length !== 0 && canvasState().perspective === 'detail') {
-            viewBounds = new OpenSeadragon.Rect(
-                viewBounds[0].canvas.x,
-                viewBounds[0].canvas.y,
-                viewBounds[0].canvas.width,
-                viewBounds[0].canvas.height
-            );
-            viewer.viewport.fitBounds(viewBounds, false);
-        } else {
-            viewBounds = new OpenSeadragon.Rect(0,0, container.width(), container.height());
-            viewer.viewport.fitBounds(viewBounds,true);
-        }
-
-    };
-
     function initOSD() {
         viewer = OpenSeadragon({
             element: osdContainer[0],
-            autoResize:true,
+            autoResize: true,
             showNavigationControl: false,
             preserveViewport: true
         });
@@ -37611,14 +37615,14 @@ var manifestor = function(options) {
 
     function selectPerspective(perspective) {
         var state = canvasState();
+        state.previousPerspective = state.perspective;
         state.perspective = perspective;
         canvasState(state);
     }
 
-    function selectViewingMode(item) {
+    function selectViewingMode(viewingMode) {
         var state = canvasState();
-        state.selectedCanvas = item;
-        state.perspective = 'detail';
+        state.viewingMode = viewingMode;
 
         canvasState(state);
     }
@@ -37660,7 +37664,20 @@ var manifestor = function(options) {
     }
 
     function resize() {
-        render();
+        var state = canvasState();
+
+        state.width = container.width();
+        state.height = container.height();
+
+        canvasState(state);
+    }
+
+    function updateThumbSize(scaleFactor) {
+        var state = canvasState();
+
+        state.scaleFactor = scaleFactor;
+
+        canvasState(state);
     }
 
     container.on('click', '.canvas', function(event) {
@@ -37682,6 +37699,7 @@ var manifestor = function(options) {
         selectCanvas: selectCanvas,
         selectPerspective: selectPerspective,
         selectViewingMode: selectViewingMode,
+        updateThumbSize: updateThumbSize,
         refreshState: refreshState
     };
 
@@ -37696,8 +37714,8 @@ var manifestLayout = function(options) {
         maxCanvasWidth = options.maxCanvasWidth ||  30, // screen pixels
         minCanvasWidth = options.minCanvasWidth ||  30,  // screen pixels
         minCanvasHeight = options.minCanvasHeight ||  30,  // screen pixels
-        canvasHeight = options.canvasHeight ||  100,  // screen pixels
-        canvasWidth = options.canvasWidth ||  30,  // screen pixels
+        canvasHeight = options.canvasHeight * options.scaleFactor ||  100,  // screen pixels
+        canvasWidth = options.canvasWidth * options.scaleFactor ||  30,  // screen pixels
         scaleFactor = options.scaleFactor || 1,
         columns = options.columns || 8,
         containerPadding = {
@@ -37750,14 +37768,15 @@ var manifestLayout = function(options) {
             overviewPadding: {},
             detailPadding: {},
             width: containerWidth,
-            height: containerHeight
+            height: containerHeight,
+            aspectRatio: containerWidth/containerHeight
         };
 
     function getFirst() {
         return canvases[0]['@id'];
     }
 
-    function pruneCanvas(canvas) {
+    function pruneCanvas(canvas, index) {
         var prunedCanvas = {
             id: canvas['@id'],
             label: canvas.label,
@@ -37765,7 +37784,8 @@ var manifestLayout = function(options) {
             width: canvas.width,
             aspectRatio: canvas.width/canvas.height,
             thumbService: canvas.images[0].resource.service['@id'],
-            selected: canvas['@id'] === selectedCanvas ? true : false
+            selected: canvas['@id'] === selectedCanvas ? true : false,
+            sequencePosition: index
         };
         return prunedCanvas;
     }
@@ -37981,12 +38001,14 @@ var manifestLayout = function(options) {
     function intermediateLayout() {
         // configure for viewingDirection, viewingHint,
         // and alignment Style (scaling).
+        return intermediateLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
     }
 
     function detailLayout() {
         // configure for viewingDirection, viewingHint,
         // and alignment Style (scaling).
-        return detailLayoutHorizontal(overviewLayout(), selectedCanvas, [containerWidth, containerHeight]);
+        // return detailLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
+        return detailLayoutHorizontal(intermediateLayout(), selectedCanvas, viewport);
     }
 
     function overviewLayout() {
@@ -37999,7 +38021,40 @@ var manifestLayout = function(options) {
         return fixedHeightAlign(frames, containerWidth, viewingDirection);
     }
 
-    function getDetailFrame(canvas, viewport) {
+    function getVantageForCanvas(canvas, viewport) {
+        // We want to construct a representation
+        // of the viewport that will frame this
+        // object, with the values of the global
+        // coordinate system.
+
+        // Take the aspect ratio of the viewport,
+        // and get a box that fits the frame.
+        // Then add a margin to it. Save these
+        // horizontal and vertical margins for
+        // other layout purposes.
+
+        if (viewingHint === 'paged') {
+            // If we're in book mode, the vantage needs
+            // to take into account the matching page
+            // as well as the configured page margin.
+            // (scroll mode or "continuous")
+        }
+
+        console.log(canvas);
+
+        var vantageWidth = canvas.width +40,
+            vantageHeight = canvas.height+80,
+            vantageX = canvas.x,
+            vantageY = canvas.y;
+
+        return {
+            x: vantageY,
+            y: vantageX,
+            width: vantageWidth,
+            height: vantageHeight,
+            horizontalMargin: (vantageWidth - canvas.width)/2,
+            verticalMargin: (vantageHeight - canvas.height)/2
+        };
     }
 
     function detailLayoutHorizontal(frames, selected, viewport) {
@@ -38010,12 +38065,42 @@ var manifestLayout = function(options) {
             previousCanvases = '',
             nextCanvases = '';
 
-        return detailFrames.map(function(frame) {
-            // 1.) Find the current canvas and increase the frame
-            // paddings to match the target viewport.
-            return frame;
-        });
+        // return detailFrames.map(function(frame) {
+        //     // 1.) Find the current canvas and increase the frame
+        //     // paddings to match the target viewport.
+        //     return frame;
+        // });
     }
+
+    function intermediateLayoutHorizontal(frames, selected, viewport) {
+        var selectedFrame = frames.filter(function(frame) {
+            return frame.canvas.selected;
+        })[0];
+        selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, viewport);
+
+        frames.forEach(function(frame, index, allFrames) {
+            if (frame.y === selectedFrame.y && frame.canvas.id !== selectedFrame.canvas.id) {
+                if (index < selectedFrame.canvas.sequencePosition) {
+                    frame.x = frame.x - selectedFrame.vantage.horizontalMargin;
+                } else {
+                    frame.x = frame.x + selectedFrame.vantage.horizontalMargin;
+                }
+            } else if (frame.y > selectedFrame.y) {
+                frame.y = frame.y + selectedFrame.vantage.verticalMargin;
+            } else if (frame.y < selectedFrame.y) {
+                frame.y = frame.y - selectedFrame.vantage.verticalMargin;
+            }
+
+            frame.canvas.x = frame.x + frame.canvas.localX;
+            frame.canvas.y = frame.y + frame.canvas.localY;
+        });
+
+        // Now that I have the select frame, I need to determine the three groups
+        // of objects to transform. Those of the same line, those above, and those below.
+
+        return frames;
+    }
+
 
     function detailLayoutVertical(frames, selected, viewport) {
         return frames.map();
@@ -38025,10 +38110,6 @@ var manifestLayout = function(options) {
     };
 
     function intermediateLayoutVertical(frames, selected, viewport) {
-        return frames.map();
-    }
-
-    function intermediateLayoutHorizontal(frames, selected, viewport) {
         return frames.map();
     }
 

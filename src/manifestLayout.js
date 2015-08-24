@@ -5,8 +5,8 @@ var manifestLayout = function(options) {
         maxCanvasWidth = options.maxCanvasWidth ||  30, // screen pixels
         minCanvasWidth = options.minCanvasWidth ||  30,  // screen pixels
         minCanvasHeight = options.minCanvasHeight ||  30,  // screen pixels
-        canvasHeight = options.canvasHeight ||  100,  // screen pixels
-        canvasWidth = options.canvasWidth ||  30,  // screen pixels
+        canvasHeight = options.canvasHeight * options.scaleFactor ||  100,  // screen pixels
+        canvasWidth = options.canvasWidth * options.scaleFactor ||  30,  // screen pixels
         scaleFactor = options.scaleFactor || 1,
         columns = options.columns || 8,
         containerPadding = {
@@ -59,14 +59,15 @@ var manifestLayout = function(options) {
             overviewPadding: {},
             detailPadding: {},
             width: containerWidth,
-            height: containerHeight
+            height: containerHeight,
+            aspectRatio: containerWidth/containerHeight
         };
 
     function getFirst() {
         return canvases[0]['@id'];
     }
 
-    function pruneCanvas(canvas) {
+    function pruneCanvas(canvas, index) {
         var prunedCanvas = {
             id: canvas['@id'],
             label: canvas.label,
@@ -74,7 +75,8 @@ var manifestLayout = function(options) {
             width: canvas.width,
             aspectRatio: canvas.width/canvas.height,
             thumbService: canvas.images[0].resource.service['@id'],
-            selected: canvas['@id'] === selectedCanvas ? true : false
+            selected: canvas['@id'] === selectedCanvas ? true : false,
+            sequencePosition: index
         };
         return prunedCanvas;
     }
@@ -290,12 +292,14 @@ var manifestLayout = function(options) {
     function intermediateLayout() {
         // configure for viewingDirection, viewingHint,
         // and alignment Style (scaling).
+        return intermediateLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
     }
 
     function detailLayout() {
         // configure for viewingDirection, viewingHint,
         // and alignment Style (scaling).
-        return detailLayoutHorizontal(overviewLayout(), selectedCanvas, [containerWidth, containerHeight]);
+        // return detailLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
+        return detailLayoutHorizontal(intermediateLayout(), selectedCanvas, viewport);
     }
 
     function overviewLayout() {
@@ -308,7 +312,40 @@ var manifestLayout = function(options) {
         return fixedHeightAlign(frames, containerWidth, viewingDirection);
     }
 
-    function getDetailFrame(canvas, viewport) {
+    function getVantageForCanvas(canvas, viewport) {
+        // We want to construct a representation
+        // of the viewport that will frame this
+        // object, with the values of the global
+        // coordinate system.
+
+        // Take the aspect ratio of the viewport,
+        // and get a box that fits the frame.
+        // Then add a margin to it. Save these
+        // horizontal and vertical margins for
+        // other layout purposes.
+
+        if (viewingHint === 'paged') {
+            // If we're in book mode, the vantage needs
+            // to take into account the matching page
+            // as well as the configured page margin.
+            // (scroll mode or "continuous")
+        }
+
+        console.log(canvas);
+
+        var vantageWidth = canvas.width +40,
+            vantageHeight = canvas.height+80,
+            vantageX = canvas.x,
+            vantageY = canvas.y;
+
+        return {
+            x: vantageY,
+            y: vantageX,
+            width: vantageWidth,
+            height: vantageHeight,
+            horizontalMargin: (vantageWidth - canvas.width)/2,
+            verticalMargin: (vantageHeight - canvas.height)/2
+        };
     }
 
     function detailLayoutHorizontal(frames, selected, viewport) {
@@ -319,12 +356,42 @@ var manifestLayout = function(options) {
             previousCanvases = '',
             nextCanvases = '';
 
-        return detailFrames.map(function(frame) {
-            // 1.) Find the current canvas and increase the frame
-            // paddings to match the target viewport.
-            return frame;
-        });
+        // return detailFrames.map(function(frame) {
+        //     // 1.) Find the current canvas and increase the frame
+        //     // paddings to match the target viewport.
+        //     return frame;
+        // });
     }
+
+    function intermediateLayoutHorizontal(frames, selected, viewport) {
+        var selectedFrame = frames.filter(function(frame) {
+            return frame.canvas.selected;
+        })[0];
+        selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, viewport);
+
+        frames.forEach(function(frame, index, allFrames) {
+            if (frame.y === selectedFrame.y && frame.canvas.id !== selectedFrame.canvas.id) {
+                if (index < selectedFrame.canvas.sequencePosition) {
+                    frame.x = frame.x - selectedFrame.vantage.horizontalMargin;
+                } else {
+                    frame.x = frame.x + selectedFrame.vantage.horizontalMargin;
+                }
+            } else if (frame.y > selectedFrame.y) {
+                frame.y = frame.y + selectedFrame.vantage.verticalMargin;
+            } else if (frame.y < selectedFrame.y) {
+                frame.y = frame.y - selectedFrame.vantage.verticalMargin;
+            }
+
+            frame.canvas.x = frame.x + frame.canvas.localX;
+            frame.canvas.y = frame.y + frame.canvas.localY;
+        });
+
+        // Now that I have the select frame, I need to determine the three groups
+        // of objects to transform. Those of the same line, those above, and those below.
+
+        return frames;
+    }
+
 
     function detailLayoutVertical(frames, selected, viewport) {
         return frames.map();
@@ -334,10 +401,6 @@ var manifestLayout = function(options) {
     };
 
     function intermediateLayoutVertical(frames, selected, viewport) {
-        return frames.map();
-    }
-
-    function intermediateLayoutHorizontal(frames, selected, viewport) {
         return frames.map();
     }
 
