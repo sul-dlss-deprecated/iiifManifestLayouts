@@ -1,0 +1,35 @@
+{
+  "name": "iiifManifestLayout",
+  "version": "0.0.1",
+  "homepage": "https://github.com/aeschylus/iiif-manifest-d3-osd-layout",
+  "authors": [
+    "aeschylus <scipioaffricanus@gmail.com>"
+  ],
+  "description": "An openSeadragon-based representation of a iiif manifest.",
+  "main": "dist/iiifManifestLayout.js",
+  "moduleType": [
+    "amd",
+    "node"
+  ],
+  "keywords": [
+    "iiif",
+    "openSeadragon",
+    "d3"
+  ],
+  "license": "Apache 2.0",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "manifesto": "~0.1.12",
+    "openseadragon": "~2.0.0",
+    "keymaster": "~1.6.3"
+  },
+  "devDependencies": {
+    "keymaster": "~1.6.3"
+  }
+}

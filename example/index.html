@@ -18,6 +18,9 @@
 
         <!-- CONTENT BEGIN - replace the following with your app content -->
         <div id="controls">
+            <h2>Choose Manifest</h2>
+            <select id="manifestPicker" name="manifestPicker">
+            </select>
             <h2>Layout Parameters</h2>
             <label for=scale>Thumb Size</label>
             <input id="scale" name="scale" type="range" min=50 max=200 value=100 step=1/>
@@ -65,28 +68,84 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
         <script>window.jQuery || document.write('<script src="../../bower_components/jquery/dist/jquery.min.js"><\/script>')</script>
         <script type="text/javascript" src="scripts/manifestor.js"></script>
+        <script type="text/javascript" src="scripts/keymaster.js"></script>
         <script>
-         $.get('http://manifests.ydc2.yale.edu/manifest/Osbornfa1v2', function(manifest) {
-         /* http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json */
-             console.log(manifest);
+         var manifest;
+
+         $.get('http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', function(manifest) {
+
+             manifest = manifest;
+
+             /* http://iiif.io/api/presentation/2.0/example/fixtures/24/manifest.json */
+             /* http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json */
              viewer = manifestor({
                  manifest: manifest,
-                 container: $('#example-container')
+                 container: $('#example-container'),
+                 selectedCanvas: manifest.sequences[0].canvases[10]['@id']
+             });
+
+             key('h, left', function() {
+                 currentCanvas -= 1
+                 viewer.selectCanvas(manifest.sequences[0].canvases[currentCanvas]['@id']);
+             });
+             /*          key('j, down') */
+             /*          key('k, up') */
+             key('l, right', function() {
+                 currentCanvas += 1
+                 viewer.selectCanvas(manifest.sequences[0].canvases[currentCanvas]['@id']);
              });
          });
 
+         var currentCanvas = 10;
+
+         // We can set events outside of the component.
          $(window).on('resize', function() {
              viewer.resize();
          });
 
-         $('#readingDirection').on('change', function() {
-             /*              renderManifest(manifest, $(this).val()); */
-             /*              renderOSD(manifest, 'left-to-right', viewer); */
+         $('#manifestPicker').on('change', function() {
          });
 
          $('#scale').on('input', function() {
-             /*              renderManifest(manifest, $(this).val()); */
+             // must be a value between 0.5 and 2;
+             // input is between 50 and 200, so
+             // we must convert.
+             viewer.updateThumbSize($(this).val()*(1/100));
          });
+
+         key('shift+j', function() {
+             viewer.selectPerspective('detail');
+             console.log('shifting to detail perspective');
+         });
+         key('shift+k', function() {
+             viewer.selectPerspective('overview');
+             console.log('shifting to overview perspective');
+         });
+         key('m', cycleViewingModes);
+
+         var currentMode = 'individuals';
+
+         function cycleViewingModes() {
+             var newMode;
+
+             if (currentMode === 'individuals') {
+                 newMode = 'paged';
+             } else if (currentMode === 'paged'){
+                 newMode = 'continuous';
+             } else if (currentMode === 'continuous'){
+                 newMode = 'individuals';
+             }
+
+             currentMode = newMode;
+         }
+
+         $.get('http://iiif.io/api/presentation/2.0/example/fixtures/collection.json', function(fixtureCollection) {
+             var manifestPicker = $('#manifestPicker');
+             fixtureCollection.manifests.forEach(function(manifest) {
+                 var option = $('<option>').val(manifest['@id']).text(manifest.label);
+                 manifestPicker.append(option);
+             });
+         })
 
         </script>
     </body>
