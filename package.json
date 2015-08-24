@@ -29,13 +29,11 @@
     "grunt-contrib-uglify": "~0.5.0",
     "grunt-contrib-watch": "~0.6.1",
     "grunt-html-build": "~0.3.2",
+    "grunt-smash": "^0.1.0",
     "jquery": "~2.1.1",
     "load-grunt-tasks": "~0.6.0",
     "underscore": "~1.6.0"
   },
-  "scripts": {
-    "prepublish": "gulp prepublish",
-    "test": "gulp"
-  },
+  "scripts": {},
   "license": "Apache-2.0"
 }
