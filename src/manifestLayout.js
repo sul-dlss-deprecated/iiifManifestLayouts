@@ -31,6 +31,7 @@ var manifestLayout = function(options) {
         viewingDirection = options.viewingDirection || 'left-to-right',
         viewingHint = options.viewingHint || null,
         lineStrategy = options.viewingHint || 'grid',
+        minimumImageGap = options.minimumImageGap,
 
         // Layout Constants
         // Storing strategies for specific states
@@ -192,24 +193,31 @@ var manifestLayout = function(options) {
 
     function bindPages(frames, viewingHint, viewingDirection, facingCanvasPadding) {
         if (viewingHint === 'paged') {
-            frames.filter(function(frame) {
-                return frame.viewingHint === 'non-paged' ? false : true;
+            return frames.filter(function(frame) {
+                return frame.canvas.viewingHint === 'non-paged' ? false : true;
+            }).map(function(frame, index) {
+                if (index === 0) {
+                    return frame;
+                }
+
+                if ((index + 1) % 2 === 0) {
+                    // gets all even pages and makes
+                    // their facing page the next page
+                    // in the index.
+                    return frame;
+
+                    // only return the bound frames.
+                    // opensedragon needs the particular page data,
+                    // so the inside of each canvas is updated.
+                } else {
+                    return frame;
+                }
             });
-            // TODO: perhaps change the ordering based on viewingDirection
+        } else if (viewingHint === 'continuous') {
+            return frames;
+        } else {
+            return frames;
         }
-
-        return frames.map(function(frame, index, frames) {
-            if ((index + 1) % 2 === 0) {
-                // gets all even pages and makes
-                // their facing page the next page
-                // in the index.
-
-                // only return the bound frames.
-                // opensedragon needs the particular page data,
-                // so the inside of each canvas is updated.
-            }
-            return frame;
-        });
     }
 
     function fixedHeightAlign(frames, lineWidth, viewingDirection) {
@@ -256,52 +264,6 @@ var manifestLayout = function(options) {
         });
     }
 
-    function group(frames, selected) {
-
-        var focusIndex = frames.indexOf(selected),
-            lineStart = function(focus) {
-                // we need only iterate in one direction.
-                // Binary search not appropriate; use an
-                // exponential backoff instead.
-
-                frames.slice(focusIndex - 10, focusIndex).forEach(function() {
-                });
-                return 'int';
-            },
-            lineEnd = function(focus) {
-                // we need only iterate in one direction.
-                // frames.
-                return 'int';
-            };
-
-        // Conduct binary search on either side of the
-        // selected canvas. Store the stopcodes as
-        // resultant indices.
-
-        return {
-            // Map over the frames using the stopcodes.
-            // Do benchmark on 4 loops versus .reduce()?
-            // Can this be done with a reduce?
-            left: [],
-            right: [],
-            above: [],
-            below: []
-        };
-    }
-
-    function intermediateLayout() {
-        // configure for viewingDirection, viewingHint,
-        // and alignment Style (scaling).
-        return intermediateLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
-    }
-
-    function detailLayout() {
-        // configure for viewingDirection, viewingHint,
-        // and alignment Style (scaling).
-        // return detailLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
-        return detailLayoutHorizontal(intermediateLayout(), selectedCanvas, viewport);
-    }
-
     function overviewLayout() {
         // configure for viewingDirection, viewingHint, framing technique,
         // and alignment Style.
@@ -312,58 +274,110 @@ var manifestLayout = function(options) {
         return fixedHeightAlign(frames, containerWidth, viewingDirection);
     }
 
-    function getVantageForCanvas(canvas, viewport) {
-        // We want to construct a representation
-        // of the viewport that will frame this
-        // object, with the values of the global
-        // coordinate system.
+    function intermediateLayout() {
+        // configure for viewingDirection, viewingHint,
+        // and alignment Style (scaling).
+        return intermediateLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
+    }
 
-        // Take the aspect ratio of the viewport,
-        // and get a box that fits the frame.
-        // Then add a margin to it. Save these
-        // horizontal and vertical margins for
-        // other layout purposes.
+    function detailLayout() {
+        // TODO: configure for viewingDirection, viewingHint,
+        // and alignment Style (scaling).
+        // return detailLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
+
+        return detailLayoutHorizontal(intermediateLayout());
+    }
+
+    function getVantageForCanvas(canvas, viewport) {
+        var portrait = (canvas.width/canvas.height) <= 1,
+            vantageWidth,
+            vantageHeight,
+            horizontalMargin,
+            verticalMargin,
+            minimumViewportPadding = 5, // units in %
+            selectionBoundingBox;
 
         if (viewingHint === 'paged') {
             // If we're in book mode, the vantage needs
             // to take into account the matching page
             // as well as the configured page margin.
-            // (scroll mode or "continuous")
+            selectionBoundingBox = {width: canvas.width};
         }
 
-        console.log(canvas);
+        selectionBoundingBox = {
+            width: canvas.width + (canvasWidth*(minimumViewportPadding*2)/100),
+            height: canvas.height + (canvas.height*(minimumViewportPadding*2)/100)
+        };
 
-        var vantageWidth = canvas.width +40,
-            vantageHeight = canvas.height+80,
-            vantageX = canvas.x,
-            vantageY = canvas.y;
+        if (viewport.aspectRatio <= 1 && portrait || viewport.aspectRatio > 1 && !portrait) {
+            // this handles the case where both the viewport
+            // and the canvas are portraits or both landscapes.
+            // In this case, "something's gotta give", and
+            // more padding will be added to the vantage
+            // (which is the same thing as an osd "Bounds" Rect)
+            // in order to properly display it.
+            if (portrait) {
+                vantageWidth = selectionBoundingBox.width;
+                vantageHeight = vantageWidth / viewport.aspectRatio;
+            } else {
+                vantageHeight = selectionBoundingBox.height;
+                vantageWidth = vantageHeight * viewport.aspectRatio;
+            }
+        } else {
+            // note here that we've already eliminated the cases
+            // where the viewport is the same aspect ratio class
+            // as the canvas.
+            if (portrait) {
+                vantageHeight = selectionBoundingBox.height;
+                vantageWidth = vantageHeight * viewport.aspectRatio;
+            } else {
+                vantageWidth = selectionBoundingBox.width,
+                vantageHeight = vantageWidth / viewport.aspectRatio;
+            }
+        }
+
+        horizontalMargin = (vantageWidth - canvas.width)/2,
+        verticalMargin = (vantageHeight - canvas.height)/2;
 
         return {
-            x: vantageY,
-            y: vantageX,
+            x: canvas.x - horizontalMargin,
+            y: canvas.y - verticalMargin,
             width: vantageWidth,
             height: vantageHeight,
-            horizontalMargin: (vantageWidth - canvas.width)/2,
-            verticalMargin: (vantageHeight - canvas.height)/2
+            horizontalMargin: horizontalMargin,
+            verticalMargin: verticalMargin
         };
     }
 
-    function detailLayoutHorizontal(frames, selected, viewport) {
-        // builds a viewbox (bounds) for each of the items, and
-        // updates their positions so that when they are panned
-        // to, the "camera" moves along the reading direction.
-        var currentCanvas = '',
-            previousCanvases = '',
-            nextCanvases = '';
+    function detailLayoutHorizontal(frames) {
+        var selectedFrame = frames.filter(function(frame) {
+            return frame.canvas.selected;
+        })[0],
+            previousFrames = frames.filter(function(frame, index){
+                return index < selectedFrame.canvas.sequencePosition;
+            }).reduce(function(sum, nextFrame) {
+                frame.y = selectedFrame.y;
+                return sum + nextFrame.width;
+            }, selectedFrame.vantage.width),
+            nextFrames = frames.filter(function(frame, index){
+                return index < selectedFrame.canvas.sequencePosition;
+            }).reduce(function(sum, nextFrame) {
+                return sum + nextFrame.width;
+            }, selectedFrame.vantage.width);
 
-        // return detailFrames.map(function(frame) {
-        //     // 1.) Find the current canvas and increase the frame
-        //     // paddings to match the target viewport.
-        //     return frame;
-        // });
+        frames.forEach(function(frame, index) {
+            if(index < selectedFrame.canvas.sequencePosition){
+                frame.x = '' - leftDisplacement;
+            } else {
+                frame.x = '' + rightDisplacement;
+            }
+            frame.y = selectedFrame.y;
+        });
+
+        return frames;
     }
 
-    function intermediateLayoutHorizontal(frames, selected, viewport) {
+    function intermediateLayoutHorizontal(frames, selectedCanvas, viewport) {
         var selectedFrame = frames.filter(function(frame) {
             return frame.canvas.selected;
         })[0];
@@ -403,52 +417,6 @@ var manifestLayout = function(options) {
     function intermediateLayoutVertical(frames, selected, viewport) {
         return frames.map();
     }
-
-    // Book
-    // - Recalculate using the pairs for lineBreaking and diminishing the margins between pairs
-    // - Verticality matters. Only shrink the margins in the correct direction.
-
-    // Continuous
-    // - Reduce all margins (in the correct direction) to 0.
-    // - What is the "correct direction"? It depends on the reading direction. If
-    //   the reading direction is vertical, the pages should be ordered in columns
-    //   anyway (different layout altogether). If vertical, only shrink the top and
-    //   bottom margins to 0. Otherwise, shrink the horizontal margins and repeat the
-    //   layout.
-
-    // Left-to-right Intermediate (Smoothly animate translations, pan, and zoom simultaneously)
-    // - Take the result of the left-to-right layout algorithm and adjust all
-    //   frames such that those in the lines above and below the current line
-    //   translated up and down respectively by an amount calculated from the
-    //   viewport properties. At the end of the transition they should be invisible
-    //   to the user.
-    // - Take those to the right of the selected image and translate them far to the
-    //   right, take those on the left and translate them far left.
-    // Left-to-right Focused (This change occurs instantaneously, out of frame (the viewport))
-    // - Take all items with lower numbered indices and arrange them to the
-    //   left of the current page. Take all items with higher numbered indices
-    //   and arrange them to the right of the current page. The margin between
-    //   the items will be a function of the viewport size, and a reasonable
-    //   buffer to prevent them from appearing on resizing accidentally.
-
-    // Right-to-left Intermediate (Smoothly animate translations, pan, and zoom simultaneously)
-    // - Take the result of the right-to-left layout algorithm and adjust all
-    //   frames such that those in the lines above and below the current line
-    //   translated up and down respectively by an amount calculated from the
-    //   viewport properties. At the end of the transition they should be invisible
-    //   to the user.
-    // Right-to-left Focused (This change occurs instantaneously, out of frame (the viewport))
-    // - Take all items with lower numbered indices and arrange them to the
-    //   right of the current page. Take all items with higher numbered indices
-    //   and arrange them to the left of the current page. The margin between
-    //   the items will be a function of the viewport size, and a reasonable
-    //   buffer to prevent them from appearing on resizing accidentally.
-
-    // Top-to-bottom Intermediate (Smoothly animate translations, pan, and zoom simultaneously)
-    // Top-to-bottom Focused (This change occurs instantaneously, out of frame (the viewport))
-
-    // Bottom-to-top Intermediate (Smoothly animate translations, pan, and zoom simultaneously)
-    // Bottom-to-top Focused (This change occurs instantaneously, out of frame (the viewport))
 
     return {
         overview: overviewLayout,

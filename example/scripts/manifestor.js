@@ -37256,13 +37256,13 @@ var manifestor = function(options) {
 
     buildCanvasStates(manifest.sequences[0].canvases);
 
-    var overlays = $('<div class="overlaysContainer">');// .css(
-    // {'width': '100%',
-    //  'height': '100%',
-    //  'position': 'absolute',
-    //  'top': 0,
-    //  'left': 0
-    // });
+    var overlays = $('<div class="overlaysContainer">').css(
+        {'width': '100%',
+         'height': '100%',
+         'position': 'absolute',
+         'top': 0,
+         'left': 0
+        });
     var osdContainer = $('<div class="osd-container">').css(
         {'width': '100%',
          'height': '100%',
@@ -37276,21 +37276,21 @@ var manifestor = function(options) {
          'position': 'absolute',
          'top': 0,
          'left': 0,
-         'overflow-x': 'hidden',
-         'overflow-y': 'scroll'
+         'overflow': 'hidden'//,
+         // 'overflow-x': 'hidden',
+         // 'overflow-y': 'scroll'
         });
-
-    console.log(overlays);
+    var ersatzOverlays = $('<div class="ersatzOverlays">').height(1800);
 
     container.append(osdContainer);
     container.append(scrollContainer);
+    scrollContainer.append(ersatzOverlays);
     scrollContainer.append(overlays);
-
-
     initOSD();
+
     // set the initial state, which triggers the first rendering.
     canvasState({
-        selectedCanvas: null, // @id of the canvas:
+        selectedCanvas: selectedCanvas, // @id of the canvas:
         perspective: 'overview', // can be 'overview' or 'detail'
         viewingMode: 'individuals', // manifest derived or user specified (iiif viewingHint)
         width: container.width(),
@@ -37355,14 +37355,8 @@ var manifestor = function(options) {
                 left: 10,
                 right: 10
             },
-            minimumImageGap: 5 // precent of viewport
+            minimumImageGap: 3 // precent of viewport
         });
-
-        // disable events during transition
-        // Set layout according to perspective, viewingMode,
-        // and viewingDirection.
-        // overview->intermediate=>then
-        // var targetLayout = layout[userState.perspective]();
 
         // if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
         //     var endCallback = function() {console.log('rendered overview from detail'); renderLayout(layout.overview(), true);};
@@ -37374,19 +37368,50 @@ var manifestor = function(options) {
         //     renderLayout(targetLayout, true);
         // }
 
-        renderLayout(layout.intermediate(), true);
+        // disable events during transition
+        // Set layout according to perspective, viewingMode,
+        // and viewingDirection.
+        // overview->intermediate=>then
+        // var targetLayout = layout[userState.perspective]();
+
+        if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
+            // var endCallback = function() {
+            //     console.log('rendered overview from detail');
+            //     renderLayout(layout.overview(), true);
+            // };
+            renderLayout(layout.intermediate(), false);//, endCallback);
+        } else if (userState.perspective === 'overview' && userState.preserveViewport === 'detail'){
+            var endCallback = function() {
+                console.log('rendered overview from detail');
+                renderLayout(layout.overview(), false);
+            };
+            renderLayout(layout.intermediate(), true);//, endCallback);
+            } else if (userState.perspective === 'detail' && userState.perspective === 'detail'){
+                renderLayout(layout.intermediate(), false);
+            } else {
+                console.log(userState.perspective);
+                renderLayout(layout.overview(), true);
+            }
+
+        // renderLayout(layout.intermediate(), true);
 
         // calculate and zoom to new bounds (if relevant)
         // Set appropriate events for mode.
 
-        // var viewBounds = targetLayout.filter(function(frame) {
-        //     return frame.canvas.selected.viewBounds;
-        // });
+        if (userState.perspective === 'detail') {
+            var viewBounds = layout.intermediate().filter(function(frame) {
+                return frame.canvas.selected;
+            })[0].vantage;
 
-        // viewer.viewport.fitBounds(viewBounds, false);
+            console.log(viewBounds);
 
-        var viewBounds = new OpenSeadragon.Rect(0,0, canvasState().width, canvasState().height);
-        viewer.viewport.fitBounds(viewBounds, true);
+            var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
+
+            viewer.viewport.fitBounds(osdBounds, false);
+        } else {
+            viewBounds = new OpenSeadragon.Rect(0,0, canvasState().width, canvasState().height);
+            viewer.viewport.fitBounds(viewBounds, false);
+        }
     }
 
     function canvasImageStates(state) {
@@ -37409,9 +37434,66 @@ var manifestor = function(options) {
     // }
 
     function renderLayout(layoutData, animate, callback) {
-        // To understand this layout, read: http://bost.ocks.org/mike/nest/
+        // To understand this render function,
+        // you need a general understanding of d3 selections,
+        // and you will want to read about nested
+        // selections in particular: http://bost.ocks.org/mike/nest/
+
         var interactionOverlay = d3.select(overlays[0]),
-            animationTiming = animate ? 1000 : 0;
+            animationTiming = 0; // animate ? 1000 : 0;
+
+        if (canvasState().perspective === 'detail') {
+            interactionOverlay
+                .transition()
+                .duration(animationTiming)
+                .style('pointer-events', 'none')
+                .style('opacity', 0);
+
+            d3.select(scrollContainer[0])
+                .transition()
+                .duration(animationTiming)
+                .style('pointer-events', 'none')
+                .style('overflow-x', 'hidden')
+                .style('overflow-y', 'hidden');
+        } else {
+            interactionOverlay
+                .transition()
+                .duration(animationTiming)
+                .style('pointer-events', 'all')
+                .style('opacity', 1);
+
+            d3.select(scrollContainer[0])
+                .transition()
+                .duration(animationTiming)
+                .style('pointer-events', 'all')
+                .style('overflow-x', 'hidden')
+                .style('overflow-y', 'scroll');
+        }
+        // var bounds = interactionOverlay.selectAll('.vantage')
+        //         .data(
+        //             (function() {
+        //                 return [layoutData.filter(function(frame){
+        //                     return frame.canvas.selected;
+        //                 })[0].vantage];
+        //             })())
+        //         .enter()
+        //         .append('div')
+        //         .attr('class', 'vantage')
+        //         .style('border', '3px solid orangered')
+        //         .style('box-sizing', 'border-box')
+        //         .style('width', function(d) { console.log (d); return d.width + 'px'; })
+        //         .style('height', function(d) { return d.height + 'px'; })
+        //         .style('position', 'absolute')
+        //         .transition()
+        //         .duration(animationTiming)
+        //         .ease('cubic-out')
+        //         .styleTween('transform', function(d) {
+        //             return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
+        //         })
+        //         .styleTween('-webkit-transform', function(d) {
+        //             return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
+        //         });
+
         var frame = interactionOverlay.selectAll('.frame')
                 .data(layoutData);
 
@@ -37429,7 +37511,7 @@ var manifestor = function(options) {
                 })
                 .tween('translateTilesources', translateTilesources)
                 .each(updateImages)
-                .each('end', callback);
+                .call(endall, function() { if (callback) { callback(); }});
 
         frameUpdated.select('.canvas')
             .style('width', function(d) { return d.canvas.width + 'px'; })
@@ -37468,6 +37550,15 @@ var manifestor = function(options) {
 
     };
 
+    function endall(transition, callback) {
+        var n = 0;
+        if (transition.empty()) {callback();} else {
+            transition
+                .each(function() { ++n; })
+                .each("end", function() { if (!--n) callback.apply(this, arguments); });
+        }
+    }
+
     function translateTilesources(d, i) {
         var canvasId = d.canvas.id,
             dummyObj = canvasImageStates()[canvasId].dummyObj;
@@ -37478,6 +37569,8 @@ var manifestor = function(options) {
 
         return function(t) {
             dummyObj.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
+            dummyObj.setWidth(d.canvas.width, true);
+            dummyObj.setHeight(d.canvas.height, true);
         };
     }
 
@@ -37577,10 +37670,12 @@ var manifestor = function(options) {
             preserveViewport: true
         });
 
+        $(viewer.container).css('position', 'absolute');
+
         viewer.addHandler('animation', function(event) {
-            if (canvasState().perspective === 'detail') {
+            // if (canvasState().perspective === 'detail') {
                 synchroniseZoom();
-            }
+            // }
         });
     };
 
@@ -37704,6 +37799,7 @@ var manifestor = function(options) {
     };
 
 };
+
 module.exports = manifestor;
 
 },{"./canvasLayout":3,"./lib/openseadragon":4,"./manifestLayout":6,"d3":1,"jquery":2}],6:[function(require,module,exports){
@@ -37740,6 +37836,7 @@ var manifestLayout = function(options) {
         viewingDirection = options.viewingDirection || 'left-to-right',
         viewingHint = options.viewingHint || null,
         lineStrategy = options.viewingHint || 'grid',
+        minimumImageGap = options.minimumImageGap,
 
         // Layout Constants
         // Storing strategies for specific states
@@ -37901,24 +37998,31 @@ var manifestLayout = function(options) {
 
     function bindPages(frames, viewingHint, viewingDirection, facingCanvasPadding) {
         if (viewingHint === 'paged') {
-            frames.filter(function(frame) {
-                return frame.viewingHint === 'non-paged' ? false : true;
+            return frames.filter(function(frame) {
+                return frame.canvas.viewingHint === 'non-paged' ? false : true;
+            }).map(function(frame, index) {
+                if (index === 0) {
+                    return frame;
+                }
+
+                if ((index + 1) % 2 === 0) {
+                    // gets all even pages and makes
+                    // their facing page the next page
+                    // in the index.
+                    return frame;
+
+                    // only return the bound frames.
+                    // opensedragon needs the particular page data,
+                    // so the inside of each canvas is updated.
+                } else {
+                    return frame;
+                }
             });
-            // TODO: perhaps change the ordering based on viewingDirection
+        } else if (viewingHint === 'continuous') {
+            return frames;
+        } else {
+            return frames;
         }
-
-        return frames.map(function(frame, index, frames) {
-            if ((index + 1) % 2 === 0) {
-                // gets all even pages and makes
-                // their facing page the next page
-                // in the index.
-
-                // only return the bound frames.
-                // opensedragon needs the particular page data,
-                // so the inside of each canvas is updated.
-            }
-            return frame;
-        });
     }
 
     function fixedHeightAlign(frames, lineWidth, viewingDirection) {
@@ -37965,52 +38069,6 @@ var manifestLayout = function(options) {
         });
     }
 
-    function group(frames, selected) {
-
-        var focusIndex = frames.indexOf(selected),
-            lineStart = function(focus) {
-                // we need only iterate in one direction.
-                // Binary search not appropriate; use an
-                // exponential backoff instead.
-
-                frames.slice(focusIndex - 10, focusIndex).forEach(function() {
-                });
-                return 'int';
-            },
-            lineEnd = function(focus) {
-                // we need only iterate in one direction.
-                // frames.
-                return 'int';
-            };
-
-        // Conduct binary search on either side of the
-        // selected canvas. Store the stopcodes as
-        // resultant indices.
-
-        return {
-            // Map over the frames using the stopcodes.
-            // Do benchmark on 4 loops versus .reduce()?
-            // Can this be done with a reduce?
-            left: [],
-            right: [],
-            above: [],
-            below: []
-        };
-    }
-
-    function intermediateLayout() {
-        // configure for viewingDirection, viewingHint,
-        // and alignment Style (scaling).
-        return intermediateLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
-    }
-
-    function detailLayout() {
-        // configure for viewingDirection, viewingHint,
-        // and alignment Style (scaling).
-        // return detailLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
-        return detailLayoutHorizontal(intermediateLayout(), selectedCanvas, viewport);
-    }
-
     function overviewLayout() {
         // configure for viewingDirection, viewingHint, framing technique,
         // and alignment Style.
@@ -38021,58 +38079,110 @@ var manifestLayout = function(options) {
         return fixedHeightAlign(frames, containerWidth, viewingDirection);
     }
 
-    function getVantageForCanvas(canvas, viewport) {
-        // We want to construct a representation
-        // of the viewport that will frame this
-        // object, with the values of the global
-        // coordinate system.
+    function intermediateLayout() {
+        // configure for viewingDirection, viewingHint,
+        // and alignment Style (scaling).
+        return intermediateLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
+    }
 
-        // Take the aspect ratio of the viewport,
-        // and get a box that fits the frame.
-        // Then add a margin to it. Save these
-        // horizontal and vertical margins for
-        // other layout purposes.
+    function detailLayout() {
+        // TODO: configure for viewingDirection, viewingHint,
+        // and alignment Style (scaling).
+        // return detailLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
+
+        return detailLayoutHorizontal(intermediateLayout());
+    }
+
+    function getVantageForCanvas(canvas, viewport) {
+        var portrait = (canvas.width/canvas.height) <= 1,
+            vantageWidth,
+            vantageHeight,
+            horizontalMargin,
+            verticalMargin,
+            minimumViewportPadding = 5, // units in %
+            selectionBoundingBox;
 
         if (viewingHint === 'paged') {
             // If we're in book mode, the vantage needs
             // to take into account the matching page
             // as well as the configured page margin.
-            // (scroll mode or "continuous")
+            selectionBoundingBox = {width: canvas.width};
         }
 
-        console.log(canvas);
+        selectionBoundingBox = {
+            width: canvas.width + (canvasWidth*(minimumViewportPadding*2)/100),
+            height: canvas.height + (canvas.height*(minimumViewportPadding*2)/100)
+        };
 
-        var vantageWidth = canvas.width +40,
-            vantageHeight = canvas.height+80,
-            vantageX = canvas.x,
-            vantageY = canvas.y;
+        if (viewport.aspectRatio <= 1 && portrait || viewport.aspectRatio > 1 && !portrait) {
+            // this handles the case where both the viewport
+            // and the canvas are portraits or both landscapes.
+            // In this case, "something's gotta give", and
+            // more padding will be added to the vantage
+            // (which is the same thing as an osd "Bounds" Rect)
+            // in order to properly display it.
+            if (portrait) {
+                vantageWidth = selectionBoundingBox.width;
+                vantageHeight = vantageWidth / viewport.aspectRatio;
+            } else {
+                vantageHeight = selectionBoundingBox.height;
+                vantageWidth = vantageHeight * viewport.aspectRatio;
+            }
+        } else {
+            // note here that we've already eliminated the cases
+            // where the viewport is the same aspect ratio class
+            // as the canvas.
+            if (portrait) {
+                vantageHeight = selectionBoundingBox.height;
+                vantageWidth = vantageHeight * viewport.aspectRatio;
+            } else {
+                vantageWidth = selectionBoundingBox.width,
+                vantageHeight = vantageWidth / viewport.aspectRatio;
+            }
+        }
+
+        horizontalMargin = (vantageWidth - canvas.width)/2,
+        verticalMargin = (vantageHeight - canvas.height)/2;
 
         return {
-            x: vantageY,
-            y: vantageX,
+            x: canvas.x - horizontalMargin,
+            y: canvas.y - verticalMargin,
             width: vantageWidth,
             height: vantageHeight,
-            horizontalMargin: (vantageWidth - canvas.width)/2,
-            verticalMargin: (vantageHeight - canvas.height)/2
+            horizontalMargin: horizontalMargin,
+            verticalMargin: verticalMargin
         };
     }
 
-    function detailLayoutHorizontal(frames, selected, viewport) {
-        // builds a viewbox (bounds) for each of the items, and
-        // updates their positions so that when they are panned
-        // to, the "camera" moves along the reading direction.
-        var currentCanvas = '',
-            previousCanvases = '',
-            nextCanvases = '';
+    function detailLayoutHorizontal(frames) {
+        var selectedFrame = frames.filter(function(frame) {
+            return frame.canvas.selected;
+        })[0],
+            previousFrames = frames.filter(function(frame, index){
+                return index < selectedFrame.canvas.sequencePosition;
+            }).reduce(function(sum, nextFrame) {
+                frame.y = selectedFrame.y;
+                return sum + nextFrame.width;
+            }, selectedFrame.vantage.width),
+            nextFrames = frames.filter(function(frame, index){
+                return index < selectedFrame.canvas.sequencePosition;
+            }).reduce(function(sum, nextFrame) {
+                return sum + nextFrame.width;
+            }, selectedFrame.vantage.width);
 
-        // return detailFrames.map(function(frame) {
-        //     // 1.) Find the current canvas and increase the frame
-        //     // paddings to match the target viewport.
-        //     return frame;
-        // });
+        frames.forEach(function(frame, index) {
+            if(index < selectedFrame.canvas.sequencePosition){
+                frame.x = '' - leftDisplacement;
+            } else {
+                frame.x = '' + rightDisplacement;
+            }
+            frame.y = selectedFrame.y;
+        });
+
+        return frames;
     }
 
-    function intermediateLayoutHorizontal(frames, selected, viewport) {
+    function intermediateLayoutHorizontal(frames, selectedCanvas, viewport) {
         var selectedFrame = frames.filter(function(frame) {
             return frame.canvas.selected;
         })[0];
@@ -38112,52 +38222,6 @@ var manifestLayout = function(options) {
     function intermediateLayoutVertical(frames, selected, viewport) {
         return frames.map();
     }
-
-    // Book
-    // - Recalculate using the pairs for lineBreaking and diminishing the margins between pairs
-    // - Verticality matters. Only shrink the margins in the correct direction.
-
-    // Continuous
-    // - Reduce all margins (in the correct direction) to 0.
-    // - What is the "correct direction"? It depends on the reading direction. If
-    //   the reading direction is vertical, the pages should be ordered in columns
-    //   anyway (different layout altogether). If vertical, only shrink the top and
-    //   bottom margins to 0. Otherwise, shrink the horizontal margins and repeat the
-    //   layout.
-
-    // Left-to-right Intermediate (Smoothly animate translations, pan, and zoom simultaneously)
-    // - Take the result of the left-to-right layout algorithm and adjust all
-    //   frames such that those in the lines above and below the current line
-    //   translated up and down respectively by an amount calculated from the
-    //   viewport properties. At the end of the transition they should be invisible
-    //   to the user.
-    // - Take those to the right of the selected image and translate them far to the
-    //   right, take those on the left and translate them far left.
-    // Left-to-right Focused (This change occurs instantaneously, out of frame (the viewport))
-    // - Take all items with lower numbered indices and arrange them to the
-    //   left of the current page. Take all items with higher numbered indices
-    //   and arrange them to the right of the current page. The margin between
-    //   the items will be a function of the viewport size, and a reasonable
-    //   buffer to prevent them from appearing on resizing accidentally.
-
-    // Right-to-left Intermediate (Smoothly animate translations, pan, and zoom simultaneously)
-    // - Take the result of the right-to-left layout algorithm and adjust all
-    //   frames such that those in the lines above and below the current line
-    //   translated up and down respectively by an amount calculated from the
-    //   viewport properties. At the end of the transition they should be invisible
-    //   to the user.
-    // Right-to-left Focused (This change occurs instantaneously, out of frame (the viewport))
-    // - Take all items with lower numbered indices and arrange them to the
-    //   right of the current page. Take all items with higher numbered indices
-    //   and arrange them to the left of the current page. The margin between
-    //   the items will be a function of the viewport size, and a reasonable
-    //   buffer to prevent them from appearing on resizing accidentally.
-
-    // Top-to-bottom Intermediate (Smoothly animate translations, pan, and zoom simultaneously)
-    // Top-to-bottom Focused (This change occurs instantaneously, out of frame (the viewport))
-
-    // Bottom-to-top Intermediate (Smoothly animate translations, pan, and zoom simultaneously)
-    // Bottom-to-top Focused (This change occurs instantaneously, out of frame (the viewport))
 
     return {
         overview: overviewLayout,
