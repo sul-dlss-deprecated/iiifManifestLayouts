@@ -9221,23 +9221,23 @@ module.exports = canvasLayout;
 
 },{}],3:[function(require,module,exports){
 !function(){
-  var d3 = {version: "3.4.13"}; // semver
+  var d3 = {version: "3.5.6"}; // semver
 var d3_arraySlice = [].slice,
     d3_array = function(list) { return d3_arraySlice.call(list); }; // conversion for NodeLists
+var d3_document = this.document;
 
-var d3_document = document,
-    d3_documentElement = d3_document.documentElement,
-    d3_window = window;
+function d3_documentElement(node) {
+  return node
+      && (node.ownerDocument // node is a Node
+      || node.document // node is a Window
+      || node).documentElement; // node is a Document
+}
 
-// Redefine d3_array if the browser doesn’t support slice-based conversion.
-try {
-  d3_array(d3_documentElement.childNodes)[0].nodeType;
-} catch(e) {
-  d3_array = function(list) {
-    var i = list.length, array = new Array(i);
-    while (i--) array[i] = list[i];
-    return array;
-  };
+function d3_window(node) {
+  return node
+      && ((node.ownerDocument && node.ownerDocument.defaultView) // node is a Node
+        || (node.document && node) // node is a Window
+        || node.defaultView); // node is a Document
 }
 var d3_subclass = {}.__proto__?
 
@@ -9268,8 +9268,13 @@ function d3_selection(groups) {
 
 var d3_select = function(s, n) { return n.querySelector(s); },
     d3_selectAll = function(s, n) { return n.querySelectorAll(s); },
-    d3_selectMatcher = d3_documentElement.matches || d3_documentElement[d3_vendorSymbol(d3_documentElement, "matchesSelector")],
-    d3_selectMatches = function(n, s) { return d3_selectMatcher.call(n, s); };
+    d3_selectMatches = function(n, s) {
+      var d3_selectMatcher = n.matches || n[d3_vendorSymbol(n, "matchesSelector")];
+      d3_selectMatches = function(n, s) {
+        return d3_selectMatcher.call(n, s);
+      };
+      return d3_selectMatches(n, s);
+    };
 
 // Prefer Sizzle, if available.
 if (typeof Sizzle === "function") {
@@ -9279,7 +9284,7 @@ if (typeof Sizzle === "function") {
 }
 
 d3.selection = function() {
-  return d3_selectionRoot;
+  return d3.select(d3_document.documentElement);
 };
 
 var d3_selectionPrototype = d3.selection.prototype = [];
@@ -9519,7 +9524,10 @@ d3_selectionPrototype.style = function(name, value, priority) {
     }
 
     // For style(string), return the computed style value for the first node.
-    if (n < 2) return d3_window.getComputedStyle(this.node(), null).getPropertyValue(name);
+    if (n < 2) {
+      var node = this.node();
+      return d3_window(node).getComputedStyle(node, null).getPropertyValue(name);
+    }
 
     // For style(string, string) or style(string, function), use the default
     // priority. The priority is ignored for style(string, null).
@@ -9626,9 +9634,22 @@ d3_selectionPrototype.append = function(name) {
 };
 
 function d3_selection_creator(name) {
+
+  function create() {
+    var document = this.ownerDocument,
+        namespace = this.namespaceURI;
+    return namespace
+        ? document.createElementNS(namespace, name)
+        : document.createElement(name);
+  }
+
+  function createNS() {
+    return this.ownerDocument.createElementNS(name.space, name.local);
+  }
+
   return typeof name === "function" ? name
-      : (name = d3.ns.qualify(name)).local ? function() { return this.ownerDocument.createElementNS(name.space, name.local); }
-      : function() { return this.ownerDocument.createElementNS(this.namespaceURI, name); };
+      : (name = d3.ns.qualify(name)).local ? createNS
+      : create;
 }
 
 d3_selectionPrototype.insert = function(name, before) {
@@ -9643,11 +9664,13 @@ d3_selectionPrototype.insert = function(name, before) {
 // TODO remove(node)?
 // TODO remove(function)?
 d3_selectionPrototype.remove = function() {
-  return this.each(function() {
-    var parent = this.parentNode;
-    if (parent) parent.removeChild(this);
-  });
+  return this.each(d3_selectionRemove);
 };
+
+function d3_selectionRemove() {
+  var parent = this.parentNode;
+  if (parent) parent.removeChild(this);
+}
 function d3_class(ctor, properties) {
   for (var key in properties) {
     Object.defineProperty(ctor.prototype, key, {
@@ -9657,10 +9680,19 @@ function d3_class(ctor, properties) {
   }
 }
 
-d3.map = function(object) {
+d3.map = function(object, f) {
   var map = new d3_Map;
-  if (object instanceof d3_Map) object.forEach(function(key, value) { map.set(key, value); });
-  else for (var key in object) map.set(key, object[key]);
+  if (object instanceof d3_Map) {
+    object.forEach(function(key, value) { map.set(key, value); });
+  } else if (Array.isArray(object)) {
+    var i = -1,
+        n = object.length,
+        o;
+    if (arguments.length === 1) while (++i < n) map.set(i, object[i]);
+    else while (++i < n) map.set(f.call(object, o = object[i], i), o);
+  } else {
+    for (var key in object) map.set(key, object[key]);
+  }
   return map;
 };
 
@@ -10119,9 +10151,11 @@ var d3_selection_onFilters = d3.map({
   mouseleave: "mouseout"
 });
 
-d3_selection_onFilters.forEach(function(k) {
-  if ("on" + k in d3_document) d3_selection_onFilters.remove(k);
-});
+if (d3_document) {
+  d3_selection_onFilters.forEach(function(k) {
+    if ("on" + k in d3_document) d3_selection_onFilters.remove(k);
+  });
+}
 
 function d3_selection_onListener(listener, argumentz) {
   return function(e) {
@@ -10247,50 +10281,30 @@ function d3_selection_enterInsertBefore(enter) {
   };
 }
 
-// import "../transition/transition";
-
-d3_selectionPrototype.transition = function() {
-  var id = d3_transitionInheritId || ++d3_transitionId,
-      subgroups = [],
-      subgroup,
-      node,
-      transition = d3_transitionInherit || {time: Date.now(), ease: d3_ease_cubicInOut, delay: 0, duration: 250};
-
-  for (var j = -1, m = this.length; ++j < m;) {
-    subgroups.push(subgroup = []);
-    for (var group = this[j], i = -1, n = group.length; ++i < n;) {
-      if (node = group[i]) d3_transitionNode(node, i, id, transition);
-      subgroup.push(node);
-    }
-  }
-
-  return d3_transition(subgroups, id);
-};
-// import "../transition/transition";
-
-d3_selectionPrototype.interrupt = function() {
-  return this.each(d3_selection_interrupt);
-};
-
-function d3_selection_interrupt() {
-  var lock = this.__transition__;
-  if (lock) ++lock.active;
-}
-
 // TODO fast singleton implementation?
 d3.select = function(node) {
-  var group = [typeof node === "string" ? d3_select(node, d3_document) : node];
-  group.parentNode = d3_documentElement;
+  var group;
+  if (typeof node === "string") {
+    group = [d3_select(node, d3_document)];
+    group.parentNode = d3_document.documentElement;
+  } else {
+    group = [node];
+    group.parentNode = d3_documentElement(node);
+  }
   return d3_selection([group]);
 };
 
 d3.selectAll = function(nodes) {
-  var group = d3_array(typeof nodes === "string" ? d3_selectAll(nodes, d3_document) : nodes);
-  group.parentNode = d3_documentElement;
+  var group;
+  if (typeof nodes === "string") {
+    group = d3_array(d3_selectAll(nodes, d3_document));
+    group.parentNode = d3_document.documentElement;
+  } else {
+    group = nodes;
+    group.parentNode = null;
+  }
   return d3_selection([group]);
 };
-
-var d3_selectionRoot = d3.select(d3_documentElement);
 function d3_true() {
   return true;
 }
@@ -10300,7 +10314,7 @@ var d3_timer_queueHead,
     d3_timer_interval, // is an interval (or frame) active?
     d3_timer_timeout, // is a timeout active?
     d3_timer_active, // active timer object
-    d3_timer_frame = d3_window[d3_vendorSymbol(d3_window, "requestAnimationFrame")] || function(callback) { setTimeout(callback, 17); };
+    d3_timer_frame = this[d3_vendorSymbol(this, "requestAnimationFrame")] || function(callback) { setTimeout(callback, 17); };
 
 // The timer will continue to fire until callback returns true.
 d3.timer = function(callback, delay, then) {
@@ -10369,11 +10383,55 @@ function d3_timer_sweep() {
   d3_timer_queueTail = t0;
   return time;
 }
+// import "../transition/transition";
 
-function d3_transition(groups, id) {
+d3_selectionPrototype.transition = function(name) {
+  var id = d3_transitionInheritId || ++d3_transitionId,
+      ns = d3_transitionNamespace(name),
+      subgroups = [],
+      subgroup,
+      node,
+      transition = d3_transitionInherit || {time: Date.now(), ease: d3_ease_cubicInOut, delay: 0, duration: 250};
+
+  for (var j = -1, m = this.length; ++j < m;) {
+    subgroups.push(subgroup = []);
+    for (var group = this[j], i = -1, n = group.length; ++i < n;) {
+      if (node = group[i]) d3_transitionNode(node, i, ns, id, transition);
+      subgroup.push(node);
+    }
+  }
+
+  return d3_transition(subgroups, ns, id);
+};
+// import "../transition/transition";
+
+// TODO Interrupt transitions for all namespaces?
+d3_selectionPrototype.interrupt = function(name) {
+  return this.each(name == null
+      ? d3_selection_interrupt
+      : d3_selection_interruptNS(d3_transitionNamespace(name)));
+};
+
+var d3_selection_interrupt = d3_selection_interruptNS(d3_transitionNamespace());
+
+function d3_selection_interruptNS(ns) {
+  return function() {
+    var lock, active;
+    if ((lock = this[ns]) && (active = lock[lock.active])) {
+      if (--lock.count) delete lock[lock.active];
+      else delete this[ns];
+      lock.active += .5;
+      active.event && active.event.interrupt.call(this, this.__data__, active.index);
+    }
+  };
+}
+
+function d3_transition(groups, ns, id) {
   d3_subclass(groups, d3_transitionPrototype);
 
-  groups.id = id; // Note: read-only!
+  // Note: read-only!
+  groups.namespace = ns;
+  groups.id = id;
 
   return groups;
 }
@@ -10388,10 +10446,10 @@ d3_transitionPrototype.empty = d3_selectionPrototype.empty;
 d3_transitionPrototype.node = d3_selectionPrototype.node;
 d3_transitionPrototype.size = d3_selectionPrototype.size;
 
-d3.transition = function(selection) {
-  return arguments.length
-      ? (d3_transitionInheritId ? selection.transition() : selection)
-      : d3_selectionRoot.transition();
+d3.transition = function(selection, name) {
+  return selection && selection.transition
+      ? (d3_transitionInheritId ? selection.transition(name) : selection)
+      : d3.selection().transition(selection);
 };
 
 d3.transition.prototype = d3_transitionPrototype;
@@ -10399,6 +10457,7 @@ d3.transition.prototype = d3_transitionPrototype;
 
 d3_transitionPrototype.select = function(selector) {
   var id = this.id,
+      ns = this.namespace,
       subgroups = [],
       subgroup,
       subnode,
@@ -10411,7 +10470,7 @@ d3_transitionPrototype.select = function(selector) {
     for (var group = this[j], i = -1, n = group.length; ++i < n;) {
       if ((node = group[i]) && (subnode = selector.call(node, node.__data__, i, j))) {
         if ("__data__" in node) subnode.__data__ = node.__data__;
-        d3_transitionNode(subnode, i, id, node.__transition__[id]);
+        d3_transitionNode(subnode, i, ns, id, node[ns][id]);
         subgroup.push(subnode);
       } else {
         subgroup.push(null);
@@ -10419,11 +10478,12 @@ d3_transitionPrototype.select = function(selector) {
     }
   }
 
-  return d3_transition(subgroups, id);
+  return d3_transition(subgroups, ns, id);
 };
 
 d3_transitionPrototype.selectAll = function(selector) {
   var id = this.id,
+      ns = this.namespace,
       subgroups = [],
       subgroup,
       subnodes,
@@ -10436,18 +10496,18 @@ d3_transitionPrototype.selectAll = function(selector) {
   for (var j = -1, m = this.length; ++j < m;) {
     for (var group = this[j], i = -1, n = group.length; ++i < n;) {
       if (node = group[i]) {
-        transition = node.__transition__[id];
+        transition = node[ns][id];
         subnodes = selector.call(node, node.__data__, i, j);
         subgroups.push(subgroup = []);
         for (var k = -1, o = subnodes.length; ++k < o;) {
-          if (subnode = subnodes[k]) d3_transitionNode(subnode, k, id, transition);
+          if (subnode = subnodes[k]) d3_transitionNode(subnode, k, ns, id, transition);
           subgroup.push(subnode);
         }
       }
     }
   }
 
-  return d3_transition(subgroups, id);
+  return d3_transition(subgroups, ns, id);
 };
 
 d3_transitionPrototype.filter = function(filter) {
@@ -10467,7 +10527,7 @@ d3_transitionPrototype.filter = function(filter) {
     }
   }
 
-  return d3_transition(subgroups, this.id);
+  return d3_transition(subgroups, this.namespace, this.id);
 };
 d3.color = d3_color;
 
@@ -10530,11 +10590,12 @@ function d3_hsl_rgb(h, s, l) {
 
   return new d3_rgb(vv(h + 120), vv(h), vv(h - 120));
 }
-var π = Math.PI,
-    τ = 2 * π,
-    halfπ = π / 2,
-    ε = 1e-6,
+var ε = 1e-6,
     ε2 = ε * ε,
+    π = Math.PI,
+    τ = 2 * π,
+    τε = τ - ε,
+    halfπ = π / 2,
     d3_radians = π / 180,
     d3_degrees = 180 / π;
 
@@ -10727,7 +10788,7 @@ function d3_rgb_parse(format, rgb, hsl) {
       color;
 
   /* Handle hsl, rgb. */
-  m1 = /([a-z]+)\((.*)\)/i.exec(format);
+  m1 = /([a-z]+)\((.*)\)/.exec(format = format.toLowerCase());
   if (m1) {
     m2 = m1[2].split(",");
     switch (m1[1]) {
@@ -10749,7 +10810,9 @@ function d3_rgb_parse(format, rgb, hsl) {
   }
 
   /* Named colors. */
-  if (color = d3_rgb_names.get(format)) return rgb(color.r, color.g, color.b);
+  if (color = d3_rgb_names.get(format)) {
+    return rgb(color.r, color.g, color.b);
+  }
 
   /* Hexadecimal colors: #rgb and #rrggbb. */
   if (format != null && format.charAt(0) === "#" && !isNaN(color = parseInt(format.slice(1), 16))) {
@@ -10926,6 +10989,7 @@ var d3_rgb_names = d3.map({
   plum: 0xdda0dd,
   powderblue: 0xb0e0e6,
   purple: 0x800080,
+  rebeccapurple: 0x663399,
   red: 0xff0000,
   rosybrown: 0xbc8f8f,
   royalblue: 0x4169e1,
@@ -11091,7 +11155,7 @@ function d3_interpolate(a, b) {
 d3.interpolators = [
   function(a, b) {
     var t = typeof b;
-    return (t === "string" ? (d3_rgb_names.has(b) || /^(#|rgb\(|hsl\()/.test(b) ? d3_interpolateRgb : d3_interpolateString)
+    return (t === "string" ? (d3_rgb_names.has(b.toLowerCase()) || /^(#|rgb\(|hsl\()/i.test(b) ? d3_interpolateRgb : d3_interpolateString)
         : b instanceof d3_color ? d3_interpolateRgb
         : Array.isArray(b) ? d3_interpolateArray
         : t === "object" && isNaN(b) ? d3_interpolateObject
@@ -11216,18 +11280,18 @@ function d3_interpolateTransform(a, b) {
 }
 
 d3_transitionPrototype.tween = function(name, tween) {
-  var id = this.id;
-  if (arguments.length < 2) return this.node().__transition__[id].tween.get(name);
+  var id = this.id, ns = this.namespace;
+  if (arguments.length < 2) return this.node()[ns][id].tween.get(name);
   return d3_selection_each(this, tween == null
-        ? function(node) { node.__transition__[id].tween.remove(name); }
-        : function(node) { node.__transition__[id].tween.set(name, tween); });
+        ? function(node) { node[ns][id].tween.remove(name); }
+        : function(node) { node[ns][id].tween.set(name, tween); });
 };
 
 function d3_transition_tween(groups, name, value, tween) {
-  var id = groups.id;
+  var id = groups.id, ns = groups.namespace;
   return d3_selection_each(groups, typeof value === "function"
-      ? function(node, i, j) { node.__transition__[id].tween.set(name, tween(value.call(node, node.__data__, i, j))); }
-      : (value = tween(value), function(node) { node.__transition__[id].tween.set(name, value); }));
+      ? function(node, i, j) { node[ns][id].tween.set(name, tween(value.call(node, node.__data__, i, j))); }
+      : (value = tween(value), function(node) { node[ns][id].tween.set(name, value); }));
 }
 
 d3_transitionPrototype.attr = function(nameNS, value) {
@@ -11313,7 +11377,7 @@ d3_transitionPrototype.style = function(name, value, priority) {
   // Otherwise, a name, value and priority are specified, and handled as below.
   function styleString(b) {
     return b == null ? styleNull : (b += "", function() {
-      var a = d3_window.getComputedStyle(this, null).getPropertyValue(name), i;
+      var a = d3_window(this).getComputedStyle(this, null).getPropertyValue(name), i;
       return a !== b && (i = d3_interpolate(a, b), function(t) { this.style.setProperty(name, i(t), priority); });
     });
   }
@@ -11325,7 +11389,7 @@ d3_transitionPrototype.styleTween = function(name, tween, priority) {
   if (arguments.length < 3) priority = "";
 
   function styleTween(d, i) {
-    var f = tween.call(this, d, i, d3_window.getComputedStyle(this, null).getPropertyValue(name));
+    var f = tween.call(this, d, i, d3_window(this).getComputedStyle(this, null).getPropertyValue(name));
     return f && function(t) { this.style.setProperty(name, f(t), priority); };
   }
 
@@ -11342,9 +11406,10 @@ function d3_transition_text(b) {
 }
 
 d3_transitionPrototype.remove = function() {
+  var ns = this.namespace;
   return this.each("end.transition", function() {
     var p;
-    if (this.__transition__.count < 2 && (p = this.parentNode)) p.removeChild(this);
+    if (this[ns].count < 2 && (p = this.parentNode)) p.removeChild(this);
   });
 };
 function d3_identity(d) {
@@ -11459,44 +11524,47 @@ function d3_ease_bounce(t) {
 }
 
 d3_transitionPrototype.ease = function(value) {
-  var id = this.id;
-  if (arguments.length < 1) return this.node().__transition__[id].ease;
+  var id = this.id, ns = this.namespace;
+  if (arguments.length < 1) return this.node()[ns][id].ease;
   if (typeof value !== "function") value = d3.ease.apply(d3, arguments);
-  return d3_selection_each(this, function(node) { node.__transition__[id].ease = value; });
+  return d3_selection_each(this, function(node) { node[ns][id].ease = value; });
 };
 
 d3_transitionPrototype.delay = function(value) {
-  var id = this.id;
-  if (arguments.length < 1) return this.node().__transition__[id].delay;
+  var id = this.id, ns = this.namespace;
+  if (arguments.length < 1) return this.node()[ns][id].delay;
   return d3_selection_each(this, typeof value === "function"
-      ? function(node, i, j) { node.__transition__[id].delay = +value.call(node, node.__data__, i, j); }
-      : (value = +value, function(node) { node.__transition__[id].delay = value; }));
+      ? function(node, i, j) { node[ns][id].delay = +value.call(node, node.__data__, i, j); }
+      : (value = +value, function(node) { node[ns][id].delay = value; }));
 };
 
 d3_transitionPrototype.duration = function(value) {
-  var id = this.id;
-  if (arguments.length < 1) return this.node().__transition__[id].duration;
+  var id = this.id, ns = this.namespace;
+  if (arguments.length < 1) return this.node()[ns][id].duration;
   return d3_selection_each(this, typeof value === "function"
-      ? function(node, i, j) { node.__transition__[id].duration = Math.max(1, value.call(node, node.__data__, i, j)); }
-      : (value = Math.max(1, value), function(node) { node.__transition__[id].duration = value; }));
+      ? function(node, i, j) { node[ns][id].duration = Math.max(1, value.call(node, node.__data__, i, j)); }
+      : (value = Math.max(1, value), function(node) { node[ns][id].duration = value; }));
 };
 
 d3_transitionPrototype.each = function(type, listener) {
-  var id = this.id;
+  var id = this.id, ns = this.namespace;
   if (arguments.length < 2) {
     var inherit = d3_transitionInherit,
         inheritId = d3_transitionInheritId;
-    d3_transitionInheritId = id;
-    d3_selection_each(this, function(node, i, j) {
-      d3_transitionInherit = node.__transition__[id];
-      type.call(node, node.__data__, i, j);
-    });
-    d3_transitionInherit = inherit;
-    d3_transitionInheritId = inheritId;
+    try {
+      d3_transitionInheritId = id;
+      d3_selection_each(this, function(node, i, j) {
+        d3_transitionInherit = node[ns][id];
+        type.call(node, node.__data__, i, j);
+      });
+    } finally {
+      d3_transitionInherit = inherit;
+      d3_transitionInheritId = inheritId;
+    }
   } else {
     d3_selection_each(this, function(node) {
-      var transition = node.__transition__[id];
-      (transition.event || (transition.event = d3.dispatch("start", "end"))).on(type, listener);
+      var transition = node[ns][id];
+      (transition.event || (transition.event = d3.dispatch("start", "end", "interrupt"))).on(type, listener);
     });
   }
   return this;
@@ -11505,6 +11573,7 @@ d3_transitionPrototype.each = function(type, listener) {
 d3_transitionPrototype.transition = function() {
   var id0 = this.id,
       id1 = ++d3_transitionId,
+      ns = this.namespace,
       subgroups = [],
       subgroup,
       group,
@@ -11515,19 +11584,22 @@ d3_transitionPrototype.transition = function() {
     subgroups.push(subgroup = []);
     for (var group = this[j], i = 0, n = group.length; i < n; i++) {
       if (node = group[i]) {
-        transition = Object.create(node.__transition__[id0]);
-        transition.delay += transition.duration;
-        d3_transitionNode(node, i, id1, transition);
+        transition = node[ns][id0];
+        d3_transitionNode(node, i, ns, id1, {time: transition.time, ease: transition.ease, delay: transition.delay + transition.duration, duration: transition.duration});
       }
       subgroup.push(node);
     }
   }
 
-  return d3_transition(subgroups, id1);
+  return d3_transition(subgroups, ns, id1);
 };
 
-function d3_transitionNode(node, i, id, inherit) {
-  var lock = node.__transition__ || (node.__transition__ = {active: 0, count: 0}),
+function d3_transitionNamespace(name) {
+  return name == null ? "__transition__" : "__transition_" + name + "__";
+}
+
+function d3_transitionNode(node, i, ns, id, inherit) {
+  var lock = node[ns] || (node[ns] = {active: 0, count: 0}),
       transition = lock[id];
 
   if (!transition) {
@@ -11536,18 +11608,20 @@ function d3_transitionNode(node, i, id, inherit) {
     transition = lock[id] = {
       tween: new d3_Map,
       time: time,
-      ease: inherit.ease,
       delay: inherit.delay,
-      duration: inherit.duration
+      duration: inherit.duration,
+      ease: inherit.ease,
+      index: i
     };
+
+    inherit = null; // allow gc
 
     ++lock.count;
 
     d3.timer(function(elapsed) {
-      var d = node.__data__,
-          ease = transition.ease,
-          delay = transition.delay,
-          duration = transition.duration,
+      var delay = transition.delay,
+          duration,
+          ease,
           timer = d3_timer_active,
           tweened = [];
 
@@ -11557,14 +11631,27 @@ function d3_transitionNode(node, i, id, inherit) {
 
       function start(elapsed) {
         if (lock.active > id) return stop();
+
+        var active = lock[lock.active];
+        if (active) {
+          --lock.count;
+          delete lock[lock.active];
+          active.event && active.event.interrupt.call(node, node.__data__, active.index);
+        }
+
         lock.active = id;
-        transition.event && transition.event.start.call(node, d, i);
+
+        transition.event && transition.event.start.call(node, node.__data__, i);
 
         transition.tween.forEach(function(key, value) {
-          if (value = value.call(node, d, i)) {
+          if (value = value.call(node, node.__data__, i)) {
             tweened.push(value);
           }
         });
+
+        // Deferred capture to allow tweens to initialize ease & duration.
+        ease = transition.ease;
+        duration = transition.duration;
 
         d3.timer(function() { // defer to end of current frame
           timer.c = tick(elapsed || 1) ? d3_true : tick;
@@ -11573,7 +11660,7 @@ function d3_transitionNode(node, i, id, inherit) {
       }
 
       function tick(elapsed) {
-        if (lock.active !== id) return stop();
+        if (lock.active !== id) return 1;
 
         var t = elapsed / duration,
             e = ease(t),
@@ -11584,14 +11671,14 @@ function d3_transitionNode(node, i, id, inherit) {
         }
 
         if (t >= 1) {
-          transition.event && transition.event.end.call(node, d, i);
+          transition.event && transition.event.end.call(node, node.__data__, i);
           return stop();
         }
       }
 
       function stop() {
         if (--lock.count) delete lock[id];
-        else delete node.__transition__;
+        else delete node[ns];
         return 1;
       }
     }, 0, time);
