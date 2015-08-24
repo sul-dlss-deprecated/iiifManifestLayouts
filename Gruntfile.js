@@ -131,7 +131,7 @@ module.exports = function(grunt) {
         watch: {
             js: {
                 files: '<%= config.srcDir %>/**/*.*',
-                tasks: ['browserify:dist', 'copy:example']
+                tasks: ['smash', 'browserify:dist', 'copy:example']
             },
             grunt: {
                 files: 'Gruntfile.js',
@@ -149,6 +149,13 @@ module.exports = function(grunt) {
                 files: '<%= config.distDir %>/*',
                 tasks: ['copy:example']
             }
+        },
+
+        smash: {
+          bundle: {
+            src: 'src/lib/d3-slim.js',
+            dest: 'src/lib/d3-slim-dist.js'
+          }
         }
     });
 
@@ -156,6 +163,7 @@ module.exports = function(grunt) {
     grunt.registerTask('buildExample', [
         'clean:dist',      // clean old files out of build/Example
         'clean:example',      // clean old files out of build/Example
+        'smash', // build custom D3 package
         'browserify:dist', // bundle JS with browserify
         'copy:example',       // copy static asset files from app/ to build/Example
         'less:example',       // compile LESS to CSS
@@ -171,6 +179,7 @@ module.exports = function(grunt) {
     grunt.registerTask('buildDist', [
         'clean:dist',      // clean old files out of build/dist
         'clean:example',      // clean old files out of build/dist
+        'smash', // build custom D3 package
         'browserify:dist', // bundle JS with browserify
         'copy:example',       // copy static asset files from app/ to build/dist
         'less:example',       // compile LESS to CSS
