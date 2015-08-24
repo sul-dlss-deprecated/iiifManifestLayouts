@@ -30566,7 +30566,7 @@ $.extend( $.World.prototype, $.EventSource.prototype, /** @lends OpenSeadragon.W
 'use strict';
 
 var $ = require('jquery');
-var d3 = require('./lib/d3-slim-dist.js');
+var d3 = require('./lib/d3-slim-dist');
 var osd = require('./lib/openseadragon');
 var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
@@ -31148,7 +31148,7 @@ var manifestor = function(options) {
 
 module.exports = manifestor;
 
-},{"./canvasLayout":2,"./iiifUtils":3,"./lib/d3-slim-dist.js":4,"./lib/openseadragon":5,"./manifestLayout":7,"jquery":1}],7:[function(require,module,exports){
+},{"./canvasLayout":2,"./iiifUtils":3,"./lib/d3-slim-dist":4,"./lib/openseadragon":5,"./manifestLayout":7,"jquery":1}],7:[function(require,module,exports){
 'use strict';
 
 var manifestLayout = function(options) {
