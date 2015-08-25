@@ -58,11 +58,11 @@ var manifestor = function(options) {
          // 'overflow-x': 'hidden',
          // 'overflow-y': 'scroll'
         });
-    var ersatzOverlays = $('<div class="ersatzOverlays">').height(1800);
+    // var ersatzOverlays = $('<div class="ersatzOverlays">').height(1800);
 
     container.append(osdContainer);
     container.append(scrollContainer);
-    scrollContainer.append(ersatzOverlays);
+    // scrollContainer.append(ersatzOverlays);
     scrollContainer.append(overlays);
     initOSD();
 
