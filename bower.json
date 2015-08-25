@@ -6,7 +6,7 @@
     "aeschylus <scipioaffricanus@gmail.com>"
   ],
   "description": "An openSeadragon-based representation of a iiif manifest.",
-  "main": "dist/iiifManifestLayout.js",
+  "main": "dist/manifestor.js",
   "moduleType": [
     "amd",
     "node"
