@@ -1,8 +1,6 @@
 'use strict';
 
-var $ = require('jquery');
 var d3 = require('./lib/d3-slim-dist');
-var osd = require('./lib/openseadragon');
 var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
 var iiif = require('./iiifUtils');

@@ -168,28 +168,28 @@ var manifestLayout = function(options) {
         };
     }
 
-    function gridAlign(frames, canvasHeight, canvasWidth, lineWidth) {
-        var framesPerLine = Math.floor(lineWidth/canvasWidth),
-        framesLength = frames.length;
+    // function gridAlign(frames, canvasHeight, canvasWidth, lineWidth) {
+    //     var framesPerLine = Math.floor(lineWidth/canvasWidth),
+    //     framesLength = frames.length;
 
-        return frames.map(function(frame, index) {
-            var lineNumber = Math.floor((index)/framesPerLine),
-                lineIndex = index%framesPerLine;
-            // The canvass must get their x and y properties
-            // after the frame (the parent) props are set.
-            frame.x = frame.width*lineIndex;
-            frame.y = lineNumber*frame.height; // y determined by the line;
+    //     return frames.map(function(frame, index) {
+    //         var lineNumber = Math.floor((index)/framesPerLine),
+    //             lineIndex = index%framesPerLine;
+    //         // The canvass must get their x and y properties
+    //         // after the frame (the parent) props are set.
+    //         frame.x = frame.width*lineIndex;
+    //         frame.y = lineNumber*frame.height; // y determined by the line;
 
-            frame.canvases.forEach(function(canvas, index) {
-                canvas.localX = frame.leftPadding,
-                canvas.localY = frame.topPadding,
-                canvas.x = frame.x + frame.leftPadding,
-                canvas.y = frame.y + frame.topPadding;
-            });
+    //         frame.canvases.forEach(function(canvas, index) {
+    //             canvas.localX = frame.leftPadding,
+    //             canvas.localY = frame.topPadding,
+    //             canvas.x = frame.x + frame.leftPadding,
+    //             canvas.y = frame.y + frame.topPadding;
+    //         });
 
-            return frame;
-        });
-    }
+    //         return frame;
+    //     });
+    // }
 
     function bindCanvases(canvases, viewingMode, viewingDirection, framePadding, facingCanvasPadding) {
 
