@@ -30785,7 +30785,7 @@ var manifestor = function(options) {
         // selections in particular: http://bost.ocks.org/mike/nest/
 
         var interactionOverlay = d3.select(overlays[0]),
-            animationTiming = 0; // animate ? 1000 : 0;
+            animationTiming = animate ? 1000 : 0;
 
         if (canvasState().perspective === 'detail') {
             interactionOverlay
@@ -30858,7 +30858,7 @@ var manifestor = function(options) {
                 .each(updateImages)
                 .call(endall, function() { if (callback) { callback(); }});
 
-        frameUpdated.select('.canvas')
+        frame.select('.canvas')
             .style('width', function(d) { return d.canvas.width + 'px'; })
             .style('height', function(d) { return d.canvas.height + 'px'; })
             .attr('class', function(d) {
@@ -31017,11 +31017,11 @@ var manifestor = function(options) {
 
         $(viewer.container).css('position', 'absolute');
 
-        viewer.addHandler('animation', function(event) {
-            // if (canvasState().perspective === 'detail') {
-                synchroniseZoom();
-            // }
-        });
+        // viewer.addHandler('animation', function(event) {
+        //     // if (canvasState().perspective === 'detail') {
+        //         synchroniseZoom();
+        //     // }
+        // });
     };
 
     function synchroniseZoom() {
@@ -31310,7 +31310,7 @@ var manifestLayout = function(options) {
         // A frame can wrap several book pages
         // into what will become a single higlight,
         // hover, or click target.
-        canvas.localX = canvas.localX ? canvas.localX : padding.left;
+        canvas.localX = padding.left;
         canvas.localY = padding.top;
         return {
             width: canvas.width + padding.left + padding.right,
@@ -31349,11 +31349,17 @@ var manifestLayout = function(options) {
                 return canvas.viewingHint === 'non-paged' ? false : true;
             }).map(function(canvas, index) {
                 var boundPagePadding;
-                if (index === 0) {
-                    return frame(canvas, framePadding);
-                }
 
-                if ((index + 1) % 2 === 0) {
+                if (index === 0) {
+                    boundPagePadding = {
+                        top: framePadding.top,
+                        bottom: framePadding.bottom,
+                        left: framePadding.left,
+                        right: canvas.width * facingCanvasPadding/100/2
+                    };
+                    boundPagePadding.left = canvas.width + (facingCanvasPadding/100 * canvas.width);
+                    return frame(canvas, boundPagePadding);
+                } else if ((index + 1) % 2 === 0) {
                     console.log(index + ' even');
                     // gets all even pages and makes
                     // their facing page the next page
@@ -31365,7 +31371,8 @@ var manifestLayout = function(options) {
                         right: canvas.width * facingCanvasPadding/100/2
                     };
 
-                    return frame(canvas, framePadding);
+                    console.log(boundPagePadding);
+                    return frame(canvas, boundPagePadding);
 
                 } else {
 
@@ -31378,7 +31385,7 @@ var manifestLayout = function(options) {
                     console.log(index + ' odd');
                     console.log(boundPagePadding);
 
-                    return frame(canvas, framePadding);
+                    return frame(canvas, boundPagePadding);
                 }
             });
         } else if (viewingMode === 'continuous') {
@@ -31477,7 +31484,10 @@ var manifestLayout = function(options) {
             // If we're in book mode, the vantage needs
             // to take into account the matching page
             // as well as the configured page margin.
-            selectionBoundingBox = {width: canvas.width};
+            selectionBoundingBox = {
+                width: canvas.width,
+                height: canvas.height
+            };
         }
 
         selectionBoundingBox = {

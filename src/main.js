@@ -220,7 +220,7 @@ var manifestor = function(options) {
         // selections in particular: http://bost.ocks.org/mike/nest/
 
         var interactionOverlay = d3.select(overlays[0]),
-            animationTiming = 0; // animate ? 1000 : 0;
+            animationTiming = animate ? 1000 : 0;
 
         if (canvasState().perspective === 'detail') {
             interactionOverlay
@@ -293,7 +293,7 @@ var manifestor = function(options) {
                 .each(updateImages)
                 .call(endall, function() { if (callback) { callback(); }});
 
-        frameUpdated.select('.canvas')
+        frame.select('.canvas')
             .style('width', function(d) { return d.canvas.width + 'px'; })
             .style('height', function(d) { return d.canvas.height + 'px'; })
             .attr('class', function(d) {
@@ -452,11 +452,11 @@ var manifestor = function(options) {
 
         $(viewer.container).css('position', 'absolute');
 
-        viewer.addHandler('animation', function(event) {
-            // if (canvasState().perspective === 'detail') {
-                synchroniseZoom();
-            // }
-        });
+        // viewer.addHandler('animation', function(event) {
+        //     // if (canvasState().perspective === 'detail') {
+        //         synchroniseZoom();
+        //     // }
+        // });
     };
 
     function synchroniseZoom() {

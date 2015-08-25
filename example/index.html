@@ -137,6 +137,7 @@
              }
 
              currentMode = newMode;
+             viewer.selectViewingMode(newMode);
          }
 
          $.get('http://iiif.io/api/presentation/2.0/example/fixtures/collection.json', function(fixtureCollection) {
