@@ -25,10 +25,10 @@
     "tests"
   ],
   "dependencies": {
-    "openseadragon": "~2.0.0",
-    "jquery": "~2.1.4"
+    "openseadragon": "~2.0.0"
   },
   "devDependencies": {
-      "keymaster": "~1.6.3"
+    "jquery": "~2.1.4",
+    "keymaster": "~1.6.3"
   }
 }
