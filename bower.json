@@ -25,11 +25,10 @@
     "tests"
   ],
   "dependencies": {
-    "manifesto": "~0.1.12",
     "openseadragon": "~2.0.0",
-    "keymaster": "~1.6.3"
+    "jquery": "~2.1.4"
   },
   "devDependencies": {
-    "keymaster": "~1.6.3"
+      "keymaster": "~1.6.3"
   }
 }
