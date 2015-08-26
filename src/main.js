@@ -151,13 +151,11 @@ var manifestor = function(options) {
 
     if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
       var endCallback = function() {
-          console.log('rendered overview from detail');
           renderLayout(layout.overview(), false);
       };
       renderLayout(layout.intermediate(), true, endCallback);
     } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail'){
         endCallback = function() {
-        console.log('rendered overview from detail');
         renderLayout(layout.overview(), false);
       };
       renderLayout(layout.intermediate(), false, endCallback);
@@ -295,7 +293,7 @@ var manifestor = function(options) {
           .tween('translateTilesources', translateTilesources)
           .each(updateImages)
           .call(endall, function() {
-            if (callback) { console.log('called callback'); callback();}
+            if (callback) {callback();}
           });
 
     frame.select('.' + canvasClass)
