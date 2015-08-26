@@ -265,11 +265,9 @@ var manifestLayout = function(options) {
           return page.canvas.sequencePosition - 1 === frame.canvas.sequencePosition;
         })[0];
 
-        console.log(facingFrame);
         if (facingFrame) {
           lineItemWidth = frame.width + facingFrame.width;
         } else {
-          console.log('firstPage');
           lineItemWidth = frame.width;
         }
       } else {
@@ -279,7 +277,6 @@ var manifestLayout = function(options) {
       if (!line) { line = this.addLine(); }
 
       if (line.remaining >= lineItemWidth) {
-        console.log('plenty of space!');
         var x = lineWidth - line.remaining;
         if (viewingDirection === 'right-to-left') {
           x = line.remaining - frame.x;
@@ -288,7 +285,6 @@ var manifestLayout = function(options) {
         return [x, lines.currentLine];
       }
 
-      console.log('not enough space, going to next line');
       this.currentLine += 1;
       line = lines.addLine();
       x = viewingDirection === 'right-to-left' ? frame.width: line.remaining;
