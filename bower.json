@@ -6,7 +6,7 @@
     "aeschylus <scipioaffricanus@gmail.com>"
   ],
   "description": "An openSeadragon-based representation of a iiif manifest.",
-  "main": "dist/iiifManifestLayout.js",
+  "main": "dist/manifestor.js",
   "moduleType": [
     "amd",
     "node"
@@ -25,11 +25,10 @@
     "tests"
   ],
   "dependencies": {
-    "manifesto": "~0.1.12",
-    "openseadragon": "~2.0.0",
-    "keymaster": "~1.6.3"
+    "openseadragon": "~2.0.0"
   },
   "devDependencies": {
+    "jquery": "~2.1.4",
     "keymaster": "~1.6.3"
   }
 }
