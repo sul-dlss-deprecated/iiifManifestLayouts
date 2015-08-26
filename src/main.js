@@ -15,6 +15,8 @@ var manifestor = function(options) {
       initialPerspective = options.perspective ? options.perspective : 'overview',
       selectedCanvas = options.selectedCanvas,
       viewer,
+      canvasClass = options.canvasClass ? options.canvasClass : 'canvas',
+      frameClass = options.frameClass ? options.frameClass : 'frame',
       _canvasState,
       _canvasImageStates,
       _zooming = false;
@@ -274,7 +276,7 @@ var manifestor = function(options) {
     //             return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
     //         });
 
-    var frame = interactionOverlay.selectAll('.frame')
+    var frame = interactionOverlay.selectAll('.' + frameClass)
           .data(layoutData);
 
     var frameUpdated = frame
@@ -295,17 +297,17 @@ var manifestor = function(options) {
             if (callback) { console.log('called callback'); callback();}
           });
 
-    frame.select('.canvas')
+    frame.select('.' + canvasClass)
       .style('width', function(d) { return d.canvas.width + 'px'; })
       .style('height', function(d) { return d.canvas.height + 'px'; })
       .attr('class', function(d) {
         var selected = d.canvas.selected;
-        return selected ? 'canvas selected' : 'canvas';
+        return selected ? canvasClass + ' selected' : canvasClass;
       });
 
     var frameEnter = frame
           .enter().append('div')
-          .attr('class', 'frame')
+          .attr('class', frameClass)
           .style('width', function(d) { return d.width + 'px'; })
           .style('height', function(d) { return d.height + 'px'; })
           .style('transform', function(d) { return 'translate(' + d.x + 'px,' + d.y + 'px)'; })
@@ -315,7 +317,7 @@ var manifestor = function(options) {
       .append('div')
       .attr('class', function(d) {
         var selected = d.canvas.selected;
-        return selected ? 'canvas selected' : 'canvas';
+        return selected ? canvasClass + ' selected' : canvasClass;
       })
       .attr('data-id', function(d) {
         return d.canvas.id;
@@ -328,7 +330,7 @@ var manifestor = function(options) {
     // .attr('src', function(d) { return d.canvas.iiifService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
 
     frameEnter
-      .append('div').text(function(d) { return d.canvas.label; });
+      .append('div').class().text(function(d) { return d.canvas.label; });
 
   };
 
@@ -556,7 +558,7 @@ var manifestor = function(options) {
     canvasState(state);
   }
 
-  container.on('click', '.canvas', function(event) {
+  container.on('click', '.' + canvasClass, function(event) {
     selectCanvas($(this).data('id'));
   });
   scrollContainer.on('scroll', function(event) {
