@@ -17,7 +17,7 @@ var manifestor = function(options) {
       viewer,
       canvasClass = options.canvasClass ? options.canvasClass : 'canvas',
       frameClass = options.frameClass ? options.frameClass : 'frame',
-      labelClass = options.frameClass ? options.frameClass : 'label',
+      labelClass = options.labelClass ? options.labelClass : 'label',
       _canvasState,
       _canvasImageStates,
       _zooming = false;
