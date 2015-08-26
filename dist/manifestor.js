@@ -2707,13 +2707,11 @@ var manifestor = function(options) {
 
     if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
       var endCallback = function() {
-          console.log('rendered overview from detail');
           renderLayout(layout.overview(), false);
       };
       renderLayout(layout.intermediate(), true, endCallback);
     } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail'){
         endCallback = function() {
-        console.log('rendered overview from detail');
         renderLayout(layout.overview(), false);
       };
       renderLayout(layout.intermediate(), false, endCallback);
@@ -2851,7 +2849,7 @@ var manifestor = function(options) {
           .tween('translateTilesources', translateTilesources)
           .each(updateImages)
           .call(endall, function() {
-            if (callback) { console.log('called callback'); callback();}
+            if (callback) { callback();}
           });
 
     frame.select('.' + canvasClass)
@@ -3412,11 +3410,9 @@ var manifestLayout = function(options) {
           return page.canvas.sequencePosition - 1 === frame.canvas.sequencePosition;
         })[0];
 
-        console.log(facingFrame);
         if (facingFrame) {
           lineItemWidth = frame.width + facingFrame.width;
         } else {
-          console.log('firstPage');
           lineItemWidth = frame.width;
         }
       } else {
@@ -3426,7 +3422,6 @@ var manifestLayout = function(options) {
       if (!line) { line = this.addLine(); }
 
       if (line.remaining >= lineItemWidth) {
-        console.log('plenty of space!');
         var x = lineWidth - line.remaining;
         if (viewingDirection === 'right-to-left') {
           x = line.remaining - frame.x;
@@ -3435,7 +3430,6 @@ var manifestLayout = function(options) {
         return [x, lines.currentLine];
       }
 
-      console.log('not enough space, going to next line');
       this.currentLine += 1;
       line = lines.addLine();
       x = viewingDirection === 'right-to-left' ? frame.width: line.remaining;

@@ -293,7 +293,7 @@ var manifestor = function(options) {
           .tween('translateTilesources', translateTilesources)
           .each(updateImages)
           .call(endall, function() {
-            if (callback) {callback();}
+            if (callback) { callback();}
           });
 
     frame.select('.' + canvasClass)
