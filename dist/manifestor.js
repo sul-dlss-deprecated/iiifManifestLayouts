@@ -2573,6 +2573,7 @@ var manifestor = function(options) {
       viewer,
       canvasClass = options.canvasClass ? options.canvasClass : 'canvas',
       frameClass = options.frameClass ? options.frameClass : 'frame',
+      labelClass = options.labelClass ? options.labelClass : 'label',
       _canvasState,
       _canvasImageStates,
       _zooming = false;
@@ -2884,7 +2885,9 @@ var manifestor = function(options) {
     // .attr('src', function(d) { return d.canvas.iiifService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
 
     frameEnter
-      .append('div').text(function(d) { return d.canvas.label; });
+      .append('div')
+      .attr('class', labelClass)
+      .text(function(d) { return d.canvas.label; });
 
   };
 
