@@ -209,7 +209,6 @@ var manifestLayout = function(options) {
                     boundPagePadding.left = canvas.width + (facingCanvasPadding/100 * canvas.width);
                     return frame(canvas, boundPagePadding);
                 } else if ((index + 1) % 2 === 0) {
-                    console.log(index + ' even');
                     // gets all even pages and makes
                     // their facing page the next page
                     // in the index.
@@ -220,7 +219,6 @@ var manifestLayout = function(options) {
                         right: canvas.width * facingCanvasPadding/100/2
                     };
 
-                    console.log(boundPagePadding);
                     return frame(canvas, boundPagePadding);
 
                 } else {
@@ -231,19 +229,15 @@ var manifestLayout = function(options) {
                         left: canvas.width * facingCanvasPadding/100/2,
                         right: framePadding.right
                     };
-                    console.log(index + ' odd');
-                    console.log(boundPagePadding);
 
                     return frame(canvas, boundPagePadding);
                 }
             });
         } else if (viewingMode === 'continuous') {
-            console.log('continuous');
             return canvases.map(function(canvas){
                 return frame(canvas, framePadding);
             });
         } else {
-            console.log('individuals');
             return canvases.map(function(canvas){
                 return frame(canvas, framePadding);
             });
@@ -301,7 +295,6 @@ var manifestLayout = function(options) {
             // resizes canvases for the chosen layout strategy.
             return fitHeight(canvas, canvasHeight);
         }), viewingMode, viewingDirection, framePadding, facingCanvasPadding);
-        console.log(frames);
 
         return fixedHeightAlign(frames, containerWidth, viewingDirection);
     }
