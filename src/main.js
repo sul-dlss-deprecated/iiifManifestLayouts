@@ -59,11 +59,9 @@ var manifestor = function(options) {
      // 'overflow-x': 'hidden',
      // 'overflow-y': 'scroll'
     });
-  var ersatzOverlays = $('<div class="ersatzOverlays">').height(1800);
 
   container.append(osdContainer);
   container.append(scrollContainer);
-  scrollContainer.append(ersatzOverlays);
   scrollContainer.append(overlays);
   initOSD();
 
@@ -153,13 +151,13 @@ var manifestor = function(options) {
           console.log('rendered overview from detail');
           renderLayout(layout.overview(), false);
       };
-      renderLayout(layout.intermediate(), true, endCallback);//, endCallback);
+      renderLayout(layout.intermediate(), true, endCallback);
     } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail'){
         endCallback = function() {
         console.log('rendered overview from detail');
         renderLayout(layout.overview(), false);
       };
-      renderLayout(layout.intermediate(), false, endCallback);//, endCallback);
+      renderLayout(layout.intermediate(), false, endCallback);
     } else if (userState.perspective === 'detail' && userState.perspective === 'detail'){
       renderLayout(layout.intermediate(), false);
     } else {
@@ -330,7 +328,7 @@ var manifestor = function(options) {
     // .attr('src', function(d) { return d.canvas.iiifService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
 
     frameEnter
-      .append('h4').text(function(d) { return d.canvas.label; });
+      .append('div').text(function(d) { return d.canvas.label; });
 
   };
 
