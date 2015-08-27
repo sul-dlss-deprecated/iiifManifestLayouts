@@ -2574,6 +2574,7 @@ var manifestor = function(options) {
       canvasClass = options.canvasClass ? options.canvasClass : 'canvas',
       frameClass = options.frameClass ? options.frameClass : 'frame',
       labelClass = options.labelClass ? options.labelClass : 'label',
+      stateUpdateCallback = options.stateUpdateCallback,
       _canvasState,
       _canvasImageStates,
       _zooming = false;
@@ -2632,7 +2633,7 @@ var manifestor = function(options) {
     viewingDirection: initialViewingDirection, // manifest derived or user specified (iiif viewingHint)
     width: container.width(),
     height: container.height()
-  });
+  }, true); // "initial" is true here; don't fire the state callback.
 
   d3.timer(function() {
     viewer.forceRedraw();
@@ -2652,11 +2653,17 @@ var manifestor = function(options) {
     return manifest.viewingHint ? manifest.viewingHint : 'individuals';
   };
 
-  function canvasState(state) {
+  function canvasState(state, initial) {
 
     if (!arguments.length) return _canvasState;
     _canvasState = state;
 
+    if (stateUpdateCallback && !initial) {
+      // should we pass in the state here?
+      // I don't really want to encourage reading
+      // the state from the event.
+      stateUpdateCallback();
+    }
     render();
 
     return _canvasState;
