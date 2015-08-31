@@ -2911,6 +2911,10 @@ var manifestor = function(options) {
     var canvasId = d.canvas.id,
         dummyObj = canvasImageStates()[canvasId].dummyObj;
 
+    if (dummyObj === undefined) {
+      return;
+    }
+
     var currentBounds = dummyObj.getBounds(true),
         xi = d3.interpolate(currentBounds.x, d.canvas.x),
         yi = d3.interpolate(currentBounds.y, d.canvas.y);
@@ -3144,7 +3148,8 @@ var manifestor = function(options) {
     updateThumbSize: updateThumbSize,
     refreshState: refreshState,
     getState: canvasState,
-    setState: canvasState
+    setState: canvasState,
+    osd: viewer
   };
 };
 
