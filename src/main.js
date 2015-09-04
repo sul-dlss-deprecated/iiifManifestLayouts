@@ -157,7 +157,6 @@ var manifestor = function(options) {
     // } else {
     //     renderLayout(targetLayout, true);
     // }
-
     if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
       var endCallback = function() {
           renderLayout(layout.overview(), false);
@@ -168,7 +167,7 @@ var manifestor = function(options) {
         renderLayout(layout.overview(), false);
       };
       renderLayout(layout.intermediate(), false, endCallback);
-    } else if (userState.perspective === 'detail' && userState.perspective === 'detail'){
+    } else if (userState.perspective === 'detail' && userState.previousPerspective === 'detail'){
       renderLayout(layout.intermediate(), false);
     } else {
       renderLayout(layout.overview(), true);

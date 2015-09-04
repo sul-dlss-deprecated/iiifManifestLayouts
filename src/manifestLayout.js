@@ -327,31 +327,53 @@ var manifestLayout = function(options) {
     return detailLayoutHorizontal(intermediateLayout());
   }
 
-  function getVantageForCanvas(canvas, viewport) {
-    var portrait = (canvas.width/canvas.height) <= 1,
+  /**
+   * Calculates a vantage for a selected canvas
+   * @param {Object} selectedCanvas
+   * @param {Object} previousFrame
+   * @param {Object} nextFrame
+   */
+  function getVantageForCanvas(selectedCanvas, previousFrame, nextFrame) {
+    var portrait,
         vantageWidth,
         vantageHeight,
         horizontalMargin,
         verticalMargin,
+        combinedCanvasWidths,
+        x,
         minimumViewportPadding = 5, // units in %
-        selectionBoundingBox;
+        selectionBoundingBox = {};
 
+    var paddingCalc = ((minimumViewportPadding * 2 ) / 100 );
+
+    // Set the selectionBoundingBox.width, portrait, and x values based on the
+    // location of the paged frame
     if (viewingMode === 'paged') {
-      // If we're in book mode, the vantage needs
-      // to take into account the matching page
-      // as well as the configured page margin.
-      selectionBoundingBox = {
-        width: canvas.width,
-        height: canvas.height
-      };
+      var selectionIndex = selectedCanvas.sequencePosition;
+      if (selectionIndex === 0) {
+        // first page
+        combinedCanvasWidths = selectedCanvas.width * 2;
+        x = selectedCanvas.x - selectedCanvas.width;
+      } else if (selectionIndex % 2 === 0) {
+        // right page
+        combinedCanvasWidths = selectedCanvas.width + previousFrame.canvas.width;
+        x = previousFrame.canvas.x;
+      } else {
+        // left page
+        combinedCanvasWidths = selectedCanvas.width + nextFrame.canvas.width;        
+        x = selectedCanvas.x;
+      }
+    } else {
+      combinedCanvasWidths = selectedCanvas.width;
+      x = selectedCanvas.x;
     }
-
     selectionBoundingBox = {
-      width: canvas.width + (canvasWidth*(minimumViewportPadding*2)/100),
-      height: canvas.height + (canvas.height*(minimumViewportPadding*2)/100)
+      width: combinedCanvasWidths + (combinedCanvasWidths * paddingCalc),
+      height: selectedCanvas.height + (selectedCanvas.height * paddingCalc)
     };
 
-    if (viewport.aspectRatio <= 1 && portrait || viewport.aspectRatio > 1 && !portrait) {
+    portrait = isPortrait(selectionBoundingBox.width / selectedCanvas.height);
+    if ((viewport.aspectRatio <= 1 && portrait) || (viewport.aspectRatio > 1 && !portrait)) {
       // this handles the case where both the viewport
       // and the canvas are portraits or both landscapes.
       // In this case, "something's gotta give", and
@@ -373,17 +395,16 @@ var manifestLayout = function(options) {
         vantageHeight = selectionBoundingBox.height;
         vantageWidth = vantageHeight * viewport.aspectRatio;
       } else {
-        vantageWidth = selectionBoundingBox.width,
+        vantageWidth = selectionBoundingBox.width;
         vantageHeight = vantageWidth / viewport.aspectRatio;
       }
     }
-
-    horizontalMargin = (vantageWidth - canvas.width)/2,
-    verticalMargin = (vantageHeight - canvas.height)/2;
+    horizontalMargin = (vantageWidth - combinedCanvasWidths) / 2;
+    verticalMargin = (vantageHeight - selectedCanvas.height) / 2;
 
     return {
-      x: canvas.x - horizontalMargin,
-      y: canvas.y - verticalMargin,
+      x: x - horizontalMargin,
+      y: selectedCanvas.y - verticalMargin,
       width: vantageWidth,
       height: vantageHeight,
       horizontalMargin: horizontalMargin,
@@ -423,11 +444,16 @@ var manifestLayout = function(options) {
     var selectedFrame = frames.filter(function(frame) {
       return frame.canvas.selected;
     })[0];
-    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, viewport);
 
+    var canvasPosition = selectedFrame.canvas.sequencePosition;
+    var previousFrame = frames[canvasPosition - 1];
+    var nextFrame = frames[canvasPosition + 1];
+
+    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, previousFrame, nextFrame, viewport);
+    
     frames.forEach(function(frame, index, allFrames) {
       if (frame.y === selectedFrame.y && frame.canvas.id !== selectedFrame.canvas.id) {
-        if (index < selectedFrame.canvas.sequencePosition) {
+        if (index < canvasPosition) {
           frame.x = frame.x - selectedFrame.vantage.horizontalMargin;
         } else {
           frame.x = frame.x + selectedFrame.vantage.horizontalMargin;
@@ -446,6 +472,15 @@ var manifestLayout = function(options) {
     // of objects to transform. Those of the same line, those above, and those below.
 
     return frames;
+  }
+
+  /**
+   * Calculates whether or not an aspectRatio is portrait
+   * @param {Number} aspectRatio (w/h)
+   * @returns {Boolean}
+   */
+  function isPortrait(aspectRatio) {
+    return aspectRatio <= 1 ? true : false;
   }
 
 
