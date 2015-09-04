@@ -31,11 +31,11 @@
                 <option value="value2">Grid</option>
                 <option value="value3">Hybrid</option>
             </select>
-            <label for=mode>Viewing Mode</label>
+            <label for=mode>Viewing Mode (m)</label>
             <select id="mode" name="mode">
-                <option value="single" selected>single</option>
-                <option value="book">book</option>
-                <option value="scroll">scroll</option>
+                <option value="individuals" selected>individuals</option>
+                <option value="paged">paged</option>
+                <!-- <option value="scroll">scroll</option> -->
             </select>
             <label for=readingDirection>Reading Direction</label>
             <select id="readingDirection" name="readingDirection">
@@ -109,6 +109,10 @@
          });
 
          $('#manifestPicker').on('change', function() {
+         });
+
+         $('#mode').on('change', function(e) {
+           viewer.selectViewingMode(e.target[e.target.selectedIndex].value);
          });
 
          $('#scale').on('input', function() {
