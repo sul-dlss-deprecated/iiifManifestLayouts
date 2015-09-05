@@ -60,13 +60,7 @@ module.exports = function(grunt) {
                     dot: true,
                     src: ['<%= config.distDir %>/*', '!<%= config.distDir %>/.git*']
                 }]
-            },
-            example: {
-                files: [{
-                    dot: true,
-                    src: ['<%= config.exampleScriptDir %>/manifestor.js', '!<%= config.exampleScriptDir %>/.git*']
-                }]
-            },
+            }
         },
 
         // copy static asset files from dist/ to example/scripts/ for demoing/dev work
@@ -121,8 +115,7 @@ module.exports = function(grunt) {
         connect: {
             example : {
                 options: {
-                    port: '4000',
-                    base: config.exampleDir
+                    port: '4000'
                 }
             }
         },
@@ -131,11 +124,11 @@ module.exports = function(grunt) {
         watch: {
             js: {
                 files: '<%= config.srcDir %>/**/*.*',
-                tasks: ['smash', 'browserify:dist', 'copy:example']
+                tasks: ['smash', 'browserify:dist']
             },
             grunt: {
                 files: 'Gruntfile.js',
-                tasks: ['less:example', 'browserify:dist', 'copy:example']
+                tasks: ['less:example', 'browserify:dist']
             },
             less: {
                 files: '<%= config.exampleDir %>/styles/**/*.*',
@@ -144,10 +137,6 @@ module.exports = function(grunt) {
             browserify: {
                 files: '<%= config.src %>/scripts/**/*.*',
                 tasks: ['browserify:dist']
-            },
-            copy: {
-                files: '<%= config.distDir %>/*',
-                tasks: ['copy:example']
             }
         },
 
@@ -161,11 +150,9 @@ module.exports = function(grunt) {
 
     // Example tasks
     grunt.registerTask('buildExample', [
-        'clean:dist',      // clean old files out of build/Example
-        'clean:example',      // clean old files out of build/Example
+        'clean:dist',      // clean old files out of build/dist
         'smash', // build custom D3 package
         'browserify:dist', // bundle JS with browserify
-        'copy:example',       // copy static asset files from app/ to build/Example
         'less:example',       // compile LESS to CSS
     ]);
 
@@ -178,10 +165,8 @@ module.exports = function(grunt) {
     // Distribution tasks
     grunt.registerTask('buildDist', [
         'clean:dist',      // clean old files out of build/dist
-        'clean:example',      // clean old files out of build/dist
         'smash', // build custom D3 package
         'browserify:dist', // bundle JS with browserify
-        'copy:example',       // copy static asset files from app/ to build/dist
         'less:example',       // compile LESS to CSS
         'uglify:dist',     // minify JS files
     ]);
