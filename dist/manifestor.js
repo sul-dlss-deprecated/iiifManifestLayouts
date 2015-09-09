@@ -2779,6 +2779,7 @@ var manifestor = function(options) {
     var interactionOverlay = d3.select(overlays[0]);
     if (canvasState().perspective === 'detail') {
       interactionOverlay
+        .style('opacity', 0)
         .transition()
         .duration(animationTiming)
         .style('pointer-events', 'none');
@@ -2792,10 +2793,10 @@ var manifestor = function(options) {
     } else if(!_zooming) {
 
       interactionOverlay
+        .style('opacity', 1)
         .transition()
         .duration(animationTiming)
-        .style('pointer-events', 'all')
-        .style('opacity', 1);
+        .style('pointer-events', 'all');
 
       d3.select(scrollContainer[0])
         .transition()
