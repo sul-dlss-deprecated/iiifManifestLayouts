@@ -3513,13 +3513,29 @@ var manifestLayout = function(options) {
       return line;
     };
 
+    /**
+     * @param frame
+     * @returns {Array} [frame x position, line frame is on]
+     */
     lines.addItem = function(frame) {
       var line = this[this.currentLine],
-          lineItemWidth;
+          lineItemWidth,
+          x;
 
-      if (viewingMode === 'paged') {
+      if (viewingMode === 'paged') {        
+        var position = frame.canvas.sequencePosition;
+        // Return the facingFrame, based on the facing page type
         var facingFrame = frames.filter(function(page) {
-          return page.canvas.sequencePosition - 1 === frame.canvas.sequencePosition;
+          var value;
+          switch (facingPageType(position)) {
+            case 'rightPage':
+            value = -1;
+            break;
+            case 'leftPage':
+            value = 1;
+            break;
+          }
+          return page.canvas.sequencePosition + value === position;
         })[0];
 
         if (facingFrame) {
@@ -3534,14 +3550,17 @@ var manifestLayout = function(options) {
       if (!line) { line = this.addLine(); }
 
       if (line.remaining >= lineItemWidth) {
-        var x = lineWidth - line.remaining;
+        x = lineWidth - line.remaining;
         if (viewingDirection === 'right-to-left') {
           x = line.remaining - frame.x;
-        };
+        }
         line.remaining -= frame.width;
         return [x, lines.currentLine];
       }
-
+      if (line.remaining >= frame.width && facingPageType(frame.canvas.sequencePosition) === 'rightPage') {
+        x = lineWidth - line.remaining;
+        return [x, lines.currentLine];
+      }
       this.currentLine += 1;
       line = lines.addLine();
       x = viewingDirection === 'right-to-left' ? frame.width: line.remaining;
@@ -3557,6 +3576,20 @@ var manifestLayout = function(options) {
       frame.canvas.y = frame.y + frame.canvas.localY;
       return frame;
     });
+  }
+
+  /**
+   * Determines a facing page type
+   * @returns {String}
+   */
+  function facingPageType(index) {
+    if (index === 0) {
+      return 'firstPage';
+    } else if ((index % 2) === 0) {
+      return 'rightPage';
+    } else {
+      return 'leftPage';
+    }
   }
 
   function overviewLayout() {
