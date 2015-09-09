@@ -11,6 +11,12 @@ var resourceStore = function(resourceUrl, resourceMask) {
     opactity: 0
   };
 
+  resource.setTilesource = function() {
+  };
+
+  resource.setOpacity = function() {
+  };
+
   return resource;
 };
 

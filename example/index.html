@@ -81,7 +81,7 @@
              /* http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json */
              viewer = manifestor({
                  manifest: manifest,
-                 container: $('#example-container'),
+                 container: $('#example-container')[0],
                  selectedCanvas: manifest.sequences[0].canvases[10]['@id'],
                  canvasClass: 'canvas', //default set to 'canvas'
                  frameClass: 'frame', //default set to 'frame'

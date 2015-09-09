@@ -16,18 +16,18 @@ var iiifUtils = {
     return id;
   },
 
-  getViewingDirection : function(options) {
-    if (options.sequence && options.sequence.viewingDirection) {
-      return options.sequence.viewingDirection;
+  getViewingDirection : function(manifest) {
+    if (manifest.sequence && manifest.sequence.viewingDirection) {
+      return manifest.sequence.viewingDirection;
     }
-    return options.manifest.viewingDirection ? options.manifest.viewingDirection : 'left-to-right';
+    return manifest.viewingDirection ? manifest.viewingDirection : 'left-to-right';
   },
 
-  getViewingHint: function(options) {
-    if (options.sequence && options.sequence.viewingHint) {
-      return options.sequence.viewingHint;
+  getViewingHint: function(manifest) {
+    if (manifest.sequence && manifest.sequence.viewingHint) {
+      return manifest.sequence.viewingHint;
     }
-    return options.manifest.viewingHint ? options.manifest.viewingHint : 'individuals';
+    return manifest.viewingHint ? manifest.viewingHint : 'individuals';
   },
 
 

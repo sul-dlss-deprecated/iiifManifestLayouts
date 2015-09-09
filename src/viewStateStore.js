@@ -1,15 +1,14 @@
 'use strict';
 
-var manifestLayout = require('./manifestLayout');
-var canvasLayout = require('./canvasLayout');
+var iiif = require('./iiifUtils');
 
-var manifestor = function(options) {
+var viewStateStore = function(options) {
   var manifest = options.manifest,
       sequence = options.sequence,
       canvases = options.sequence ? options.sequence.canvases : manifest.sequences[0].canvases,
       container = options.container,
-      initialViewingDirection = options.viewingDirection ? options.viewingDirection : getViewingDirection(),
-      initialViewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
+      initialViewingDirection = options.viewingDirection ? options.viewingDirection : iiif.getViewingDirection(manifest),
+      initialViewingMode = options.viewingMode ? options.viewingHint : iiif.getViewingHint(manifest),
       initialPerspective = options.perspective ? options.perspective : 'overview',
       selectedCanvas = options.selectedCanvas,
       viewer,
@@ -25,8 +24,8 @@ var manifestor = function(options) {
         perspective: initialPerspective, // can be 'overview' or 'detail'
         viewingMode: initialViewingMode, // manifest derived or user specified (iiif viewingHint)
         viewingDirection: initialViewingDirection, // manifest derived or user specified (iiif viewingHint)
-        width: container.width(),
-        height: container.height()
+        width: container.offsetWidth,
+        height: container.offsetWidth
       }, true); // "initial" is true here; don't fire the state callback.
 
   function canvasState(state, initial) {
@@ -107,4 +106,4 @@ var manifestor = function(options) {
   };
 };
 
-module.exports = manifestor;
+module.exports = viewStateStore;

@@ -14,7 +14,7 @@ var domComponent = function(container) {
 
   container.appendChild(osdElement);
   container.appendChild(scrollArea);
-  scrollArea.append(overlaysContainer);
+  scrollArea.appendChild(overlaysContainer);
 
   return {
     overlaysContainer: overlaysContainer,

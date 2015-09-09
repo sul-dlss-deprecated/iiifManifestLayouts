@@ -6,37 +6,6 @@ var canvasLayout = require('./canvasLayout');
 var iiif = require('./iiifUtils');
 
 var imageRenderer = function(options) {
-  var container = options.container,
-      viewer;
-
-  var overlays = $('<div class="overlaysContainer">').css(
-    {'width': '100%',
-     'height': '100%',
-     'position': 'absolute',
-     'top': 0,
-     'left': 0
-    });
-  var osdContainer = $('<div class="osd-container">').css(
-    {'width': '100%',
-     'height': '100%',
-     'position': 'absolute',
-     'top': 0,
-     'left': 0
-    });
-  var scrollContainer = $('<div class="scroll-container">').css(
-    {'width': '100%',
-     'height': '100%',
-     'position': 'absolute',
-     'top': 0,
-     'left': 0,
-     'overflow': 'hidden'//,
-     // 'overflow-x': 'hidden',
-     // 'overflow-y': 'scroll'
-    });
-
-  container.append(osdContainer);
-  container.append(scrollContainer);
-  scrollContainer.append(overlays);
   initOSD();
 
   d3.timer(function() {
@@ -44,15 +13,6 @@ var imageRenderer = function(options) {
   });
 
   function initOSD() {
-    viewer = OpenSeadragon({
-      element: osdContainer[0],
-      autoResize: true,
-      showNavigationControl: false,
-      preserveViewport: true
-    });
-
-    $(viewer.container).css('position', 'absolute');
-
     viewer.addHandler('animation', function(event) {
       if (canvasState().perspective === 'detail' || _zooming === true) {
         synchroniseZoom();
@@ -125,16 +85,6 @@ var imageRenderer = function(options) {
       minimumImageGap: 5, // precent of viewport
       facingCanvasPadding: 1 // precent of viewport
     });
-
-    // if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
-    //     var endCallback = function() {console.log('rendered overview from detail'); renderLayout(layout.overview(), true);};
-    //     renderLayout(layout.intermediate(), false, endCallback);
-    // } else if (userState.perspective === 'overview' && userState.preserveViewport === 'detail'){
-    //     endCallback = function() {console.log('rendered overview from detail'); renderLayout(layout.detail(), false);};
-    //     renderLayout(targetLayout, true, endCallback);
-    // } else {
-    //     renderLayout(targetLayout, true);
-    // }
 
     if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
       var endCallback = function() {
