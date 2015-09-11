@@ -23,7 +23,8 @@ var manifestor = function(options) {
       _canvasImageStates,
       _zooming = false,
       _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()},
-      _inZoomConstraints;
+      _inZoomConstraints,
+      _lastScrollPosition = 0;
 
   function getViewingDirection() {
     if (sequence && sequence.viewingDirection) {
@@ -84,20 +85,6 @@ var manifestor = function(options) {
   d3.timer(function() {
     viewer.forceRedraw();
   });
-
-  function getViewingDirection() {
-    if (sequence && sequence.viewingDirection) {
-      return sequence.viewingDirection;
-    }
-    return manifest.viewingDirection ? manifest.viewingDirection : 'left-to-right';
-  };
-
-  function getViewingHint() {
-    if (sequence && sequence.viewingHint) {
-      return sequence.viewingHint;
-    }
-    return manifest.viewingHint ? manifest.viewingHint : 'individuals';
-  };
 
   function canvasState(state, initial) {
 
@@ -189,14 +176,14 @@ var manifestor = function(options) {
       setScrollElementEvents();
       viewer.viewport.fitBounds(osdBounds, false);
     } else {
-      viewBounds = new OpenSeadragon.Rect(0,0, canvasState().width, canvasState().height);
+      viewBounds = new OpenSeadragon.Rect(0, _lastScrollPosition, canvasState().width, canvasState().height);
       _zooming = true;
       setScrollElementEvents();
       viewer.viewport.fitBounds(viewBounds, false);
       setTimeout(function(){
         _zooming = false;
         setScrollElementEvents();
-      }, 1200);
+      }, 1500);
     }
   }
 
@@ -490,7 +477,8 @@ var manifestor = function(options) {
     var viewerWidth = viewer.container.clientWidth;
     var viewerHeight = viewer.container.clientHeight;
     var center = viewer.viewport.getCenter(true);
-    var p = center.minus(new OpenSeadragon.Point(viewerWidth / 2, viewerHeight / 2));
+    var p = center.minus(new OpenSeadragon.Point(viewerWidth / 2, viewerHeight / 2))
+          .minus(new OpenSeadragon.Point(0, _lastScrollPosition));
     var zoom = viewer.viewport.getZoom(true);
     var scale = viewerWidth * zoom;
 
@@ -675,7 +663,8 @@ var manifestor = function(options) {
   });
   scrollContainer.on('scroll', function(event) {
     if (canvasState().perspective === 'overview' && _zooming === false) {
-      synchronisePan($(this).scrollTop(), $(this).width(), $(this).height());
+      _lastScrollPosition = $(this).scrollTop();
+      synchronisePan(_lastScrollPosition, $(this).width(), $(this).height());
     }
   });
 
