@@ -1,4 +1,20 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.manifestor = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var iiif = require('./iiifUtils'),
+    canvasStore = require('./resourceStore');
+
+var canvasHelper = function(canvases) {
+  var canvasHelper = {};
+
+  canvases.forEach(function(canvas) {
+    canvasHelper[canvas['@id']] = canvasStore(canvas);
+  });
+
+  return canvasHelper;
+};
+
+module.exports = canvasHelper;
+
+},{"./iiifUtils":4,"./resourceStore":9}],2:[function(require,module,exports){
 'use strict';
 
 var canvasLayout = function(canvas) {
@@ -7,7 +23,7 @@ var canvasLayout = function(canvas) {
 
 module.exports = canvasLayout;
 
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 var domComponent = function(container) {
 
   var overlaysContainer = document.createElement('div'),
@@ -35,7 +51,7 @@ var domComponent = function(container) {
 
 module.exports = domComponent;
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 'use strict';
 
 var iiifUtils = {
@@ -126,7 +142,7 @@ var iiifUtils = {
 
 module.exports = iiifUtils;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 'use strict';
 
 var manifestLayout = require('./manifestLayout');
@@ -135,30 +151,27 @@ var iiif = require('./iiifUtils');
 var d3 = require('./lib/d3-slim-dist');
 
 function imageGraph(stores) {
+  var renderData = stores.getState();
+  console.log(renderData);
 
   // creare a document fragment to draw "offline"
   var graphRoot = document.createDocumentFragment();
 
-  var imageGraph = d3.select(sketchFrag).append("svg")
-        .attr("width", w)
-        .attr("height", h)
+  var imageGraph = d3.select(graphRoot).append("svg")
+        .attr("width", renderData.width)
+        .attr("height", renderData.height)
         .call(renderImageScene);
 
   function renderImageScene(selection) {
+    console.log('called');
   }
-
-  // This renders the graph of nodes according to node law.
-  // The land of the nodes is a cruel and harsh one,
-  // but for the nodes, who have inhabited these
-  // barren wastes for eons now,
-  // it will always be home.
 
   return imageGraph;
 };
 
 module.exports = imageGraph;
 
-},{"./canvasLayout":1,"./iiifUtils":3,"./lib/d3-slim-dist":5,"./manifestLayout":7}],5:[function(require,module,exports){
+},{"./canvasLayout":2,"./iiifUtils":4,"./lib/d3-slim-dist":6,"./manifestLayout":8}],6:[function(require,module,exports){
 !function(){
   var d3 = {version: "3.5.6"}; // semver
 var d3_arraySlice = [].slice,
@@ -2628,31 +2641,59 @@ function d3_transitionNode(node, i, ns, id, inherit) {
   this.d3 = d3;
 }();
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 'use strict';
 
 var viewStateStore = require('./viewStateStore'),
     imageGraph = require('./imageGraph'),
-    domComponent = require('./domComponent');
+    domComponent = require('./domComponent'),
+    canvasHelper = require('./canvasHelper');
 
 var manifestor = function(options) {
   var manifestor = viewStateStore(options);
 
-  manifestor.dom = domComponent(options.container);
+  var dom = domComponent(options.container),
+      helper = canvasHelper(manifestor.getState().canvases),
+      osd = OpenSeadragon({
+        element: dom.osdElement,
+        showNavigationControl: false
+      }),
+      graph = imageGraph(manifestor);
 
-  manifestor.osd = OpenSeadragon({
-    element: manifestor.dom.osdElement,
-    showNavigationControl: false
-  });
+  // beginning layout
+  //          - unbind events, force remove styles
+  // current layout
+  // (this is determined as a function of time)
+  // target layout
+  //          - bind events, force styles
 
-  manifestor.graphRoot = {};
+  // A transition consists of a timer, an interpolator,
+  // a start quantity (or set of quantities), and an end property.
+  //
+  // Based on the interpolation function, the quantity(ies) are
+  // varied over the set time.
+  //
+  // Additionally, a transition can have a start event for side effects,
+  // and an end event for side effects upon its completion.
+  //
+  // However, difficulties emerge when we need to interrupt the transition.
+  // We need to not run the start callback of the interrupting transition,
+  // use the real current layout as the initial layout of the new transition,
+  // and prevent the end callback of the first transition from running.
+  // The biggest gray spot, however, comes from the holdover state of the interpolator.
+  // Should there be some sense of "velocity" held over from the motion of the
+  // previous transition. That would be preferable.
+
+  if (options.defaultEvents !== false) {
+    // bindDefaultEvents(dom);
+  }
 
   return manifestor;
 };
 
 module.exports = manifestor;
 
-},{"./domComponent":2,"./imageGraph":4,"./viewStateStore":8}],7:[function(require,module,exports){
+},{"./canvasHelper":1,"./domComponent":3,"./imageGraph":5,"./viewStateStore":10}],8:[function(require,module,exports){
 'use strict';
 
 var manifestLayout = function(options) {
@@ -3125,7 +3166,57 @@ var manifestLayout = function(options) {
 
 module.exports = manifestLayout;
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
+var resourceStore = function(resourceData, parentCanvas) {
+  var resource = {
+    id: resource.id,
+    tileSource: null,
+    type: 'tileSource', // static, tilesource
+    status: 'pending',
+    x: null,
+    y: null,
+    width: null,
+    height: null,
+    opacity: 0,
+    visible: false
+  };
+
+  resource.setTilesource = function() {
+  };
+
+  resource.setOpacity = function() {
+  };
+
+  resource.moveUpOne = function() {
+  };
+
+  resource.moveDownOne = function() {
+  };
+
+  resource.moveTo = function() {
+  };
+
+  resource.moveToTop = function() {
+  };
+
+  resource.moveToBottom = function() {
+  };
+
+  resource.rotate = function() {
+  };
+
+  resource.scale = function() {
+  };
+
+  resource.translate = function() {
+  };
+
+  return resource;
+};
+
+module.exports = resourceStore;
+
+},{}],10:[function(require,module,exports){
 'use strict';
 
 var iiif = require('./iiifUtils');
@@ -3148,6 +3239,7 @@ var viewStateStore = function(options) {
 
       // set the initial state, which triggers the first rendering.
       canvasState({
+        canvases: canvases,
         selectedCanvas: selectedCanvas, // @id of the canvas:
         perspective: initialPerspective, // can be 'overview' or 'detail'
         viewingMode: initialViewingMode, // manifest derived or user specified (iiif viewingHint)
@@ -3203,8 +3295,8 @@ var viewStateStore = function(options) {
   function resize() {
     var state = canvasState();
 
-    state.width = container.width();
-    state.height = container.height();
+    state.width = container.offsetWidth;
+    state.height = container.offsetWidth;
 
     canvasState(state);
   }
@@ -3236,5 +3328,5 @@ var viewStateStore = function(options) {
 
 module.exports = viewStateStore;
 
-},{"./iiifUtils":3}]},{},[6])(6)
+},{"./iiifUtils":4}]},{},[7])(7)
 });

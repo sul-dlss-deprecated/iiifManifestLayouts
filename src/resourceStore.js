@@ -1,4 +1,4 @@
-var resourceStore = function(resourceUrl, resourceMask) {
+var resourceStore = function(iiifResource, parentCanvas) {
   var resource = {
     id: resource.id,
     tileSource: null,
@@ -8,13 +8,38 @@ var resourceStore = function(resourceUrl, resourceMask) {
     y: null,
     width: null,
     height: null,
-    opactity: 0
+    opacity: 0,
+    visible: false
   };
 
   resource.setTilesource = function() {
   };
 
   resource.setOpacity = function() {
+  };
+
+  resource.moveUpOne = function() {
+  };
+
+  resource.moveDownOne = function() {
+  };
+
+  resource.moveTo = function() {
+  };
+
+  resource.moveToTop = function() {
+  };
+
+  resource.moveToBottom = function() {
+  };
+
+  resource.rotate = function() {
+  };
+
+  resource.scale = function() {
+  };
+
+  resource.translate = function() {
   };
 
   return resource;

@@ -20,6 +20,7 @@ var viewStateStore = function(options) {
 
       // set the initial state, which triggers the first rendering.
       canvasState({
+        canvases: canvases,
         selectedCanvas: selectedCanvas, // @id of the canvas:
         perspective: initialPerspective, // can be 'overview' or 'detail'
         viewingMode: initialViewingMode, // manifest derived or user specified (iiif viewingHint)
@@ -75,8 +76,8 @@ var viewStateStore = function(options) {
   function resize() {
     var state = canvasState();
 
-    state.width = container.width();
-    state.height = container.height();
+    state.width = container.offsetWidth;
+    state.height = container.offsetWidth;
 
     canvasState(state);
   }
