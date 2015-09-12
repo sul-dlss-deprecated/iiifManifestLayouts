@@ -2739,7 +2739,7 @@ var manifestor = function(options) {
       setTimeout(function(){
         _zooming = false;
         setScrollElementEvents();
-      }, 1500);
+      }, 1200);
     }
   }
 
@@ -2762,7 +2762,7 @@ var manifestor = function(options) {
   //     renderLayout(detailLayout);
   // }
   function setScrollElementEvents() {
-    var animationTiming = 1000;
+    var animationTiming = 1200;
     var interactionOverlay = d3.select(overlays[0]);
     if (canvasState().perspective === 'detail') {
       interactionOverlay
@@ -2899,16 +2899,25 @@ var manifestor = function(options) {
 
   function translateTilesources(d, i) {
     var canvasId = d.canvas.id,
-        dummyObj = canvasImageStates()[canvasId].dummyObj;
+        dummyObj = canvasImageStates()[canvasId].dummyObj,
+        mainImageObj = canvasImageStates()[canvasId].mainImageObj;
 
-    var currentBounds = dummyObj.getBounds(true),
+    var currentBounds = mainImageObj ? mainImageObj.getBounds(true) : dummyObj.getBounds(true),
         xi = d3.interpolate(currentBounds.x, d.canvas.x),
         yi = d3.interpolate(currentBounds.y, d.canvas.y);
 
     return function(t) {
-      dummyObj.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
-      dummyObj.setWidth(d.canvas.width, true);
-      dummyObj.setHeight(d.canvas.height, true);
+      if (dummyObj) {
+        dummyObj.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
+        dummyObj.setWidth(d.canvas.width, true);
+        dummyObj.setHeight(d.canvas.height, true);
+      }
+      if (mainImageObj) {
+        console.log('yes mulowd');
+        mainImageObj.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
+        mainImageObj.setWidth(d.canvas.width, true);
+        mainImageObj.setHeight(d.canvas.height, true);
+      }
     };
   }
 
@@ -2930,6 +2939,7 @@ var manifestor = function(options) {
       index: 0, // Add the new image below the stand-in.
       success: function(event) {
         var fullImage = event.item;
+        addMainImageObj(canvasData.id, fullImage);
 
         // The changeover will look better if we wait for the first tile to be drawn.
         var tileDrawnHandler = function(event) {
@@ -2949,29 +2959,39 @@ var manifestor = function(options) {
     var canvasData = d.canvas,
         canvasImageState = canvasImageStates()[canvasData.id];
 
-    var dummy = {
-      type: 'legacy-image-pyramid',
-      levels: [
-        {
-          url: canvasData.thumbService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg',
-          width: canvasData.width,
-          height: canvasData.height
-        }
-      ]
-    };
-
-    viewer.addTiledImage({
-      tileSource: dummy,
-      x: canvasData.x,
-      y: canvasData.y,
-      width: canvasData.width,
-      success: function(event) {
-        addDummyObj(canvasData.id, event.item);
-      }
-    });
-
     if (canvasState().perspective === 'detail' && canvasState().selectedCanvas === canvasData.id) {
-      substitute(canvasData, canvasImageState.dummyObj, canvasImageState.tileSourceUrl);
+      viewer.addTiledImage({
+        x: canvasData.x,
+        y: canvasData.y,
+        width: canvasData.width,
+        tileSource: tileSourceUrl,
+        index: 0, // Add the new image below the stand-in.
+        success: function(event) {
+          addMainImageObj(canvasData.id, event.item);
+        }
+      });
+    } else {
+
+      var dummy = {
+        type: 'legacy-image-pyramid',
+        levels: [
+          {
+            url: canvasData.thumbService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg',
+            width: canvasData.width,
+            height: canvasData.height
+          }
+        ]
+      };
+
+      viewer.addTiledImage({
+        tileSource: dummy,
+        x: canvasData.x,
+        y: canvasData.y,
+        width: canvasData.width,
+        success: function(event) {
+          addDummyObj(canvasData.id, event.item);
+        }
+      });
     }
   }
 
@@ -3003,7 +3023,6 @@ var manifestor = function(options) {
   function initOSD() {
     viewer = OpenSeadragon({
       element: osdContainer[0],
-      autoResize: true,
       showNavigationControl: false,
       preserveViewport: true
     });
@@ -3165,6 +3184,15 @@ var manifestor = function(options) {
     var canvasStates = canvasImageStates();
 
     canvasStates[id].dummyObj = osdTileObj;
+
+    canvasImageStates(canvasStates);
+  }
+
+  function addMainImageObj(id, osdTileObj) {
+    var canvasStates = canvasImageStates();
+    console.log('added main image');
+
+    canvasStates[id].mainImageObj = osdTileObj;
 
     canvasImageStates(canvasStates);
   }
