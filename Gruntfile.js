@@ -86,7 +86,7 @@ module.exports = function(grunt) {
                     }
                 },
                 src: ['src/main.js'],
-                dest: 'dist/manifestor.js'
+                dest: 'stage/manifestor.js'
             }
         },
 
@@ -171,7 +171,7 @@ module.exports = function(grunt) {
     ]);
 
     // Task aliases
-    grunt.registerTask('build', ['buildDist']);
+    // grunt.registerTask('build', ['buildDist']);
     grunt.registerTask('serve', ['serveExample']);
     grunt.registerTask('debug', ['serveExample']);
 };
