@@ -1,10 +1,10 @@
 {
-  "name": "iiif-manifest-d3-osd-layout",
-  "version": "0.0.1",
+  "name": "iiifManifestLayout",
+  "version": "0.0.2",
   "description": "A project that does stuff.",
-  "homepage": "https://github.com/aeschylus/iiif-manifest-d3-osd-layout",
-  "repository": "aeschylus/iiif-manifest-d3-osd-layout",
-  "author": "Anonymous <you@you.com>",
+  "homepage": "https://github.com/sul-dlss/iiifManifestLayouts",
+  "repository": "sul-dlss/iiifManifestLayouts",
+  "author": "aeschylus",
   "files": [
     "dist"
   ],
