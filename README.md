@@ -17,6 +17,8 @@ Run development server
 grunt serve
 ```
 
+Now you can view the example at [http://127.0.0.1:4000/example/](http://127.0.0.1:4000/example/)
+
 
 ## License
 Apache-2.0
