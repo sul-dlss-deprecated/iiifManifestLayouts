@@ -1,5 +1,6 @@
-var iiif = require('./iiifUtils'),
-    canvasStore = require('./resourceStore');
+'use strict';
+
+var canvasStore = require('./canvasStore');
 
 var canvasHelper = function(canvases) {
   var canvasHelper = {};

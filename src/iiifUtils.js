@@ -4,13 +4,13 @@ var iiifUtils = {
 
   getImageUrl: function(image) {
 
-    if (!image.images[0].resource.service) {
-      id = image.images[0].resource['default'].service['@id'];
+    if (!image.resource.service) {
+      id = image.resource['default'].service['@id'];
       id = id.replace(/\/$/, "");
       return id;
     }
 
-    var id = image.images[0].resource.service['@id'];
+    var id = image.resource.service['@id'];
     id = id.replace(/\/$/, "");
 
     return id;
@@ -29,7 +29,6 @@ var iiifUtils = {
     }
     return manifest.viewingHint ? manifest.viewingHint : 'individuals';
   },
-
 
   getVersionFromContext: function(context) {
     if (context == "http://iiif.io/api/image/2/context.json") {

@@ -32,7 +32,8 @@
     "grunt-smash": "^0.1.0",
     "jquery": "~2.1.1",
     "load-grunt-tasks": "~0.6.0",
-    "underscore": "~1.6.0"
+    "underscore": "~1.6.0",
+    "wolfy87-eventemitter": "^4.2.11"
   },
   "scripts": {},
   "license": "Apache-2.0"

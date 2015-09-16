@@ -2,7 +2,7 @@
 
 var iiif = require('./iiifUtils');
 
-var viewStateStore = function(options) {
+var viewStateStore = function(options, dispatcher) {
   var manifest = options.manifest,
       sequence = options.sequence,
       canvases = options.sequence ? options.sequence.canvases : manifest.sequences[0].canvases,
@@ -34,11 +34,14 @@ var viewStateStore = function(options) {
     if (!arguments.length) return _canvasState;
     _canvasState = state;
 
-    if (stateUpdateCallback && !initial) {
+    if (!initial) {
       // should we pass in the state here?
       // I don't really want to encourage reading
       // the state from the event.
-      stateUpdateCallback();
+      if (stateUpdateCallback) {
+        stateUpdateCallback();
+      }
+      dispatcher.emit('coreStateUpdated');
     }
 
     return _canvasState;
@@ -91,11 +94,8 @@ var viewStateStore = function(options) {
   }
 
   return {
-    // selectMode: selectMode,
-    // selectPerspective: selectPerspective,
     // next: next,
     // previous: previous,
-    // scrollThumbs: scrollThumbs,
     resize: resize,
     selectCanvas: selectCanvas,
     selectPerspective: selectPerspective,

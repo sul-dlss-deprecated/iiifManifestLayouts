@@ -1,6 +1,310 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.manifestor = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var iiif = require('./iiifUtils'),
-    canvasStore = require('./resourceStore');
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+function EventEmitter() {
+  this._events = this._events || {};
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+
+// Backwards-compat with node 0.10.x
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+EventEmitter.defaultMaxListeners = 10;
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function(n) {
+  if (!isNumber(n) || n < 0 || isNaN(n))
+    throw TypeError('n must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+EventEmitter.prototype.emit = function(type) {
+  var er, handler, len, args, i, listeners;
+
+  if (!this._events)
+    this._events = {};
+
+  // If there is no 'error' event listener then throw.
+  if (type === 'error') {
+    if (!this._events.error ||
+        (isObject(this._events.error) && !this._events.error.length)) {
+      er = arguments[1];
+      if (er instanceof Error) {
+        throw er; // Unhandled 'error' event
+      }
+      throw TypeError('Uncaught, unspecified "error" event.');
+    }
+  }
+
+  handler = this._events[type];
+
+  if (isUndefined(handler))
+    return false;
+
+  if (isFunction(handler)) {
+    switch (arguments.length) {
+      // fast cases
+      case 1:
+        handler.call(this);
+        break;
+      case 2:
+        handler.call(this, arguments[1]);
+        break;
+      case 3:
+        handler.call(this, arguments[1], arguments[2]);
+        break;
+      // slower
+      default:
+        len = arguments.length;
+        args = new Array(len - 1);
+        for (i = 1; i < len; i++)
+          args[i - 1] = arguments[i];
+        handler.apply(this, args);
+    }
+  } else if (isObject(handler)) {
+    len = arguments.length;
+    args = new Array(len - 1);
+    for (i = 1; i < len; i++)
+      args[i - 1] = arguments[i];
+
+    listeners = handler.slice();
+    len = listeners.length;
+    for (i = 0; i < len; i++)
+      listeners[i].apply(this, args);
+  }
+
+  return true;
+};
+
+EventEmitter.prototype.addListener = function(type, listener) {
+  var m;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events)
+    this._events = {};
+
+  // To avoid recursion in the case that type === "newListener"! Before
+  // adding it to the listeners, first emit "newListener".
+  if (this._events.newListener)
+    this.emit('newListener', type,
+              isFunction(listener.listener) ?
+              listener.listener : listener);
+
+  if (!this._events[type])
+    // Optimize the case of one listener. Don't need the extra array object.
+    this._events[type] = listener;
+  else if (isObject(this._events[type]))
+    // If we've already got an array, just append.
+    this._events[type].push(listener);
+  else
+    // Adding the second element, need to change to array.
+    this._events[type] = [this._events[type], listener];
+
+  // Check for listener leak
+  if (isObject(this._events[type]) && !this._events[type].warned) {
+    var m;
+    if (!isUndefined(this._maxListeners)) {
+      m = this._maxListeners;
+    } else {
+      m = EventEmitter.defaultMaxListeners;
+    }
+
+    if (m && m > 0 && this._events[type].length > m) {
+      this._events[type].warned = true;
+      console.error('(node) warning: possible EventEmitter memory ' +
+                    'leak detected. %d listeners added. ' +
+                    'Use emitter.setMaxListeners() to increase limit.',
+                    this._events[type].length);
+      if (typeof console.trace === 'function') {
+        // not supported in IE 10
+        console.trace();
+      }
+    }
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.once = function(type, listener) {
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  var fired = false;
+
+  function g() {
+    this.removeListener(type, g);
+
+    if (!fired) {
+      fired = true;
+      listener.apply(this, arguments);
+    }
+  }
+
+  g.listener = listener;
+  this.on(type, g);
+
+  return this;
+};
+
+// emits a 'removeListener' event iff the listener was removed
+EventEmitter.prototype.removeListener = function(type, listener) {
+  var list, position, length, i;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events || !this._events[type])
+    return this;
+
+  list = this._events[type];
+  length = list.length;
+  position = -1;
+
+  if (list === listener ||
+      (isFunction(list.listener) && list.listener === listener)) {
+    delete this._events[type];
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+
+  } else if (isObject(list)) {
+    for (i = length; i-- > 0;) {
+      if (list[i] === listener ||
+          (list[i].listener && list[i].listener === listener)) {
+        position = i;
+        break;
+      }
+    }
+
+    if (position < 0)
+      return this;
+
+    if (list.length === 1) {
+      list.length = 0;
+      delete this._events[type];
+    } else {
+      list.splice(position, 1);
+    }
+
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.removeAllListeners = function(type) {
+  var key, listeners;
+
+  if (!this._events)
+    return this;
+
+  // not listening for removeListener, no need to emit
+  if (!this._events.removeListener) {
+    if (arguments.length === 0)
+      this._events = {};
+    else if (this._events[type])
+      delete this._events[type];
+    return this;
+  }
+
+  // emit removeListener for all listeners on all events
+  if (arguments.length === 0) {
+    for (key in this._events) {
+      if (key === 'removeListener') continue;
+      this.removeAllListeners(key);
+    }
+    this.removeAllListeners('removeListener');
+    this._events = {};
+    return this;
+  }
+
+  listeners = this._events[type];
+
+  if (isFunction(listeners)) {
+    this.removeListener(type, listeners);
+  } else {
+    // LIFO order
+    while (listeners.length)
+      this.removeListener(type, listeners[listeners.length - 1]);
+  }
+  delete this._events[type];
+
+  return this;
+};
+
+EventEmitter.prototype.listeners = function(type) {
+  var ret;
+  if (!this._events || !this._events[type])
+    ret = [];
+  else if (isFunction(this._events[type]))
+    ret = [this._events[type]];
+  else
+    ret = this._events[type].slice();
+  return ret;
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  var ret;
+  if (!emitter._events || !emitter._events[type])
+    ret = 0;
+  else if (isFunction(emitter._events[type]))
+    ret = 1;
+  else
+    ret = emitter._events[type].length;
+  return ret;
+};
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
+
+},{}],2:[function(require,module,exports){
+'use strict';
+
+var canvasStore = require('./canvasStore');
 
 var canvasHelper = function(canvases) {
   var canvasHelper = {};
@@ -14,7 +318,7 @@ var canvasHelper = function(canvases) {
 
 module.exports = canvasHelper;
 
-},{"./iiifUtils":4,"./resourceStore":9}],2:[function(require,module,exports){
+},{"./canvasStore":4}],3:[function(require,module,exports){
 'use strict';
 
 var canvasLayout = function(canvas) {
@@ -23,48 +327,41 @@ var canvasLayout = function(canvas) {
 
 module.exports = canvasLayout;
 
-},{}],3:[function(require,module,exports){
-var domComponent = function(container) {
+},{}],4:[function(require,module,exports){
+'use strict';
 
-  var overlaysContainer = document.createElement('div'),
-      osdElement = document.createElement('div'),
-      scrollArea = document.createElement('div');
+var resourceStore = require('./resourceStore');
 
-  overlaysContainer.className = 'overlaysContainer';
-  osdElement.className = 'osdContainer';
-  scrollArea.className = 'scrollArea';
+var canvasStore = function(canvas) {
+  var canvasStore = [];
 
-  overlaysContainer.style.cssText = 'position:absolute;width:100%;height:100%;top:0;left:0;';
-  osdElement.style.cssText = 'position:absolute;width:100%;height:100%;top:0;left:0;';
-  scrollArea.style.cssText = 'position:absolute;width:100%;height:100%;top:0;left:0;overflow:hidden';
+  canvas.images.forEach(function(imageResource, index) {
+    var resource = resourceStore(imageResource);
 
-  container.appendChild(osdElement);
-  container.appendChild(scrollArea);
-  scrollArea.appendChild(overlaysContainer);
+    // at particular index.
+    canvasStore[resource.id] = resource;
+    canvasStore.push(canvasStore[resource.id]);
+  });
 
-  return {
-    overlaysContainer: overlaysContainer,
-    osdElement: osdElement,
-    scrollArea: scrollArea
-  };
+  return canvasStore;
 };
 
-module.exports = domComponent;
+module.exports = canvasStore;
 
-},{}],4:[function(require,module,exports){
+},{"./resourceStore":13}],5:[function(require,module,exports){
 'use strict';
 
 var iiifUtils = {
 
   getImageUrl: function(image) {
 
-    if (!image.images[0].resource.service) {
-      id = image.images[0].resource['default'].service['@id'];
+    if (!image.resource.service) {
+      id = image.resource['default'].service['@id'];
       id = id.replace(/\/$/, "");
       return id;
     }
 
-    var id = image.images[0].resource.service['@id'];
+    var id = image.resource.service['@id'];
     id = id.replace(/\/$/, "");
 
     return id;
@@ -83,7 +380,6 @@ var iiifUtils = {
     }
     return manifest.viewingHint ? manifest.viewingHint : 'individuals';
   },
-
 
   getVersionFromContext: function(context) {
     if (context == "http://iiif.io/api/image/2/context.json") {
@@ -142,36 +438,219 @@ var iiifUtils = {
 
 module.exports = iiifUtils;
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 'use strict';
 
 var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
-var iiif = require('./iiifUtils');
 var d3 = require('./lib/d3-slim-dist');
 
-function imageGraph(stores) {
-  var renderData = stores.getState();
-  console.log(renderData);
-
-  // creare a document fragment to draw "offline"
+function imageGraph(layoutStore, dispatcher) {
+  // create a document fragment to draw "offline"
   var graphRoot = document.createDocumentFragment();
 
-  var imageGraph = d3.select(graphRoot).append("svg")
-        .attr("width", renderData.width)
-        .attr("height", renderData.height)
-        .call(renderImageScene);
+  var imageGraph = d3.select(graphRoot).append("svg");
 
-  function renderImageScene(selection) {
-    console.log('called');
+  dispatcher.on('transitionStateUpdated', function() {console.log('eventHeard'); refreshGraph();});
+
+  function refreshGraph() {
+    var layout = layoutStore.getState().targetLayout.overview().map(function(frame){
+      return frame.canvas;
+    });
+    imageGraph
+      .attr("width", layout.width)
+      .attr("height", layout.height);
+    imageGraph.selectAll('.canvas')
+      .data(layout)
+      .classed('entering', false)
+      .classed('selected', false)
+      .classed('updating', true)
+      .attr('width', canvasWidth)
+      .attr('height', canvasHeight)
+      .attr('x', canvasX)
+      .attr('y', canvasY)
+      .enter()
+      .append('rect')
+      .classed('canvas', true)
+      .classed('selected', true)
+      .classed('entering', true)
+      .attr('data-canvas-id', canvasId)
+      .attr('width', canvasWidth)
+      .attr('height', canvasHeight)
+      .attr('x', canvasX)
+      .attr('y', canvasY);
   }
+
+  function canvasId(canvas) { return canvas.id; }
+  function canvasWidth(canvas) { return canvas.width; }
+  function canvasHeight(canvas) { return canvas.height; }
+  function canvasX(canvas) { return canvas.x; }
+  function canvasY(canvas) { return canvas.y; }
 
   return imageGraph;
 };
 
 module.exports = imageGraph;
 
-},{"./canvasLayout":2,"./iiifUtils":4,"./lib/d3-slim-dist":6,"./manifestLayout":8}],6:[function(require,module,exports){
+},{"./canvasLayout":3,"./lib/d3-slim-dist":8,"./manifestLayout":10}],7:[function(require,module,exports){
+'use strict';
+
+var d3 = require('./lib/d3-slim-dist');
+
+var imageRenderer = function(osd, graph, helper) {
+
+  d3.timer(function() {
+    osd.forceRedraw();
+  });
+
+  renderOSD();
+
+  function renderOSD() {
+    console.log(graph);
+    graph.selectAll('.entering')
+      .each(enterImage);
+    // graph.selectAll('.exiting')
+    //   .each(removeTiledImage);
+    graph.selectAll('updating')
+      .each(updateImages);
+    // graph.selectAll('needed')
+    //   .each(swapAndWarm);
+    // States in which an image might be.
+    // 1.) Neither its dummy nor its real source are needed yet.
+    // 2.) Its dummy is needed, but it has not been requested yet.
+    // 3.) Its dummy is needed, and has been requested, but it hasn't been added to the canvas yet.
+    // 4.) Its dummy is needed and has been added to the canvas.
+    // 5.) The real tilesource is needed
+  }
+
+  // function synchroniseZoom() {
+  //   var viewerWidth = viewer.container.clientWidth;
+  //   var viewerHeight = viewer.container.clientHeight;
+  //   var center = viewer.viewport.getCenter(true);
+  //   var p = center.minus(new OpenSeadragon.Point(viewerWidth / 2, viewerHeight / 2));
+  //   var zoom = viewer.viewport.getZoom(true);
+  //   var scale = viewerWidth * zoom;
+
+  //   var transform = 'scale(' + scale + ') translate(' + -p.x + 'px,' + -p.y + 'px)';
+
+  //   d3.select(overlays[0])
+  //     .style('transform', transform)
+  //     .style('-webkit-transform', transform);
+  // }
+
+  // function synchronisePan(panTop, width, height) {
+  //   var x = width/2;
+  //   var y = panTop + height/2;
+  //   viewer.viewport.panTo(new OpenSeadragon.Point(x,y), true);
+  // }
+
+  //   if (userState.perspective === 'detail') {
+  //     var viewBounds = layout.intermediate().filter(function(frame) {
+  //       return frame.canvas.selected;
+  //     })[0].vantage;
+  //     updateConstraintBounds(viewBounds);
+
+  //     var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
+
+  //     setScrollElementEvents();
+  //     viewer.viewport.fitBounds(osdBounds, false);
+  //   } else {
+  //     viewBounds = new OpenSeadragon.Rect(0,0, canvasState().width, canvasState().height);
+  //     _zooming = true;
+  //     setScrollElementEvents();
+  //     viewer.viewport.fitBounds(viewBounds, false);
+  //     setTimeout(function(){
+  //       _zooming = false;
+  //       setScrollElementEvents();
+  //     }, 1200);
+  //   }
+  // }
+
+  // function endall(transition, callback) {
+  //   var n = 0;
+  //   if (transition.empty()) {callback();} else {
+  //     transition
+  //       .each(function() { ++n; })
+  //       .each("end", function() { if (!--n) callback.apply(this, arguments); });
+  //   }
+  // }
+
+  // function translateTilesources(d, i) {
+  //   var canvasId = d.canvas.id,
+  //       dummyObj = canvasImageStates()[canvasId].dummyObj;
+
+  //   var currentBounds = dummyObj.getBounds(true),
+  //       xi = d3.interpolate(currentBounds.x, d.canvas.x),
+  //       yi = d3.interpolate(currentBounds.y, d.canvas.y);
+
+  //   return function(t) {
+  //     dummyObj.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
+  //     dummyObj.setWidth(d.canvas.width, true);
+  //     dummyObj.setHeight(d.canvas.height, true);
+  //   };
+  // }
+
+function updateImages(d, index, graphNode) {
+    var canvasData = d,
+        node = d3.select(graphNode),
+        resource = helper[canvasData.id][0];
+  resource.setPosition(new OpenSeadragon.Point(node.x, node.y), true);
+  resource.setWidth(node.width, true);
+  resource.setHeight(node.height, true);
+  resource.setOpacity(node.opacity, true);
+
+    // canvasImageStates.forEach(function(resource) {
+    //   resource.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
+    //   resource.setWidth(resource.width, true);
+    //   resource.setHeight(resource.height, true);
+    //   resource.setOpacity(resource.opacity, true);
+    // });
+  }
+
+  function enterImage(canvasData, index, graphNode) {
+    var canvasHelper = helper[canvasData.id][0];
+      osd.addTiledImage({
+        x: canvasData.x,
+        y: canvasData.y,
+        width: canvasData.width,
+        tileSource: canvasHelper.tileSource,
+        success: function(event) {
+          canvasHelper.setOsdImageObj(event.item);
+        }
+      });
+  }
+
+  // function fade(image, targetOpacity, callback) {
+  // example usage fade(dummyObj, 0, function() { viewer.world.removeItem(dummyObj); });
+  //   var currentOpacity = image.getOpacity();
+  //   var step = (targetOpacity - currentOpacity) / 10;
+  //   if (step === 0) {
+  //     callback();
+  //     return;
+  //   }
+
+  //   var frame = function() {
+  //     currentOpacity += step;
+  //     if ((step > 0 && currentOpacity >= targetOpacity) || (step < 0 && currentOpacity <= targetOpacity)) {
+  //       image.setOpacity(targetOpacity);
+  //       callback();
+  //       return;
+  //     }
+
+  //     image.setOpacity(currentOpacity);
+  //     OpenSeadragon.requestAnimationFrame(frame);
+  //   };
+  //   OpenSeadragon.requestAnimationFrame(frame);
+  // };
+
+  function removeImages(d) {
+  }
+
+};
+
+module.exports = imageRenderer;
+
+},{"./lib/d3-slim-dist":8}],8:[function(require,module,exports){
 !function(){
   var d3 = {version: "3.5.6"}; // semver
 var d3_arraySlice = [].slice,
@@ -2641,59 +3120,51 @@ function d3_transitionNode(node, i, ns, id, inherit) {
   this.d3 = d3;
 }();
 
-},{}],7:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 'use strict';
 
 var viewStateStore = require('./viewStateStore'),
-    imageGraph = require('./imageGraph'),
-    domComponent = require('./domComponent'),
-    canvasHelper = require('./canvasHelper');
+    transitionStore = require('./transitionStore'),
+    helper = require('./canvasHelper'),
+    osdComponent = require('./osdComponent'),
+    overlayComponent = require('./overlayComponent'),
+    events = require('events');
 
 var manifestor = function(options) {
-  var manifestor = viewStateStore(options);
+  var manifestor,
+      dispatcher,
+      canvasHelper,
+      transitions,
+      osd,
+      overlays;
 
-  var dom = domComponent(options.container),
-      helper = canvasHelper(manifestor.getState().canvases),
-      osd = OpenSeadragon({
-        element: dom.osdElement,
-        showNavigationControl: false
-      }),
-      graph = imageGraph(manifestor);
+  dispatcher = new events.EventEmitter();
+  manifestor = viewStateStore(options, dispatcher);
+  canvasHelper = helper(manifestor.getState().canvases);
+  transitions = transitionStore(manifestor, dispatcher);
 
-  // beginning layout
-  //          - unbind events, force remove styles
-  // current layout
-  // (this is determined as a function of time)
-  // target layout
-  //          - bind events, force styles
+  osd = osdComponent({
+    container: options.container,
+    canvasHelper: canvasHelper,
+    transitionStore: transitions,
+    dispatcher: dispatcher
+  });
 
-  // A transition consists of a timer, an interpolator,
-  // a start quantity (or set of quantities), and an end property.
-  //
-  // Based on the interpolation function, the quantity(ies) are
-  // varied over the set time.
-  //
-  // Additionally, a transition can have a start event for side effects,
-  // and an end event for side effects upon its completion.
-  //
-  // However, difficulties emerge when we need to interrupt the transition.
-  // We need to not run the start callback of the interrupting transition,
-  // use the real current layout as the initial layout of the new transition,
-  // and prevent the end callback of the first transition from running.
-  // The biggest gray spot, however, comes from the holdover state of the interpolator.
-  // Should there be some sense of "velocity" held over from the motion of the
-  // previous transition. That would be preferable.
+  // overlays = overlayComponent({
+  //   container: options.container,
+  //   canvasHelper: manifestor.helper,
+  //   dispatcher: dispatcher
+  // });
 
-  if (options.defaultEvents !== false) {
-    // bindDefaultEvents(dom);
-  }
-
+  manifestor.osd = osd;
+  // manifestor.overlays = overlays,
+  manifestor.events = dispatcher;
   return manifestor;
 };
 
 module.exports = manifestor;
 
-},{"./canvasHelper":1,"./domComponent":3,"./imageGraph":5,"./viewStateStore":10}],8:[function(require,module,exports){
+},{"./canvasHelper":2,"./osdComponent":11,"./overlayComponent":12,"./transitionStore":14,"./viewStateStore":15,"events":1}],10:[function(require,module,exports){
 'use strict';
 
 var manifestLayout = function(options) {
@@ -3166,62 +3637,313 @@ var manifestLayout = function(options) {
 
 module.exports = manifestLayout;
 
-},{}],9:[function(require,module,exports){
-var resourceStore = function(resourceData, parentCanvas) {
+},{}],11:[function(require,module,exports){
+'use strict';
+
+var imageGraph = require('./imageGraph');
+var imageRenderer = require('./imageRenderer');
+
+function osdComponent(options) {
+  var element,
+      container = options.container,
+      canvasHelper = options.canvasHelper,
+      transitionStore = options.transitionStore,
+      dispatcher = options.dispatcher,
+      graph,
+      renderer,
+      osd;
+
+  element = document.createElement('div');
+  element.className = 'osdContainer';
+  element.style.cssText = 'position:absolute;width:100%;height:100%;top:0;left:0;';
+  options.container.appendChild(element);
+
+  osd = OpenSeadragon({
+    element: element,
+    showNavigationControl: false
+  });
+
+  graph = imageGraph(transitionStore, dispatcher);
+  renderer = imageRenderer(osd, graph, canvasHelper);
+
+  // osd.addHandler('animation', function(event) {
+  //   synchroniseZoom();
+  // });
+
+  // osd.addHandler('zoom', function(event) {
+  //   applyConstraints(_constraintBounds);
+  // });
+
+  // osd.addHandler('pan', function(event) {
+  //   applyConstraints(_constraintBounds);
+  // });
+
+  // function applyConstraints() =
+
+  return osd;
+};
+
+module.exports = osdComponent;
+
+},{"./imageGraph":6,"./imageRenderer":7}],12:[function(require,module,exports){
+function renderLayout(layoutData, animate, callback) {
+  // To understand this render function,
+  // you need a general understanding of d3 selections,
+  // and you will want to read about nested
+  // selections in particular: http://bost.ocks.org/mike/nest/
+
+  var interactionOverlay = d3.select(overlays[0]),
+      animationTiming = animate ? 1000 : 0;
+
+  // var bounds = interactionOverlay.selectAll('.vantage')
+  //         .data(
+  //             (function() {
+  //                 return [layoutData.filter(function(frame){
+  //                     return frame.canvas.selected;
+  //                 })[0].vantage];
+  //             })())
+  //         .enter()
+  //         .append('div')
+  //         .attr('class', 'vantage')
+  //         .style('border', '3px solid orangered')
+  //         .style('box-sizing', 'border-box')
+  //         .style('width', function(d) { console.log (d); return d.width + 'px'; })
+  //         .style('height', function(d) { return d.height + 'px'; })
+  //         .style('position', 'absolute')
+  //         .transition()
+  //         .duration(animationTiming)
+  //         .ease('cubic-out')
+  //         .styleTween('transform', function(d) {
+  //             return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
+  //         })
+  //         .styleTween('-webkit-transform', function(d) {
+  //             return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
+  //         });
+
+  var frame = interactionOverlay.selectAll('.' + frameClass)
+        .data(layoutData);
+
+  var frameUpdated = frame
+        .style('width', function(d) { return d.width + 'px'; })
+        .style('height', function(d) { return d.height + 'px'; })
+        .transition()
+        .duration(animationTiming)
+        .ease('cubic-out')
+        .styleTween('transform', function(d) {
+          return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
+        })
+        .styleTween('-webkit-transform', function(d) {
+          return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
+        })
+        .tween('translateTilesources', translateTilesources)
+        .each(updateImages)
+        .call(endall, function() {
+          if (callback) { callback();}
+        });
+
+  frame.select('.' + canvasClass)
+    .style('width', function(d) { return d.canvas.width + 'px'; })
+    .style('height', function(d) { return d.canvas.height + 'px'; })
+    .attr('class', function(d) {
+      var selected = d.canvas.selected;
+      return selected ? canvasClass + ' selected' : canvasClass;
+    });
+
+  var frameEnter = frame
+        .enter().append('div')
+        .attr('class', frameClass)
+        .style('width', function(d) { return d.width + 'px'; })
+        .style('height', function(d) { return d.height + 'px'; })
+        .style('transform', function(d) { return 'translate(' + d.x + 'px,' + d.y + 'px)'; })
+        .style('-webkit-transform', function(d) { return 'translate(' + d.x + 'px,' + d.y + 'px)'; });
+
+  frameEnter
+    .append('div')
+    .attr('class', function(d) {
+      var selected = d.canvas.selected;
+      return selected ? canvasClass + ' selected' : canvasClass;
+    })
+    .attr('data-id', function(d) {
+      return d.canvas.id;
+    })
+    .style('width', function(d) { return d.canvas.width + 'px'; })
+    .style('height', function(d) { return d.canvas.height + 'px'; })
+    .style('transform', function(d) { return 'translateX(' + d.canvas.localX + 'px) translateY(' + d.canvas.localY + 'px)'; })
+    .each(enterImages);
+  // .append('img')
+  // .attr('src', function(d) { return d.canvas.iiifService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
+
+  frameEnter
+    .append('div')
+    .attr('class', labelClass)
+    .text(function(d) { return d.canvas.label; });
+};
+
+},{}],13:[function(require,module,exports){
+'use strict';
+
+var iiif = require('./iiifUtils');
+
+var resourceStore = function(iiifResource, parentCanvas) {
+  // If the resource has type annotation, then it is
+  // either a dynamic service-backed image, or it is
+  // a static image. In both cases, the @id of the
+  // RESOURCE (not the "image") is what ought to be
+  // used. In both cases, the height, width, x, and y
+  // are taken from properties of the IMAGE, (not the
+  // resource).
+  // The x and y can be determined in a variety of ways.
+  // There is the selector syntax in the @id (must be
+  // checked for), and there is the official selector
+  // syntax.
+  // If, instead, it has type oa:choice, then it will
+  // have a default which is a resource, and then
+  // an array of "items". Each of these is to be
+  // treated as a resource (as above).
   var resource = {
-    id: resource.id,
-    tileSource: null,
+    id: iiifResource['@id'],
+    thumbUrl: getThumb(iiifResource),
+    tileSource: osdTileSourceFromIiifImage(iiifResource),
+    osdImage: null,
     type: 'tileSource', // static, tilesource
-    status: 'pending',
-    x: null,
-    y: null,
+    status: null,
+    localX: null,
+    localY: null,
     width: null,
     height: null,
     opacity: 0,
     visible: false
   };
 
-  resource.setTilesource = function() {
+  resource.setOsdImageObj = function(imageObj) {
+    resource.osdImage = imageObj;
   };
 
-  resource.setOpacity = function() {
-  };
+  function getThumb() {
+  }
 
-  resource.moveUpOne = function() {
-  };
-
-  resource.moveDownOne = function() {
-  };
-
-  resource.moveTo = function() {
-  };
-
-  resource.moveToTop = function() {
-  };
-
-  resource.moveToBottom = function() {
-  };
-
-  resource.rotate = function() {
-  };
-
-  resource.scale = function() {
-  };
-
-  resource.translate = function() {
-  };
+  function osdTileSourceFromIiifImage(iiifImageResource, staticImage) {
+    if (staticImage) {
+      return {
+        type: 'legacy-image-pyramid',
+        levels: [
+          {
+            url: iiif.get,
+            width: iiifImageResource.width,
+            height: iiifImageResource.height
+          }
+        ]
+      };
+    }
+    return iiifResource.resource.service['@id'] + '/info.json';
+  }
 
   return resource;
 };
 
 module.exports = resourceStore;
 
-},{}],10:[function(require,module,exports){
+},{"./iiifUtils":5}],14:[function(require,module,exports){
+'use strict';
+
+var manifestLayout = require('./manifestLayout');
+var d3 = require('./lib/d3-slim-dist');
+
+function transitionStore(coreState, dispatcher) {
+  var _transitionState;
+
+  // set initial state
+  transitionState({
+    targetLayout: layoutFromState(coreState.getState()),
+    targetViewportProperties: {
+      x: 0,
+      y: 0,
+      width: coreState.getState().width,
+      height: coreState.getState().height
+    }
+  });
+
+  dispatcher.on('coreStateUpdated', parseChange);
+
+  function transitionState(state, initial) {
+
+    if (!arguments.length) return _transitionState;
+    _transitionState = state;
+
+    return _transitionState;
+  }
+
+  function parseChange() {
+    var appState = coreState.getState();
+    transitionState({
+      targetLayout: layoutFromState(appState),
+      targetViewportProperties: {
+        x: 0,
+        y: 0,
+        width: appState.width,
+        height: appState.height
+      }
+    });
+    dispatcher.emit('transitionStateUpdated');
+    // if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
+    //   var endCallback = function() {
+    //     renderLayout(layout.overview(), false);
+    //   };
+    //   renderLayout(layout.intermediate(), true, endCallback);
+    // } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail'){
+    //   endCallback = function() {
+    //     renderLayout(layout.overview(), false);
+    //   };
+    //   renderLayout(layout.intermediate(), false, endCallback);
+    // } else if (userState.perspective === 'detail' && userState.perspective === 'detail'){
+    //   renderLayout(layout.intermediate(), false);
+    // } else {
+    //   renderLayout(layout.overview(), true);
+    // }
+  }
+
+  function layoutFromState(appState) {
+    console.log(appState);
+    return manifestLayout({
+      canvases: appState.canvases,
+      width: appState.width,
+      height:coreState.height,
+      scaleFactor: coreState.scaleFactor,
+      viewingDirection: coreState.viewingd,
+      viewingMode: coreState.viewingMode,
+      canvasHeight: 100,
+      canvasWidth: 100,
+      selectedCanvas: coreState.selectedCanvas,
+      framePadding: {
+        top: 10,
+        bottom: 40,
+        left: 10,
+        right: 10
+      },
+      containerPadding: {
+        top: 50,
+        bottom: 130,
+        left: 200,
+        right: 10
+      },
+      minimumImageGap: 5, // precent of viewport
+      facingCanvasPadding: 1 // precent of viewport
+    });
+  }
+
+  return {
+    getState: transitionState
+  };
+};
+
+module.exports = transitionStore;
+
+},{"./lib/d3-slim-dist":8,"./manifestLayout":10}],15:[function(require,module,exports){
 'use strict';
 
 var iiif = require('./iiifUtils');
 
-var viewStateStore = function(options) {
+var viewStateStore = function(options, dispatcher) {
   var manifest = options.manifest,
       sequence = options.sequence,
       canvases = options.sequence ? options.sequence.canvases : manifest.sequences[0].canvases,
@@ -3253,11 +3975,14 @@ var viewStateStore = function(options) {
     if (!arguments.length) return _canvasState;
     _canvasState = state;
 
-    if (stateUpdateCallback && !initial) {
+    if (!initial) {
       // should we pass in the state here?
       // I don't really want to encourage reading
       // the state from the event.
-      stateUpdateCallback();
+      if (stateUpdateCallback) {
+        stateUpdateCallback();
+      }
+      dispatcher.emit('coreStateUpdated');
     }
 
     return _canvasState;
@@ -3310,11 +4035,8 @@ var viewStateStore = function(options) {
   }
 
   return {
-    // selectMode: selectMode,
-    // selectPerspective: selectPerspective,
     // next: next,
     // previous: previous,
-    // scrollThumbs: scrollThumbs,
     resize: resize,
     selectCanvas: selectCanvas,
     selectPerspective: selectPerspective,
@@ -3328,5 +4050,5 @@ var viewStateStore = function(options) {
 
 module.exports = viewStateStore;
 
-},{"./iiifUtils":4}]},{},[7])(7)
+},{"./iiifUtils":5}]},{},[9])(9)
 });
