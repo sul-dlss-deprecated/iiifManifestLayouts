@@ -31,6 +31,7 @@
     "grunt-html-build": "~0.3.2",
     "grunt-smash": "^0.1.0",
     "jquery": "~2.1.1",
+    "keymaster": "^1.6.2",
     "load-grunt-tasks": "~0.6.0",
     "underscore": "~1.6.0"
   },
