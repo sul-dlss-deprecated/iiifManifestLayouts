@@ -146,7 +146,7 @@ var manifestor = function(options) {
     // }
     if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
       var endCallback = function() {
-          renderLayout(layout.overview(), false);
+          renderLayout(layout.intermediate(), false);
       };
       renderLayout(layout.intermediate(), true, endCallback);
     } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail'){
@@ -299,6 +299,15 @@ var manifestor = function(options) {
       .attr('class', function(d) {
         var selected = d.canvas.selected;
         return selected ? canvasClass + ' selected' : canvasClass;
+      })
+      .transition()
+      .duration(animationTiming)
+      .ease('cubic-out')
+      .styleTween('transform', function(d) {
+        return d3.interpolateString(this.style.transform, 'translate(' + d.canvas.localX +'px,' + d.canvas.localY + 'px)');
+      })
+      .styleTween('-webkit-transform', function(d) {
+        return d3.interpolateString(this.style.transform, 'translate(' + d.canvas.localX +'px,' + d.canvas.localY + 'px)');
       });
 
     var frameEnter = frame
@@ -321,6 +330,7 @@ var manifestor = function(options) {
       .style('width', function(d) { return d.canvas.width + 'px'; })
       .style('height', function(d) { return d.canvas.height + 'px'; })
       .style('transform', function(d) { return 'translateX(' + d.canvas.localX + 'px) translateY(' + d.canvas.localY + 'px)'; })
+      .style('-webkit-transform', function(d) { return 'translateX(' + d.canvas.localX + 'px) translateY(' + d.canvas.localY + 'px)'; })
       .each(enterImages);
     // .append('img')
     // .attr('src', function(d) { return d.canvas.iiifService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
