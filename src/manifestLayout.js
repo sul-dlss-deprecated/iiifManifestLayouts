@@ -483,7 +483,7 @@ var manifestLayout = function(options) {
     var nextFrame = frames[canvasPosition + 1];
 
     selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, previousFrame, nextFrame, viewport);
-    
+
     frames.forEach(function(frame, index, allFrames) {
       if (frame.y === selectedFrame.y && frame.canvas.id !== selectedFrame.canvas.id) {
         if (index < canvasPosition) {

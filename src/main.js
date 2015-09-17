@@ -140,12 +140,12 @@ var manifestor = function(options) {
           renderLayout(layout.intermediate(), false);
       };
       renderLayout(layout.intermediate(), true, endCallback);
-    } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail'){
+    } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail') {
         endCallback = function() {
         renderLayout(layout.overview(), true);
       };
       renderLayout(layout.intermediate(), false, endCallback);
-    } else if (userState.perspective === 'detail' && userState.previousPerspective === 'detail'){
+    } else if (userState.perspective === 'detail' && userState.previousPerspective === 'detail') {
       renderLayout(layout.intermediate(), false);
     } else {
       renderLayout(layout.overview(), true);
@@ -155,17 +155,30 @@ var manifestor = function(options) {
       var viewBounds = layout.intermediate().filter(function(frame) {
         return frame.canvas.selected;
       })[0].vantage;
+
       updateConstraintBounds(viewBounds);
-
       var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
-
       setScrollElementEvents();
-      viewer.viewport.fitBounds(osdBounds, false);
+      if (userState.previousPerspective) {
+        console.log(userState.previousPerspective);
+        viewer.viewport.fitBounds(osdBounds, false);
+      } else {
+        console.log(userState.previousPerspective);
+        viewer.viewport.fitBounds(osdBounds, true);
+      }
     } else {
       viewBounds = new OpenSeadragon.Rect(0, _lastScrollPosition, canvasState().width, canvasState().height);
       _zooming = true;
       setScrollElementEvents();
-      viewer.viewport.fitBounds(viewBounds, false);
+
+      if (userState.previousPerspective) {
+        console.log(userState.previousPerspective);
+        viewer.viewport.fitBounds(viewBounds, false);
+      } else {
+        console.log(userState.previousPerspective);
+        viewer.viewport.fitBounds(viewBounds, true);
+      }
+
       setTimeout(function(){
         _zooming = false;
         setScrollElementEvents();
@@ -506,6 +519,7 @@ var manifestor = function(options) {
   function selectCanvas(item) {
     var state = canvasState();
     state.selectedCanvas = item;
+    state.previousPerspective = state.perspective;
     state.perspective = 'detail';
     canvasState(state);
   }
