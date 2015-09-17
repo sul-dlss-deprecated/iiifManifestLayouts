@@ -8,6 +8,7 @@ module.exports = function(grunt) {
     var config = {
         srcDir: 'src',
         distDir: 'dist',
+        stageDir: 'stage',
         testDir: 'test',
         exampleDir: 'example',
         distName:'manifestor.js',
@@ -16,12 +17,11 @@ module.exports = function(grunt) {
     };
 
     grunt.initConfig({
-        gitinfo: {},
         pkg: grunt.file.readJSON('package.json'),
         config: config,
         headerInfo: '/*\n' +
               ' <%= pkg.name %>\n' +
-              ' <%= pkg.version %>\n' +
+              ' version: <%= pkg.version %>\n' +
               ' <%= pkg.homepage %>\n' +
               ' Browserified module compilation\n' +
               '*/\n',
@@ -45,7 +45,7 @@ module.exports = function(grunt) {
               }
             },
             src: ['src/main.js'],
-            dest: 'stage/manifestor.js'
+            dest: '<%= config.stageDir %>/manifestor.js'
           },
           dist: {
             options: {
@@ -54,7 +54,7 @@ module.exports = function(grunt) {
               }
             },
             src: ['src/main.js'],
-            dest: 'dist/manifestor.js'
+            dest: '<%= config.distDir %>/manifestor.js'
           }
         },
 
@@ -92,11 +92,11 @@ module.exports = function(grunt) {
         watch: {
             js: {
                 files: '<%= config.srcDir %>/**/*.*',
-                tasks: ['smash', 'browserify:dist']
+                tasks: ['smash', 'browserify:stage']
             },
             grunt: {
                 files: 'Gruntfile.js',
-                tasks: ['less:example', 'browserify:dist']
+                tasks: ['less:example', 'browserify:stage']
             },
             less: {
                 files: '<%= config.exampleDir %>/styles/**/*.*',
@@ -104,7 +104,7 @@ module.exports = function(grunt) {
             },
             browserify: {
                 files: '<%= config.src %>/scripts/**/*.*',
-                tasks: ['browserify:dist']
+                tasks: ['browserify:stage']
             }
         },
 
@@ -119,28 +119,32 @@ module.exports = function(grunt) {
             options: {
               text: '<%= headerInfo %>'
             },
-              files: {
-                'stage/manifestor.js': 'stage/manifestor.js'
-              }
+            files: {
+              'stage/manifestor.js': 'stage/manifestor.js'
+            }
           },
           dist: {
             options: {
               text: '<%= headerInfo %>'
             },
-              files: {
-                'dist/manifestor.js': 'dist/manifestor.js'
-              }
+            files: {
+              '<%= config.distDir %>/manifestor.js': '<%= config.distDir %>/manifestor.js',
+              '<%= config.distDir %>/manifestor.min.js': '<%= config.distDir %>/manifestor.min.js'
+            }
           }
-    }
+        },
+        bump: {
+        options: {
+          files: ['package.json', '<%= config.distDir %>/*.js'],
+          commitFiles: ['package.json', '<%= config.distDir %>/*.js'],
+        }
+      }
     });
-    
-    grunt.load
-    grunt.loadNpmTasks('grunt-gitinfo');
 
     // Example tasks
     grunt.registerTask('buildExample', [
         'smash', // build custom D3 package
-        'browserify:dist', // bundle JS with browserify
+        'browserify:stage', // bundle JS with browserify
         'header:stage',
         'less:example',       // compile LESS to CSS
     ]);
@@ -155,8 +159,8 @@ module.exports = function(grunt) {
     grunt.registerTask('buildDist', [
         'smash', // build custom D3 package
         'browserify:dist', // bundle JS with browserify
-        'header:dist',
         'uglify:dist',     // minify JS files
+        'header:dist'
     ]);
 
     // Task aliases

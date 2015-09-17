@@ -29,5 +29,21 @@ While running `grunt serve`, an updated version of the module can be found local
 grunt build
 ```
 
+Bump the version using [grunt-bump](https://github.com/vojtajina/grunt-bump#usage-examples)
+
+** IMPORTANT ** This command will do the following:
+
+ - bump the version in `package.json` and `dist/*.js`
+ - Commit the version bumps
+ - Tag Commit
+ - Push commit and tag up to origin
+ 
+** This should only be run on master, AFTER pull requests have been merged and a new `dist` version has been built **
+
+```sh
+# Use --dry-run switch to see what it does
+grunt bump
+```
+
 ## License
 Apache-2.0
