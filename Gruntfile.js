@@ -98,13 +98,29 @@ module.exports = function(grunt) {
             src: 'src/lib/d3-slim.js',
             dest: 'src/lib/d3-slim-dist.js'
           }
-        }
+        },
+        header: {
+          stage: {
+            options: {
+              text: '/*\n' +
+                    ' <%= pkg.name %>\n' +
+                    ' <%= pkg.version %>\n' +
+                    ' <%= pkg.homepage %>\n' +
+                    ' Browserified module compilation\n' +
+                    '*/\n'
+            },
+              files: {
+                'stage/manifestor.js': 'stage/manifestor.js'
+              }
+          }
+    }
     });
 
     // Example tasks
     grunt.registerTask('buildExample', [
         'smash', // build custom D3 package
         'browserify:dist', // bundle JS with browserify
+        'header:stage',
         'less:example',       // compile LESS to CSS
     ]);
 
