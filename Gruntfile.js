@@ -11,42 +11,9 @@ module.exports = function(grunt) {
         distDir: 'dist',
         testDir: 'test',
         exampleDir: 'example',
-        exampleScriptDir: 'example/scripts/',
-        filesToCopy: [
-            // for performance we only match one level down: 'test/spec/{,*/}*.js'
-            // if you want to recursively match all subfolders: 'test/spec/**/*.js'
-            '{,*/}*.{gif,jpeg,jpg,png,webp,gif,ico}',
-            '{,*/}*.html',
-            'fonts/{,*/}*.*'
-        ],
         distName:'manifestor.js',
         // add any additional js/less/html files to build here:
-        jsToBuild: ['src/main.js'],
         lessToBuild: ['example/styles/main.less'],
-        exampleStylesDir: 'example/styles',
-        htmlToBuild: ['example/index.html']
-    };
-
-    // helper functions for munging paths
-    var prependPath = function(fileName, path) { return [path, '/', fileName].join(''); };
-    var prependSrc = function(fileName) { return prependPath(fileName, config.src); };
-    var prependExample =  function(fileName) { return prependPath(fileName, config.example); };
-    var builtExtension = function(fileName) {  return fileName.replace(/\.less$/, '.css').replace(/\.jsx$/, '.js'); };
-
-    // some tasks expect object format {'[built file path]': '[source file path]'}
-    var makeBuildSrcPathObj = function(fileNames, buildDir) {
-        console.log(fileNames);
-        console.log(buildDir);
-        return _.object(fileNames.map(function(fileName) {
-            return [prependPath(builtExtension(fileName), buildDir), prependSrc(fileName)];
-        }));
-    };
-    // or {'[built file path]': '[built file path]'} if we've already moved it to build directory
-    var makeBuildBuildPathObj = function(fileNames, buildDir) {
-        return _.object(fileNames.map(function(fileName) {
-            var buildPath = prependPath(builtExtension(fileName), buildDir);
-            return [buildPath, buildPath];
-        }));
     };
 
     grunt.initConfig({
@@ -60,20 +27,6 @@ module.exports = function(grunt) {
                     dot: true,
                     src: ['<%= config.distDir %>/*', '!<%= config.distDir %>/.git*']
                 }]
-            }
-        },
-
-        // copy static asset files from dist/ to example/scripts/ for demoing/dev work
-        copy: {
-            example: {
-                files: [
-                    {
-                        cwd: 'dist/',
-                        expand: true,
-                        dest: config.exampleScriptDir,
-                        src: config.distName
-                    }
-                ]
             }
         },
 
