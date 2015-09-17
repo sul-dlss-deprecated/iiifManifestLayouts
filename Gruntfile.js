@@ -1,4 +1,3 @@
-var _ = require('underscore');
 'use strict';
 
 module.exports = function(grunt) {
@@ -17,30 +16,46 @@ module.exports = function(grunt) {
     };
 
     grunt.initConfig({
+        gitinfo: {},
         pkg: grunt.file.readJSON('package.json'),
         config: config,
+        headerInfo: '/*\n' +
+              ' <%= pkg.name %>\n' +
+              ' <%= pkg.version %>\n' +
+              ' <%= pkg.homepage %>\n' +
+              ' Browserified module compilation\n' +
+              '*/\n',
 
         // clean out old files from build folders
         clean: {
-            dist: {
-                files: [{
-                    dot: true,
-                    src: ['<%= config.distDir %>/*', '!<%= config.distDir %>/.git*']
-                }]
-            }
+          dist: {
+            files: [{
+              dot: true,
+              src: ['<%= config.distDir %>/*', '!<%= config.distDir %>/.git*']
+            }]
+          }
         },
 
         // bundle JS with browserify
         browserify: {
-            dist: {
-                options: {
-                    browserifyOptions: {
-                        standalone: 'manifestor'
-                    }
-                },
-                src: ['src/main.js'],
-                dest: 'stage/manifestor.js'
-            }
+          stage: {
+            options: {
+              browserifyOptions: {
+                standalone: 'manifestor'
+              }
+            },
+            src: ['src/main.js'],
+            dest: 'stage/manifestor.js'
+          },
+          dist: {
+            options: {
+              browserifyOptions: {
+                standalone: 'manifestor'
+              }
+            },
+            src: ['src/main.js'],
+            dest: 'dist/manifestor.js'
+          }
         },
 
         // compile LESS to CSS
@@ -57,11 +72,11 @@ module.exports = function(grunt) {
 
         // run uglify on JS to minify it
         uglify: {
-            dist: {
-                files: {
-                    'dist/manifestor.min.js': 'dist/manifestor.js'
-                }
+          dist: {
+            files: {
+              'dist/manifestor.min.js': 'dist/manifestor.js'
             }
+          }
         },
 
         // web server for serving files from example
@@ -102,19 +117,25 @@ module.exports = function(grunt) {
         header: {
           stage: {
             options: {
-              text: '/*\n' +
-                    ' <%= pkg.name %>\n' +
-                    ' <%= pkg.version %>\n' +
-                    ' <%= pkg.homepage %>\n' +
-                    ' Browserified module compilation\n' +
-                    '*/\n'
+              text: '<%= headerInfo %>'
             },
               files: {
                 'stage/manifestor.js': 'stage/manifestor.js'
               }
+          },
+          dist: {
+            options: {
+              text: '<%= headerInfo %>'
+            },
+              files: {
+                'dist/manifestor.js': 'dist/manifestor.js'
+              }
           }
     }
     });
+    
+    grunt.load
+    grunt.loadNpmTasks('grunt-gitinfo');
 
     // Example tasks
     grunt.registerTask('buildExample', [
@@ -132,15 +153,14 @@ module.exports = function(grunt) {
 
     // Distribution tasks
     grunt.registerTask('buildDist', [
-        'clean:dist',      // clean old files out of build/dist
         'smash', // build custom D3 package
         'browserify:dist', // bundle JS with browserify
-        'less:example',       // compile LESS to CSS
+        'header:dist',
         'uglify:dist',     // minify JS files
     ]);
 
     // Task aliases
-    // grunt.registerTask('build', ['buildDist']);
+    grunt.registerTask('build', ['buildDist']);
     grunt.registerTask('serve', ['serveExample']);
     grunt.registerTask('debug', ['serveExample']);
 };
