@@ -1,6 +1,6 @@
 /*
  iiifManifestLayout
- version: 0.0.3
+ version: 0.0.4
  https://github.com/sul-dlss/iiifManifestLayouts
  Browserified module compilation
 */
@@ -2625,8 +2625,8 @@ var manifestor = function(options) {
      'position': 'absolute',
      'top': 0,
      'left': 0,
-     'overflow': 'hidden'//,
-     // 'overflow-x': 'hidden',
+     'overflow': 'hidden',
+     'overflow-x': 'hidden'
      // 'overflow-y': 'scroll'
     });
 
@@ -2703,32 +2703,51 @@ var manifestor = function(options) {
           renderLayout(layout.intermediate(), false);
       };
       renderLayout(layout.intermediate(), true, endCallback);
-    } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail'){
+    } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail') {
         endCallback = function() {
         renderLayout(layout.overview(), true);
       };
       renderLayout(layout.intermediate(), false, endCallback);
-    } else if (userState.perspective === 'detail' && userState.previousPerspective === 'detail'){
-      renderLayout(layout.intermediate(), false);
-    } else {
+    } else if (userState.perspective === 'detail' && userState.previousPerspective === 'detail') {
+      renderLayout(layout.intermediate(), true);
+    } else if (userState.perspective === 'overview' && userState.previousPerspective === 'overview') {
       renderLayout(layout.overview(), true);
-    }
+  } else if (userState.perspective === 'overview' && !userState.previousPerspective) {
+    renderLayout(layout.overview(), false);
+  } else if (userState.perspective === 'detail' && !userState.previousPerspective) {
+    renderLayout(layout.intermediate(), false);
+  }
 
     if (userState.perspective === 'detail') {
       var viewBounds = layout.intermediate().filter(function(frame) {
         return frame.canvas.selected;
       })[0].vantage;
+
       updateConstraintBounds(viewBounds);
-
       var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
-
       setScrollElementEvents();
-      viewer.viewport.fitBounds(osdBounds, false);
+      if (userState.previousPerspective) {
+        console.log(userState.previousPerspective);
+        viewer.viewport.fitBounds(osdBounds, false);
+      } else {
+        console.log(userState.previousPerspective);
+        viewer.viewport.fitBounds(osdBounds, true);
+      }
+      enableZoomAndPan();
     } else {
       viewBounds = new OpenSeadragon.Rect(0, _lastScrollPosition, canvasState().width, canvasState().height);
       _zooming = true;
+      disableZoomAndPan();
       setScrollElementEvents();
-      viewer.viewport.fitBounds(viewBounds, false);
+
+      if (userState.previousPerspective) {
+        console.log(userState.previousPerspective);
+        viewer.viewport.fitBounds(viewBounds, false);
+      } else {
+        console.log(userState.previousPerspective);
+        viewer.viewport.fitBounds(viewBounds, true);
+      }
+
       setTimeout(function(){
         _zooming = false;
         setScrollElementEvents();
@@ -2741,50 +2760,46 @@ var manifestor = function(options) {
     if (!arguments.length) return _canvasImageStates;
     _canvasImageStates = state;
 
-    // if (!initial) {
-    //     jQuery.publish('annotationsTabStateUpdated' + this.windowId, this.tabState);
-    // }
-
     return _canvasImageStates;
   }
 
-  // function detailTransition(detailLayout) {
-  //     renderLayout(detailLayout);
-  // }
-  // function overviewTransition(selection) {
-  //     renderLayout(detailLayout);
-  // }
   function setScrollElementEvents() {
     var animationTiming = 1200;
     var interactionOverlay = d3.select(overlays[0]);
     if (canvasState().perspective === 'detail') {
       interactionOverlay
         .style('opacity', 0)
-        .transition()
-        .duration(animationTiming)
         .style('pointer-events', 'none');
 
       d3.select(scrollContainer[0])
-        .transition()
-        .duration(animationTiming)
         .style('pointer-events', 'none')
-        .style('overflow-x', 'hidden')
         .style('overflow-y', 'hidden');
-    } else if(!_zooming) {
 
+    } else if(!_zooming) {
       interactionOverlay
-        .style('opacity', 1)
+        .style('pointer-events', 'all')
         .transition()
-        .duration(animationTiming)
-        .style('pointer-events', 'all');
+        .duration(animationTiming/2)
+        .style('opacity', 1);
 
       d3.select(scrollContainer[0])
-        .transition()
-        .duration(animationTiming)
         .style('pointer-events', 'all')
-        .style('overflow-x', 'hidden')
         .style('overflow-y', 'scroll');
     }
+  }
+
+  function disableZoomAndPan() {
+    viewer.zoomPerClick = 1;
+    viewer.zoomPerScroll = 1;
+    viewer.panHorizontal = false;
+    viewer.panVertical = false;
+  }
+
+  function enableZoomAndPan() {
+    viewer.zoomPerClick = 2;
+    viewer.zoomPerScroll = 1.2;
+    viewer.panHorizontal = true;
+    viewer.panVertical = true;
   }
 
   function renderLayout(layoutData, animate, callback) {
@@ -2953,9 +2968,7 @@ var manifestor = function(options) {
     });
 
     viewer.addHandler('animation', function(event) {
-      if (canvasState().perspective === 'detail' || _zooming === true) {
         synchroniseZoom();
-      }
     });
 
     viewer.addHandler('zoom', function(event) {
@@ -3069,6 +3082,7 @@ var manifestor = function(options) {
   function selectCanvas(item) {
     var state = canvasState();
     state.selectedCanvas = item;
+    state.previousPerspective = state.perspective;
     state.perspective = 'detail';
     canvasState(state);
   }
@@ -3082,6 +3096,7 @@ var manifestor = function(options) {
 
   function selectViewingMode(viewingMode) {
     var state = canvasState();
+    state.previousPerspective = state.perspective;
     state.viewingMode = viewingMode;
 
     canvasState(state);
@@ -3170,8 +3185,10 @@ var manifestor = function(options) {
   });
   scrollContainer.on('scroll', function(event) {
     if (canvasState().perspective === 'overview' && _zooming === false) {
+      var width = canvasState().width;
+      var height = canvasState().height;
       _lastScrollPosition = $(this).scrollTop();
-      synchronisePan(_lastScrollPosition, $(this).width(), $(this).height());
+      synchronisePan(_lastScrollPosition, width, height);
     }
   });
 
@@ -3681,7 +3698,7 @@ var manifestLayout = function(options) {
     var nextFrame = frames[canvasPosition + 1];
 
     selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, previousFrame, nextFrame, viewport);
-    
+
     frames.forEach(function(frame, index, allFrames) {
       if (frame.y === selectedFrame.y && frame.canvas.id !== selectedFrame.canvas.id) {
         if (index < canvasPosition) {
