@@ -2705,7 +2705,7 @@ var manifestor = function(options) {
       renderLayout(layout.intermediate(), true, endCallback);
     } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail'){
         endCallback = function() {
-        renderLayout(layout.overview(), false);
+        renderLayout(layout.overview(), true);
       };
       renderLayout(layout.intermediate(), false, endCallback);
     } else if (userState.perspective === 'detail' && userState.previousPerspective === 'detail'){
@@ -2713,11 +2713,6 @@ var manifestor = function(options) {
     } else {
       renderLayout(layout.overview(), true);
     }
-
-    // renderLayout(layout.intermediate(), true);
-
-    // calculate and zoom to new bounds (if relevant)
-    // Set appropriate events for mode.
 
     if (userState.perspective === 'detail') {
       var viewBounds = layout.intermediate().filter(function(frame) {
