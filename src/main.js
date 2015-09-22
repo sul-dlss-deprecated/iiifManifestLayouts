@@ -132,12 +132,12 @@ var manifestor = function(options) {
         right: 10
       },
       minimumImageGap: 5, // precent of viewport
-      facingCanvasPadding: 1 // precent of viewport
+      facingCanvasPadding: 0.1 // precent of viewport
     });
 
     if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
       var endCallback = function() {
-          renderLayout(layout.intermediate(), false);
+          renderLayout(layout.detail(), false);
       };
       renderLayout(layout.intermediate(), true, endCallback);
     } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail') {
@@ -146,7 +146,7 @@ var manifestor = function(options) {
       };
       renderLayout(layout.intermediate(), false, endCallback);
     } else if (userState.perspective === 'detail' && userState.previousPerspective === 'detail') {
-      renderLayout(layout.intermediate(), true);
+      renderLayout(layout.detail(), true);
     } else if (userState.perspective === 'overview' && userState.previousPerspective === 'overview') {
       renderLayout(layout.overview(), true);
   } else if (userState.perspective === 'overview' && !userState.previousPerspective) {

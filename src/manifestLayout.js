@@ -384,13 +384,24 @@ var manifestLayout = function(options) {
         verticalMargin,
         combinedCanvasWidths,
         x,
-        minimumViewportPadding = 5, // units in %
+        minimumViewportPadding = 5, // units in % of the _viewport_ width/height.
+        // This requires calculating in units of the viewport pixels, and
+        // converting them to the appropriate size.
         selectionBoundingBox = {};
 
     var paddingCalc = ((minimumViewportPadding * 2 ) / 100 );
+    // Might have to actually calculate the container padding here.
+    // Take the value (in "viewportPixels"), and find the distance
+    // at the current zoom level. Find a scale factor between a
+    // distance given in coordinate pixels and a distance given
+    // in viewport pixels.
+    //
+    // In this case, we need a scale factor between:
+    // A: The width of the viewport element itself
+    // B: The current width of
 
     // Set the selectionBoundingBox.width, portrait, and x values based on the
-    // location of the paged frame
+    // location of the paged frame.
     if (viewingMode === 'paged') {
       var selectionIndex = selectedCanvas.sequencePosition;
       if (selectionIndex === 0) {
@@ -410,6 +421,7 @@ var manifestLayout = function(options) {
       combinedCanvasWidths = selectedCanvas.width;
       x = selectedCanvas.x;
     }
+
     selectionBoundingBox = {
       width: combinedCanvasWidths + (combinedCanvasWidths * paddingCalc),
       height: selectedCanvas.height + (selectedCanvas.height * paddingCalc)
@@ -445,6 +457,10 @@ var manifestLayout = function(options) {
     horizontalMargin = (vantageWidth - combinedCanvasWidths) / 2;
     verticalMargin = (vantageHeight - selectedCanvas.height) / 2;
 
+    // This returned data is the representation of the viewport in
+    // the coordinate system of the images and overlays (the "world")
+    // coordinates. OSD/D3, other rendering environments can use this
+    // to position the camera.
     return {
       x: x - horizontalMargin,
       y: selectedCanvas.y - verticalMargin,
@@ -471,11 +487,15 @@ var manifestLayout = function(options) {
           return sum + nextFrame.width;
         }, selectedFrame.vantage.width);
 
+    console.log(selectedFrame);
+    console.log(previousFrames);
+    console.log(nextFrames);
+
     frames.forEach(function(frame, index) {
       if(index < selectedFrame.canvas.sequencePosition){
-        frame.x = '' - leftDisplacement;
+        frame.x = frame.x;
       } else {
-        frame.x = '' + rightDisplacement;
+        frame.x = frame.x;
       }
       frame.y = selectedFrame.y;
     });
@@ -510,9 +530,6 @@ var manifestLayout = function(options) {
       frame.canvas.x = frame.x + frame.canvas.localX;
       frame.canvas.y = frame.y + frame.canvas.localY;
     });
-
-    // Now that I have the select frame, I need to determine the three groups
-    // of objects to transform. Those of the same line, those above, and those below.
 
     return frames;
   }
