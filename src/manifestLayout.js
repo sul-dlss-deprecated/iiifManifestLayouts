@@ -230,8 +230,22 @@ var manifestLayout = function(options) {
         }
       });
     } else if (viewingMode === 'continuous') {
+      // This just assumes we're talking horizontal.
+      // As you can imagine, this is going to get out of
+      // hand quickly. It would be nice to go back to
+      // named functions, even if we're going to need like
+      // 45 of them. Then the possible layouts can be
+      // expressed as sequences of a few intelligibly-named
+      // functions, configured as 3-5 step flows based on
+      // the input parameters. Another day, perhaps.
+      var boundPagePadding = {
+        top: framePadding.top,
+        bottom: framePadding.bottom,
+        left: 0,
+        right: 0
+      };
       return canvases.map(function(canvas){
-        return frame(canvas, framePadding);
+        return frame(canvas, boundPagePadding);
       });
     } else {
       return canvases.map(function(canvas){
@@ -261,7 +275,7 @@ var manifestLayout = function(options) {
           lineItemWidth,
           x;
 
-      if (viewingMode === 'paged') {        
+      if (viewingMode === 'paged') {
         var position = frame.canvas.sequencePosition;
         // Return the facingFrame, based on the facing page type
         var facingFrame = frames.filter(function(page) {
@@ -389,7 +403,7 @@ var manifestLayout = function(options) {
         x = previousFrame.canvas.x;
       } else {
         // left page
-        combinedCanvasWidths = selectedCanvas.width + nextFrame.canvas.width;        
+        combinedCanvasWidths = selectedCanvas.width + nextFrame.canvas.width;
         x = selectedCanvas.x;
       }
     } else {
