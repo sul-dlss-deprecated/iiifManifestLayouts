@@ -1,6 +1,6 @@
 /*
  iiifManifestLayout
- version: 0.0.4
+ version: 0.0.5
  https://github.com/sul-dlss/iiifManifestLayouts
  Browserified module compilation
 */
@@ -2727,10 +2727,8 @@ var manifestor = function(options) {
       var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
       setScrollElementEvents();
       if (userState.previousPerspective) {
-        console.log(userState.previousPerspective);
         viewer.viewport.fitBounds(osdBounds, false);
       } else {
-        console.log(userState.previousPerspective);
         viewer.viewport.fitBounds(osdBounds, true);
       }
       enableZoomAndPan();
@@ -2741,10 +2739,8 @@ var manifestor = function(options) {
       setScrollElementEvents();
 
       if (userState.previousPerspective) {
-        console.log(userState.previousPerspective);
         viewer.viewport.fitBounds(viewBounds, false);
       } else {
-        console.log(userState.previousPerspective);
         viewer.viewport.fitBounds(viewBounds, true);
       }
 
@@ -3128,7 +3124,6 @@ var manifestor = function(options) {
 
   function addMainImageObj(id, osdTileObj) {
     var canvasStates = canvasImageStates();
-    console.log('added main image');
 
     canvasStates[id].mainImageObj = osdTileObj;
 
@@ -3180,6 +3175,80 @@ var manifestor = function(options) {
     // canvasState(state);
   }
 
+  function next() {
+    var state = canvasState(),
+        currentCanvasIndex;
+
+    if (state.viewingMode === "paged") {
+      currentCanvasIndex = currentPagedSequenceCanvasIndex(state.selectedCanvas);
+
+      if (currentCanvasIndex % 2 === 0) {
+        selectCanvas(canvases[currentCanvasIndex+1]['@id']);
+      } else {
+        selectCanvas(canvases[currentCanvasIndex+2]['@id']);
+      }
+    } else {
+      currentCanvasIndex = currentSequenceCanvasIndex(state.selectedCanvas);
+
+      selectCanvas(canvases[currentCanvasIndex+1]['@id']);
+    }
+  }
+
+  function previous() {
+    var state = canvasState(),
+        currentCanvasIndex;
+
+    if (state.viewingMode === "paged") {
+      currentCanvasIndex = currentPagedSequenceCanvasIndex(state.selectedCanvas);
+
+      if (currentCanvasIndex % 2 === 0) {
+        selectCanvas(canvases[currentCanvasIndex-2]['@id']);
+      } else {
+        selectCanvas(canvases[currentCanvasIndex-1]['@id']);
+      }
+    } else {
+      currentCanvasIndex = currentSequenceCanvasIndex(state.selectedCanvas);
+
+      selectCanvas(canvases[currentCanvasIndex-1]['@id']);
+    }
+  }
+
+  /**
+   * Returns the selected canvas in the current sequence for paged viewing
+   * @private
+   * @param {String} selectedCanvas
+   * @returns {Number}
+   */
+  function currentPagedSequenceCanvasIndex(selectedCanvas) {
+    var currentSequenceCanvases = canvases.filter(function(canvas) {
+      return canvas.viewingHint === 'non-paged' ? false : true;
+    });
+    return currentSequenceCanvasIndex(selectedCanvas, currentSequenceCanvases);
+  }
+
+  /**
+   * Returns the selected canvas for a given sequence, uses canvases if no
+   * currentCanvases argument is provided
+   * @private
+   * @param {String} selectedCanvas
+   * @param {Object[]} [currentCanvases]
+   * @returns {Number}
+   */
+  function currentSequenceCanvasIndex(selectedCanvas, currentCanvases) {
+    var currentCanvasIndex;
+    if (currentCanvases === undefined) {
+      currentCanvases = canvases;
+    }
+
+    canvases.forEach(function(canvas, index) {
+      if (selectedCanvas === canvas['@id']) {
+        currentCanvasIndex = index;
+        return;
+      }
+    });
+    return currentCanvasIndex;
+  }
+
   container.on('click', '.' + canvasClass, function(event) {
     selectCanvas($(this).data('id'));
   });
@@ -3193,11 +3262,9 @@ var manifestor = function(options) {
   });
 
   return {
-    // selectMode: selectMode,
-    // selectPerspective: selectPerspective,
-    // next: next,
-    // previous: previous,
     // scrollThumbs: scrollThumbs,
+    next: next,
+    previous: previous,
     resize: resize,
     selectCanvas: selectCanvas,
     selectPerspective: selectPerspective,
