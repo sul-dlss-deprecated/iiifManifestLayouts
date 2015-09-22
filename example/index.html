@@ -81,26 +81,24 @@
              viewer = manifestor({
                  manifest: manifest,
                  container: $('#example-container'),
-            perspective:  'detail',
+                 perspective:  'detail',
                  canvasClass: 'canvas', //default set to 'canvas'
                  frameClass: 'frame', //default set to 'frame'
                  labelClass: 'label', //default set to 'label'
-                 stateUpdateCallback: function () {console.log('I have updated!')}
+                 stateUpdateCallback: function () {console.log('I have updated!')},
+                 selectedCanvas: manifest.sequences[0].canvases[50]['@id']
              });
 
              key('h, left', function() {
-                 currentCanvas -= 1
-                 viewer.selectCanvas(manifest.sequences[0].canvases[currentCanvas]['@id']);
+                 viewer.previous();
              });
-             /*          key('j, down') */
-             /*          key('k, up') */
+             /*          key('j, down') */ // Implement nearest Neighbour Search
+             /*          key('k, up') */   // Might be easiest if the lines were
+                                           // saved somewhere.
              key('l, right', function() {
-                 currentCanvas += 1
-                 viewer.selectCanvas(manifest.sequences[0].canvases[currentCanvas]['@id']);
+                 viewer.next();
              });
          });
-
-         var currentCanvas = 10;
 
          // We can set events outside of the component.
          $(window).on('resize', function() {

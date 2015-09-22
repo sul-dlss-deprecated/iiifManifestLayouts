@@ -164,10 +164,8 @@ var manifestor = function(options) {
       var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
       setScrollElementEvents();
       if (userState.previousPerspective) {
-        console.log(userState.previousPerspective);
         viewer.viewport.fitBounds(osdBounds, false);
       } else {
-        console.log(userState.previousPerspective);
         viewer.viewport.fitBounds(osdBounds, true);
       }
       enableZoomAndPan();
@@ -178,10 +176,8 @@ var manifestor = function(options) {
       setScrollElementEvents();
 
       if (userState.previousPerspective) {
-        console.log(userState.previousPerspective);
         viewer.viewport.fitBounds(viewBounds, false);
       } else {
-        console.log(userState.previousPerspective);
         viewer.viewport.fitBounds(viewBounds, true);
       }
 
@@ -565,7 +561,6 @@ var manifestor = function(options) {
 
   function addMainImageObj(id, osdTileObj) {
     var canvasStates = canvasImageStates();
-    console.log('added main image');
 
     canvasStates[id].mainImageObj = osdTileObj;
 
@@ -617,6 +612,74 @@ var manifestor = function(options) {
     // canvasState(state);
   }
 
+  function next() {
+    var state = canvasState(),
+        currentSequenceCanvases,
+        currentCanvasIndex;
+
+    if (state.viewingMode === "paged") {
+      currentSequenceCanvases = canvases.filter(function(canvas) {
+        return canvas.viewingHint === 'non-paged' ? false : true;
+      });
+
+      currentSequenceCanvases.forEach(function(canvas, index) {
+        if (state.selectedCanvas === canvas['@id']) {
+          currentCanvasIndex = index;
+          return;
+        }
+      });
+
+      if (currentCanvasIndex % 2 === 0) {
+        selectCanvas(canvases[currentCanvasIndex+1]['@id']);
+      } else {
+        selectCanvas(canvases[currentCanvasIndex+2]['@id']);
+      }
+    } else {
+      canvases.forEach(function(canvas, index) {
+        if (state.selectedCanvas === canvas['@id']) {
+          currentCanvasIndex = index;
+          return;
+        }
+      });
+
+      selectCanvas(canvases[currentCanvasIndex+1]['@id']);
+    }
+  }
+
+  function previous() {
+    var state = canvasState(),
+        currentSequenceCanvases,
+        currentCanvasIndex;
+
+    if (state.viewingMode === "paged") {
+      currentSequenceCanvases = canvases.filter(function(canvas) {
+        return canvas.viewingHint === 'non-paged' ? false : true;
+      });
+
+      currentSequenceCanvases.forEach(function(canvas, index) {
+        if (state.selectedCanvas === canvas['@id']) {
+          currentCanvasIndex = index;
+          return;
+        }
+      });
+
+      if (currentCanvasIndex % 2 === 0) {
+        selectCanvas(canvases[currentCanvasIndex-2]['@id']);
+      } else {
+        selectCanvas(canvases[currentCanvasIndex-1]['@id']);
+      }
+    } else {
+      canvases.forEach(function(canvas, index) {
+        if (state.selectedCanvas === canvas['@id']) {
+          currentCanvasIndex = index;
+          return;
+        }
+      });
+
+      selectCanvas(canvases[currentCanvasIndex-1]['@id']);
+    }
+  }
+
   container.on('click', '.' + canvasClass, function(event) {
     selectCanvas($(this).data('id'));
   });
@@ -630,11 +693,9 @@ var manifestor = function(options) {
   });
 
   return {
-    // selectMode: selectMode,
-    // selectPerspective: selectPerspective,
-    // next: next,
-    // previous: previous,
     // scrollThumbs: scrollThumbs,
+    next: next,
+    previous: previous,
     resize: resize,
     selectCanvas: selectCanvas,
     selectPerspective: selectPerspective,
