@@ -13,7 +13,7 @@ var manifestor = function(options) {
       initialViewingDirection = options.viewingDirection ? options.viewingDirection : getViewingDirection(),
       initialViewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
       initialPerspective = options.perspective ? options.perspective : 'overview',
-      selectedCanvas = options.selectedCanvas,
+      selectedCanvas = options.selectedCanvas || iiif.getFirst(canvases),
       viewer,
       canvasClass = options.canvasClass ? options.canvasClass : 'canvas',
       frameClass = options.frameClass ? options.frameClass : 'frame',
@@ -614,41 +614,60 @@ var manifestor = function(options) {
 
   function next() {
     var state = canvasState(),
-        currentCanvasIndex;
+        currentCanvasIndex,
+        indexIncrement;
 
     if (state.viewingMode === "paged") {
       currentCanvasIndex = currentPagedSequenceCanvasIndex(state.selectedCanvas);
 
       if (currentCanvasIndex % 2 === 0) {
-        selectCanvas(canvases[currentCanvasIndex+1]['@id']);
+        indexIncrement = currentCanvasIndex + 1;
       } else {
-        selectCanvas(canvases[currentCanvasIndex+2]['@id']);
+        indexIncrement = currentCanvasIndex + 2;
       }
     } else {
       currentCanvasIndex = currentSequenceCanvasIndex(state.selectedCanvas);
-
-      selectCanvas(canvases[currentCanvasIndex+1]['@id']);
+      indexIncrement = currentCanvasIndex + 1;
     }
+    // return if next is greater than or equal to maximum page index
+    if (indexIncrement >= currentPagedSequenceCanvases().length) { return false; }
+    selectCanvas(canvases[indexIncrement]['@id']);
   }
 
   function previous() {
     var state = canvasState(),
-        currentCanvasIndex;
+        currentCanvasIndex,
+        indexIncrement;
 
     if (state.viewingMode === "paged") {
       currentCanvasIndex = currentPagedSequenceCanvasIndex(state.selectedCanvas);
 
       if (currentCanvasIndex % 2 === 0) {
-        selectCanvas(canvases[currentCanvasIndex-2]['@id']);
+        indexIncrement = currentCanvasIndex - 2;
       } else {
-        selectCanvas(canvases[currentCanvasIndex-1]['@id']);
+        indexIncrement = currentCanvasIndex - 1;
       }
     } else {
       currentCanvasIndex = currentSequenceCanvasIndex(state.selectedCanvas);
-
-      selectCanvas(canvases[currentCanvasIndex-1]['@id']);
+      indexIncrement = currentCanvasIndex - 1;
     }
+    // return if previous is less than minimum page index "0"
+    if (indexIncrement < 0) { return false; }
+    selectCanvas(canvases[indexIncrement]['@id']);
   }
+
+  /**
+   * Returns current paged sequence canvases
+   * @private
+   * @param
+   * @returns {Object[]}
+   */
+   function currentPagedSequenceCanvases() {
+     var currentCanvases = canvases.filter(function(canvas) {
+       return canvas.viewingHint === 'non-paged' ? false : true;
+     });
+     return currentCanvases;
+   }
 
   /**
    * Returns the selected canvas in the current sequence for paged viewing
@@ -657,10 +676,7 @@ var manifestor = function(options) {
    * @returns {Number}
    */
   function currentPagedSequenceCanvasIndex(selectedCanvas) {
-    var currentSequenceCanvases = canvases.filter(function(canvas) {
-      return canvas.viewingHint === 'non-paged' ? false : true;
-    });
-    return currentSequenceCanvasIndex(selectedCanvas, currentSequenceCanvases);
+    return currentSequenceCanvasIndex(selectedCanvas, currentPagedSequenceCanvases());
   }
 
   /**

@@ -27,7 +27,7 @@ var manifestLayout = function(options) {
       containerHeight = options.height,
       containerWidth = options.width,
       canvases = options.canvases,
-      selectedCanvas = options.selectedCanvas || getFirst(),
+      selectedCanvas = options.selectedCanvas,
       framingStrategy = options.framingStrategy || 'contain',
       viewingDirection = options.viewingDirection || 'left-to-right',
       viewingMode = options.viewingMode || 'individuals',
@@ -63,10 +63,6 @@ var manifestLayout = function(options) {
         height: containerHeight,
         aspectRatio: containerWidth/containerHeight
       };
-
-  function getFirst() {
-    return canvases[0]['@id'];
-  }
 
   function pruneCanvas(canvas, index) {
     var prunedCanvas = {

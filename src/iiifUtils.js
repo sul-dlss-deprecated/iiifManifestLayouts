@@ -1,6 +1,14 @@
 'use strict';
 
 var iiifUtils = {
+    /**
+     * Returns the first canvas for a given array of canvases
+     * @param {Object[]} canvases
+     * @returns {String}
+     */
+    getFirst: function(canvases) {
+      return canvases[0]['@id'];
+    },
 
     getImageUrl: function(image) {
 
