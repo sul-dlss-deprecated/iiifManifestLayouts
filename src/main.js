@@ -614,20 +614,10 @@ var manifestor = function(options) {
 
   function next() {
     var state = canvasState(),
-        currentSequenceCanvases,
         currentCanvasIndex;
 
     if (state.viewingMode === "paged") {
-      currentSequenceCanvases = canvases.filter(function(canvas) {
-        return canvas.viewingHint === 'non-paged' ? false : true;
-      });
-
-      currentSequenceCanvases.forEach(function(canvas, index) {
-        if (state.selectedCanvas === canvas['@id']) {
-          currentCanvasIndex = index;
-          return;
-        }
-      });
+      currentCanvasIndex = currentPagedSequenceCanvasIndex(state.selectedCanvas);
 
       if (currentCanvasIndex % 2 === 0) {
         selectCanvas(canvases[currentCanvasIndex+1]['@id']);
@@ -635,12 +625,7 @@ var manifestor = function(options) {
         selectCanvas(canvases[currentCanvasIndex+2]['@id']);
       }
     } else {
-      canvases.forEach(function(canvas, index) {
-        if (state.selectedCanvas === canvas['@id']) {
-          currentCanvasIndex = index;
-          return;
-        }
-      });
+      currentCanvasIndex = currentSequenceCanvasIndex(state.selectedCanvas);
 
       selectCanvas(canvases[currentCanvasIndex+1]['@id']);
     }
@@ -648,20 +633,10 @@ var manifestor = function(options) {
 
   function previous() {
     var state = canvasState(),
-        currentSequenceCanvases,
         currentCanvasIndex;
 
     if (state.viewingMode === "paged") {
-      currentSequenceCanvases = canvases.filter(function(canvas) {
-        return canvas.viewingHint === 'non-paged' ? false : true;
-      });
-
-      currentSequenceCanvases.forEach(function(canvas, index) {
-        if (state.selectedCanvas === canvas['@id']) {
-          currentCanvasIndex = index;
-          return;
-        }
-      });
+      currentCanvasIndex = currentPagedSequenceCanvasIndex(state.selectedCanvas);
 
       if (currentCanvasIndex % 2 === 0) {
         selectCanvas(canvases[currentCanvasIndex-2]['@id']);
@@ -669,15 +644,46 @@ var manifestor = function(options) {
         selectCanvas(canvases[currentCanvasIndex-1]['@id']);
       }
     } else {
-      canvases.forEach(function(canvas, index) {
-        if (state.selectedCanvas === canvas['@id']) {
-          currentCanvasIndex = index;
-          return;
-        }
-      });
+      currentCanvasIndex = currentSequenceCanvasIndex(state.selectedCanvas);
 
       selectCanvas(canvases[currentCanvasIndex-1]['@id']);
     }
+  }
+
+  /**
+   * Returns the selected canvas in the current sequence for paged viewing
+   * @private
+   * @param {String} selectedCanvas
+   * @returns {Number}
+   */
+  function currentPagedSequenceCanvasIndex(selectedCanvas) {
+    var currentSequenceCanvases = canvases.filter(function(canvas) {
+      return canvas.viewingHint === 'non-paged' ? false : true;
+    });
+    return currentSequenceCanvasIndex(selectedCanvas, currentSequenceCanvases);
+  }
+
+  /**
+   * Returns the selected canvas for a given sequence, uses canvases if no
+   * currentCanvases argument is provided
+   * @private
+   * @param {String} selectedCanvas
+   * @param {Object[]} [currentCanvases]
+   * @returns {Number}
+   */
+  function currentSequenceCanvasIndex(selectedCanvas, currentCanvases) {
+    var currentCanvasIndex;
+    if (currentCanvases === undefined) {
+      currentCanvases = canvases;
+    }
+
+    canvases.forEach(function(canvas, index) {
+      if (selectedCanvas === canvas['@id']) {
+        currentCanvasIndex = index;
+        return;
+      }
+    });
+    return currentCanvasIndex;
   }
 
   container.on('click', '.' + canvasClass, function(event) {
