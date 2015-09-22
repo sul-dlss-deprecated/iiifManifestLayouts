@@ -13,7 +13,7 @@ var manifestor = function(options) {
       initialViewingDirection = options.viewingDirection ? options.viewingDirection : getViewingDirection(),
       initialViewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
       initialPerspective = options.perspective ? options.perspective : 'overview',
-      selectedCanvas = options.selectedCanvas,
+      selectedCanvas = options.selectedCanvas || iiif.getFirst(canvases),
       viewer,
       canvasClass = options.canvasClass ? options.canvasClass : 'canvas',
       frameClass = options.frameClass ? options.frameClass : 'frame',
