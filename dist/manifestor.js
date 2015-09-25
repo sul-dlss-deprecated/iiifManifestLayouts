@@ -1,6 +1,6 @@
 /*
  iiifManifestLayout
- version: 0.0.6
+ version: 0.0.7
  https://github.com/sul-dlss/iiifManifestLayouts
  Browserified module compilation
 */
@@ -2895,12 +2895,13 @@ var manifestor = function(options) {
 
   function translateTilesources(d, i) {
     var canvasId = d.canvas.id,
-        dummyObj = canvasImageStates()[canvasId].dummyObj,
         mainImageObj = canvasImageStates()[canvasId].mainImageObj;
 
-    var currentBounds = mainImageObj ? mainImageObj.getBounds(true) : dummyObj.getBounds(true),
+    var currentBounds = mainImageObj ? mainImageObj.getBounds(true) : null,
         xi = d3.interpolate(currentBounds.x, d.canvas.x),
         yi = d3.interpolate(currentBounds.y, d.canvas.y);
+
+    if (currentBounds === null) { return function() { /*no-op*/ }; };
 
     return function(t) {
         mainImageObj.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
@@ -3120,14 +3121,6 @@ var manifestor = function(options) {
 
     canvases[id] = {
     };
-  }
-
-  function addDummyObj(id, osdTileObj) {
-    var canvasStates = canvasImageStates();
-
-    canvasStates[id].dummyObj = osdTileObj;
-
-    canvasImageStates(canvasStates);
   }
 
   function addMainImageObj(id, osdTileObj) {
