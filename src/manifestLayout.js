@@ -435,25 +435,66 @@ var manifestLayout = function(options) {
         vantageHeight,
         horizontalMargin,
         verticalMargin,
-        minimumViewportPadding = 45, // units in % of the _viewport_ width/height.
-        viewportPaddingFactor = (minimumViewportPadding/100);
+        minimumViewportPadding = 5; // units in % of the _viewport_ width/height.
 
-    if ((viewport.aspectRatio <= boundingBoxAspectRatio)) {
-      vantageWidth = boundingBox.width;
-      vantageHeight = vantageWidth / viewport.aspectRatio;
+    if ((viewport.aspectRatio >= boundingBoxAspectRatio)) {
+      // The primary dimension must be defined first, and the other
+      // will be scaled according to the aspect ratio. In this case,
+      // the viewport is wider than the canvas is tall. This means
+      // the canvas's longest dimension will need to fit inside the
+      // viewport's shortest dimension.
+      //
+      //   viewport
+      // -----------
+      // |   []    |
+      // | canvas  |
+      // -----------
+      //
+      // So we need to set the vantage height equal to the height of the
+      // thing it is meant to contain, and scale the x dimension (width)
+      // with the same aspect ratio.
+      //
+      // But we have another problem. We need to actually know the dimensions
+      // of this left over space, and we need to include the padding (which is
+      // a percentage of the _viewport_, not the iamge/canvas).
+      //
+      // The arithemtic is simple, but it doesn't look very nice in code and
+      // is confused by being a part of the aspect ratio scaling. The weird
+      // percent math in the primary dimension (in this case the width),
+      // is a cross multiplication of the percent of the viewport that
+      // the boundingBox is supposed to occupy.
+      //
+      // For example, if the canvas is 250 coordinate units tall, and our
+      // given padding is 5% of the viewport, then, first of all, the
+      // canvas height is going to be 90% of the viewport height (subtract
+      // both top and bottom marigns of 5%). Then:
+      //
+      //    90/100 = 250/vantageHeight <--- (we want to know what v.h. is)
+      //
+      // Cross multiply, giving:
+      //
+      //    vantageHeight = 250*100/90
+      //
+      // or, more generally, the real calculation below:
 
-      vantageWidth += ( boundingBox.width*viewportPaddingFactor*2 );
-      vantageHeight += ( boundingBox.height*viewportPaddingFactor*2 );
-    } else {
-      vantageHeight = boundingBox.height;
+      vantageHeight = (boundingBox.height*100)/(100-minimumViewportPadding*2);
       vantageWidth = vantageHeight * viewport.aspectRatio;
-
-      vantageWidth += ( boundingBox.width*viewportPaddingFactor*2 );
-      vantageHeight += ( boundingBox.height*viewportPaddingFactor*2 );
+      // The remaining dimension bears the same ratio to the primary dimension
+      // that the corresponding side of the viewport does to its remaining side,
+      // hence the aspectRatio (w/h). For width we multiply, as above, for
+      // the height we divide, as below.
+    } else {
+      vantageWidth = (boundingBox.width*100)/(100-minimumViewportPadding*2);
+      vantageHeight = vantageWidth / viewport.aspectRatio;
     }
 
     horizontalMargin = (vantageWidth - boundingBox.width) / 2;
     verticalMargin = (vantageHeight - boundingBox.height) / 2;
+
+    console.log('height: ' +boundingBox.height);
+    console.log('verticalMargin: ' + verticalMargin);
+    console.log('width: ' + boundingBox.width);
+    console.log('horizontalMargin: ' + horizontalMargin);
 
     // This returned data is the representation of the viewport in
     // the coordinate system of the images and overlays (the "world")
