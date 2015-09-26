@@ -366,22 +366,13 @@ var manifestLayout = function(options) {
     return detailLayoutHorizontal(intermediateLayout());
   }
 
-  function getVantageForPagedCanvases() {
-    // Start with viewport dimensions.
-    // measure page aspect ratios.
-    // Set their positions with respect to the
-    // viewport;
-    // In particular, find the world-dimesions
-    // of the gap as a percent of the viewport dimensions.
-  }
-
   /**
    * Calculates a vantage for a selected canvas
    * @param {Object} selectedCanvas
    * @param {Object} previousFrame
    * @param {Object} nextFrame
    */
-  function getVantageForCanvas(selectedCanvas, viewport) {
+  function getVantageForCanvas(selectedCanvas, facingCanvas, viewport) {
     var boundingBoxAspectRatio,
         vantageWidth,
         vantageHeight,
@@ -389,6 +380,7 @@ var manifestLayout = function(options) {
         verticalMargin,
         combinedCanvasWidths,
         x,
+        pairHeight,
         // This requires calculating in units of the viewport pixels, and
         // converting them to the appropriate size.
         selectionBoundingBox = {};
@@ -401,20 +393,25 @@ var manifestLayout = function(options) {
         // first page
         combinedCanvasWidths = selectedCanvas.width * 2;
         x = selectedCanvas.x - selectedCanvas.width;
+        pairHeight = selectedCanvas.height;
       } else if (selectionIndex % 2 === 0) {
         // right page
-        combinedCanvasWidths = selectedCanvas.width + selectedCanvas.width;
-        x = selectedCanvas.x;
+        combinedCanvasWidths = selectedCanvas.width + facingCanvas.width;
+        combinedCanvasWidths += ((facingCanvasPadding/100) * combinedCanvasWidths);
+        x = facingCanvas.x;
+        pairHeight = Math.max(selectedCanvas.height, facingCanvas.height);
       } else {
         // left page
-        combinedCanvasWidths = selectedCanvas.width + selectedCanvas.width;
+        combinedCanvasWidths = selectedCanvas.width + facingCanvas.width;
+        combinedCanvasWidths += ((facingCanvasPadding/100) * combinedCanvasWidths);
         x = selectedCanvas.x;
+        pairHeight = Math.max(selectedCanvas.height, facingCanvas.height);
       }
       selectionBoundingBox = {
-        x: selectedCanvas.x,
+        x: x,
         y: selectedCanvas.y,
         width: combinedCanvasWidths,
-        height: selectedCanvas.height
+        height: pairHeight
       };
     } else {
       x = selectedCanvas.x;
@@ -429,6 +426,14 @@ var manifestLayout = function(options) {
     return getVantage(selectionBoundingBox, viewport);
   }
 
+  /**
+   * Calculates a vantage for a given bounding box.
+   * @param {Object} boundingBox
+   *     The bounding box can be from anywhere.
+   *     In our case we want it to contain a canvas
+   *     or a group of canvases.
+   * @param {Object} viewport
+   */
   function getVantage(boundingBox, viewport) {
     var boundingBoxAspectRatio = boundingBox.width / boundingBox.height,
         vantageWidth,
@@ -491,11 +496,6 @@ var manifestLayout = function(options) {
     horizontalMargin = (vantageWidth - boundingBox.width) / 2;
     verticalMargin = (vantageHeight - boundingBox.height) / 2;
 
-    console.log('height: ' +boundingBox.height);
-    console.log('verticalMargin: ' + verticalMargin);
-    console.log('width: ' + boundingBox.width);
-    console.log('horizontalMargin: ' + horizontalMargin);
-
     // This returned data is the representation of the viewport in
     // the coordinate system of the images and overlays (the "world")
     // coordinates. OSD/D3, other rendering environments can use this
@@ -529,16 +529,18 @@ var manifestLayout = function(options) {
     var selectedFrame = frames.filter(function(frame) {
       return frame.canvas.selected;
     })[0],
-        facingPageId = getFacingCanvasId(selectedFrame.canvas, frames);
+        facingCanvas = getFacingCanvas(selectedFrame.canvas, frames);
 
     var canvasPosition = selectedFrame.canvas.sequencePosition;
 
-    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, viewport);
+    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, facingCanvas, viewport);
 
     if (viewingMode !== 'continuous') {
       frames.forEach(function(frame, index, allFrames) {
         if (frame.y === selectedFrame.y && frame.canvas.id !== selectedFrame.canvas.id) {
-          if (viewingMode === 'paged' && selectedFrame.canvas.id === facingPageId) {return;}
+          if (viewingMode === 'paged' && frame.canvas.id === facingCanvas.id) {
+            return;
+          }
           // These are the canvases within the same line of the overview layout.
           if (index < canvasPosition) {
             // Those to the left. Push them to the left, out of frame.
@@ -564,7 +566,7 @@ var manifestLayout = function(options) {
     return frames;
   }
 
-  function getFacingCanvasId(canvas, frames) {
+  function getFacingCanvas(canvas, frames) {
     var selectedIndex;
 
     frames.forEach(function(frame, index) {
@@ -576,9 +578,9 @@ var manifestLayout = function(options) {
     if (selectedIndex === 0) {
       return canvas.id;
     } else if ((selectedIndex + 1) % 2 === 0) {
-      return frames[selectedIndex+1].canvas.id;
+      return frames[selectedIndex+1].canvas;
     } else {
-      return frames[selectedIndex-1].canvas.id;
+      return frames[selectedIndex-1].canvas;
     }
   }
 
