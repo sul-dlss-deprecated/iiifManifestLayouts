@@ -18,6 +18,7 @@ var manifestor = function(options) {
       canvasClass = options.canvasClass ? options.canvasClass : 'canvas',
       frameClass = options.frameClass ? options.frameClass : 'frame',
       labelClass = options.labelClass ? options.labelClass : 'label',
+      viewportPadding = options.viewportPadding,
       stateUpdateCallback = options.stateUpdateCallback,
       _canvasState,
       _canvasImageStates,
@@ -125,12 +126,7 @@ var manifestor = function(options) {
         left: 10,
         right: 10
       },
-      containerPadding: {
-        top: 50,
-        bottom: 130,
-        left: 200,
-        right: 10
-      },
+      viewportPadding: viewportPadding,
       minimumImageGap: 5, // precent of viewport
       facingCanvasPadding: 0.1 // precent of viewport
     });
