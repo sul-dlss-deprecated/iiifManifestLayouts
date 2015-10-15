@@ -57,10 +57,10 @@ var manifestLayout = function(options) {
 
     var viewport = {
       padding: viewportPadding || {
-        top: 5,
-        left: 5,
-        right: 5,
-        bottom: 5 // units in % of pixel height of viewport
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0 // units in % of pixel height of viewport
       },
       width: width,
       height: height,
