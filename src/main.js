@@ -181,9 +181,10 @@ var manifestor = function(options) {
         viewer.viewport.fitBounds(viewBounds, true);
       }
 
-      setTimeout(function(){
+      d3.timer(function() {
         _zooming = false;
         setScrollElementEvents();
+        return true;
       }, 1200);
     }
   }
