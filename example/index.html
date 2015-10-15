@@ -69,7 +69,7 @@
         <script type="text/javascript" src="scripts/openseadragon.min.js"></script>
         <script type="text/javascript" src="../stage/manifestor.js"></script>
         <script type="text/javascript" src="../node_modules/keymaster/keymaster.js"></script>
-        <script>
+        <script type="text/javascript">
          var manifest;
 
          $.get('http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', function(manifest) {
@@ -85,6 +85,12 @@
                  canvasClass: 'canvas', //default set to 'canvas'
                  frameClass: 'frame', //default set to 'frame'
                  labelClass: 'label', //default set to 'label'
+                 viewportPadding: {  // in detail view, make sure this area is clear
+                                     top: 0,
+                                     left: 10,
+                                     right: 10,
+                                     bottom: 10 // units in % of pixel height of viewport
+                 },
                  stateUpdateCallback: function () {console.log('I have updated!')},
                  selectedCanvas: manifest.sequences[0].canvases[50]['@id']
              });
@@ -94,7 +100,7 @@
              });
              /*          key('j, down') */ // Implement nearest Neighbour Search
              /*          key('k, up') */   // Might be easiest if the lines were
-                                           // saved somewhere.
+             // saved somewhere.
              key('l, right', function() {
                  viewer.next();
              });
@@ -109,7 +115,7 @@
          });
 
          $('#mode').on('change', function(e) {
-           viewer.selectViewingMode(e.target[e.target.selectedIndex].value);
+             viewer.selectViewingMode(e.target[e.target.selectedIndex].value);
          });
 
          $('#scale').on('input', function() {
@@ -153,6 +159,7 @@
                  manifestPicker.append(option);
              });
          });
+
         </script>
     </body>
 </html>
