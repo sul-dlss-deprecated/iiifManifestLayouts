@@ -577,6 +577,8 @@ var manifestLayout = function(options) {
 
     if (selectedIndex === 0) {
       return canvas.id;
+    } else if (selectedIndex === frames.length - 1) {
+      return frames[selectedIndex].canvas;
     } else if ((selectedIndex + 1) % 2 === 0) {
       return frames[selectedIndex+1].canvas;
     } else {
