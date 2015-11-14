@@ -22,7 +22,7 @@ var manifestor = function(options) {
       viewportPadding = options.viewportPadding,
       stateUpdateCallback = options.stateUpdateCallback,
       _canvasState,
-      _canvasImageStates,
+      _canvasObjects,
       _zooming = false,
       _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()},
       _inZoomConstraints,
@@ -89,7 +89,6 @@ var manifestor = function(options) {
   });
 
   function canvasState(state, initial) {
-
     if (!arguments.length) return _canvasState;
     _canvasState = state;
 
@@ -185,12 +184,8 @@ var manifestor = function(options) {
     }
   }
 
-  function canvasImageStates(state) {
-
-    if (!arguments.length) return _canvasImageStates;
-    _canvasImageStates = state;
-
-    return _canvasImageStates;
+  function setCanvasObjects(state) {
+    _canvasObjects = state;
   }
 
   function setScrollElementEvents() {
@@ -321,7 +316,7 @@ var manifestor = function(options) {
 
   function translateTilesources(d, i) {
     var canvasId = d.canvas.id,
-        mainImageObj = canvasImageStates()[canvasId].mainImageObj;
+        mainImageObj = _canvasObjects[canvasId].mainImageObj;
 
     var currentBounds = mainImageObj ? mainImageObj.getBounds(true) : null;
 
@@ -339,13 +334,13 @@ var manifestor = function(options) {
 
   function updateImages(d) {
     var canvasData = d.canvas,
-        canvasImageState = canvasImageStates()[canvasData.id];
+        canvasImageState = _canvasObjects[canvasData.id];
   }
 
   function enterImages(d) {
 
     var canvasData = d.canvas,
-        canvasImageState = canvasImageStates()[canvasData.id];
+        canvasImageState = _canvasObjects[canvasData.id];
 
       viewer.addTiledImage({
         x: canvasData.x,
@@ -544,28 +539,28 @@ var manifestor = function(options) {
   }
 
   function addImageCluster(id) {
-    var canvases = canvasImageStates();
+    var canvases = _canvasObjects;
 
     canvases[id] = {
     };
   }
 
   function addMainImageObj(id, osdTileObj) {
-    var canvasStates = canvasImageStates();
+    var canvasStates = _canvasObjects;
 
     canvasStates[id].mainImageObj = osdTileObj;
 
-    canvasImageStates(canvasStates);
+    setCanvasObjects(canvasStates);
   }
 
   function buildCanvasStates(canvases) {
-    var canvasStates = {};
+    var canvasObjects = {};
 
     canvases.forEach(function(canvas) {
-      canvasStates[canvas['@id']] = canvasObject(canvas);
+      canvasObjects[canvas['@id']] = canvasObject(canvas);
     });
 
-    canvasImageStates(canvasStates);
+    setCanvasObjects(canvasObjects);
   }
 
   function resize() {
