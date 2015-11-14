@@ -3,6 +3,7 @@
 var d3 = require('./lib/d3-slim-dist');
 var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
+var canvasObject = require('./canvasObject');
 var iiif = require('./iiifUtils');
 
 var manifestor = function(options) {
@@ -561,9 +562,7 @@ var manifestor = function(options) {
     var canvasStates = {};
 
     canvases.forEach(function(canvas) {
-      canvasStates[canvas['@id']] = {
-        tileSourceUrl: canvas.images[0].resource.service['@id'] + '/info.json'
-      };
+      canvasStates[canvas['@id']] = canvasObject(canvas);
     });
 
     canvasImageStates(canvasStates);
