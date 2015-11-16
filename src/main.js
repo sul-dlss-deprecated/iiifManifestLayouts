@@ -342,6 +342,12 @@ var manifestor = function(options) {
     var canvasData = d.canvas,
         canvasImageState = _canvasObjects[canvasData.id];
 
+    function addMainImageObj(id, osdTileObj) {
+      var canvasObjs = _canvasObjects;
+      canvasObjs[id].setMainImage(osdTileObj);
+      setCanvasObjects(canvasObjs);
+    }
+
       viewer.addTiledImage({
         x: canvasData.x,
         y: canvasData.y,
@@ -543,14 +549,6 @@ var manifestor = function(options) {
 
     canvases[id] = {
     };
-  }
-
-  function addMainImageObj(id, osdTileObj) {
-    var canvasObjs = _canvasObjects;
-
-    canvasObjs[id].mainImageObj = osdTileObj;
-
-    setCanvasObjects(canvasObjs);
   }
 
   function buildCanvasStates(canvases) {
