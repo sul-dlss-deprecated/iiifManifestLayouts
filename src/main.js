@@ -3,7 +3,7 @@
 var d3 = require('./lib/d3-slim-dist');
 var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
-var canvasObject = require('./canvasObject');
+var CanvasObject = require('./canvasObject');
 var iiif = require('./iiifUtils');
 
 var manifestor = function(options) {
@@ -557,7 +557,9 @@ var manifestor = function(options) {
     var canvasObjects = {};
 
     canvases.forEach(function(canvas) {
-      canvasObjects[canvas['@id']] = canvasObject(canvas);
+     canvasObjects[canvas['@id']] = new CanvasObject({
+       canvas: canvas
+     });
     });
 
     setCanvasObjects(canvasObjects);

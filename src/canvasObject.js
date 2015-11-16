@@ -1,21 +1,19 @@
 'use strict';
 
-var _ = require('underscore');
+var CanvasObject = function(config) {
+  this.needed = config.needed || false;
+  this.visible = config.visible || true;
+  this.clipRegion = config.clipRegion;
+  this.opacity = config.opacity || 1;
+  this.position = config.position || {x: 0, y: 0};
+  this.placeholder = config.placeholder || '/some-image.jpg';
 
-var defaults = {
-  needed: false,
-  visible: true,
-  clipRegion: null,
-  opacity: 1,
-  position: {
-      x: 0,
-      y: 0,
-  },
-  placeholder: '/some-image.jpg',
-};
-var canvasObject= function(canvas) {
-  canvas.tileSourceUrl = canvas.images[0].resource.service['@id'] + '/info.json';
-  return _.defaults(canvas, defaults);
+  this.id = config.canvas.id;
+  this.height = config.canvas.height;
+  this.width = config.canvas.width;
+  this.images = config.canvas.images;
+  this.label = config.canvas.label;
+  this.tileSourceUrl = config.canvas.images[0].resource.service['@id'] + '/info.json';
 };
 
-module.exports = canvasObject;
+module.exports = CanvasObject;
