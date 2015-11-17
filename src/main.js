@@ -338,34 +338,9 @@ var manifestor = function(options) {
   }
 
   function enterImages(d) {
-
     var canvasData = d.canvas,
         canvasImageState = _canvasObjects[canvasData.id];
-
-    function addMainImageObj(id, osdTileObj) {
-      var canvasObjs = _canvasObjects;
-      canvasObjs[id].setMainImage(osdTileObj);
-      setCanvasObjects(canvasObjs);
-    }
-
-      viewer.addTiledImage({
-        x: canvasData.x,
-        y: canvasData.y,
-        width: canvasData.width,
-        tileSource: canvasImageState.tileSourceUrl,
-        index: 0, // Add the new image below the stand-in.
-        success: function(event) {
-          addMainImageObj(canvasData.id, event.item);
-          var main = event.item;
-          var tileDrawnHandler = function(event) {
-              viewer.removeHandler('tile-drawn', tileDrawnHandler);
-              main.setOpacity(0,true);
-              fade(main, 1);
-          };
-
-          viewer.addHandler('tile-drawn', tileDrawnHandler);
-        }
-      });
+    canvasImageState.useTileSource(canvasData.x, canvasData.y, canvasData.width, viewer);
   }
 
   function removeImages(d) {
