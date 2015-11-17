@@ -3,3 +3,4 @@ temp/
 .idea/
 src/lib/d3-slim-dist.js
 stage/
+*.sublime-workspace
