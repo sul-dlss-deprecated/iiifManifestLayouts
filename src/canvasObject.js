@@ -7,8 +7,8 @@ var CanvasObject = function(config) {
   this.visible = config.visible || true;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
-  this.position = config.position || {x: 0, y: 0};
-  this.placeholder = config.placeholder || './example-thumbnail.png';
+  this.position = config.position || { x: 0, y: 0 };
+  this.placeholder = config.placeholder || { type: 'image', url: './example-thumbnail.png' };
 
   this.id = config.canvas['@id'];
   this.height = config.canvas.height;
@@ -19,7 +19,7 @@ var CanvasObject = function(config) {
 };
 
 CanvasObject.prototype = {
-  useTileSource: function(x, y, width, viewer) {
+  openTileSource: function(x, y, width, viewer) {
     var self = this;
 
     viewer.addTiledImage({
@@ -50,8 +50,17 @@ CanvasObject.prototype = {
     });
   },
 
-  useThumbnail: function(viewer) {
-    // todo: upgrade to OSD 2.1.0 for the new ImageTileSource
+  openThumbnail: function(x, y, width, viewer) {
+    var self = this;
+    viewer.addTiledImage({
+      x: x,
+      y: y,
+      width: width,
+      tileSource: this.placeholder,
+      success: function(event) {
+        self._setMainImage(event.item);
+      }
+    })
   },
 
   _setMainImage: function(mainImage) {

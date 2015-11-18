@@ -340,7 +340,7 @@ var manifestor = function(options) {
   function enterImages(d) {
     var canvasData = d.canvas,
         canvasImageState = _canvasObjects[canvasData.id];
-    canvasImageState.useTileSource(canvasData.x, canvasData.y, canvasData.width, viewer);
+    canvasImageState.openThumbnail(canvasData.x, canvasData.y, canvasData.width, viewer);
   }
 
   function removeImages(d) {
