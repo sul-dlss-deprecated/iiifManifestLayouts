@@ -4,4 +4,3 @@ temp/
 src/lib/d3-slim-dist.js
 stage/
 *.sublime-workspace
-*.DS_Store
