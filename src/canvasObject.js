@@ -33,12 +33,11 @@ CanvasObject.prototype = {
 
         var tileDrawnHandler = function(event) {
           if (event.tiledImage === main) {
-            var self = event.userData;
             var previousImageObj = self.mainImageObj;
 
             viewer.removeHandler('tile-drawn', tileDrawnHandler);
-            self._setMainImage(event.item);
-            main.setOpacity(0,true);
+            self._setMainImage(main);
+            main.setOpacity(0, true);
             CanvasAnimationHelpers.fade(main, 1);
 
             if(previousImageObj){
@@ -46,7 +45,7 @@ CanvasObject.prototype = {
             }
           }
         };
-        viewer.addHandler('tile-drawn', tileDrawnHandler, self);
+        viewer.addHandler('tile-drawn', tileDrawnHandler);
       }
     });
   },
