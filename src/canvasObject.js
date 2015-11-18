@@ -1,7 +1,5 @@
 'use strict';
 
-var CanvasAnimationHelpers = require('./CanvasAnimationHelpers');
-
 var CanvasObject = function(config) {
   this.needed = config.needed || false;
   this.visible = config.visible || true;
@@ -38,7 +36,7 @@ CanvasObject.prototype = {
             viewer.removeHandler('tile-drawn', tileDrawnHandler);
             self._setMainImage(main);
             main.setOpacity(0, true);
-            CanvasAnimationHelpers.fade(main, 1);
+            self.fade(main, 1);
 
             if(previousImageObj){
               viewer.world.removeItem(previousImageObj);
@@ -77,6 +75,28 @@ CanvasObject.prototype = {
     // this object also has things like opacity - should we make sure that corresponding values of this
     // match the attribtes of the CanvasObject? In the case of a conflict, which value wins?
   },
+
+  fade: function(image, targetOpacity, callback) {
+    var currentOpacity = image.getOpacity();
+    var step = (targetOpacity - currentOpacity) / 30;
+    if (step === 0) {
+      callback();
+      return;
+    }
+
+    var frame = function() {
+      currentOpacity += step;
+      if ((step > 0 && currentOpacity >= targetOpacity) || (step < 0 && currentOpacity <= targetOpacity)) {
+        image.setOpacity(targetOpacity);
+        if (callback) callback();
+        return;
+      }
+
+      image.setOpacity(currentOpacity);
+      OpenSeadragon.requestAnimationFrame(frame);
+    };
+    OpenSeadragon.requestAnimationFrame(frame);
+  }
 };
 
 module.exports = CanvasObject;
