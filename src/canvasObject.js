@@ -63,6 +63,15 @@ CanvasObject.prototype = {
     })
   },
 
+  //Assumes that the point parameter is already in viewport coordinates.
+  containsPoint: function(point) {
+    var rect = this.mainImageObj.getBounds();
+    var rectRight = rect.x + rect.width;
+    var rectBottom = rect.y + rect.height;
+
+    return (rect.x <= point.x && rectRight >= point.x && rect.y <= point.y && rectBottom >= point.y);
+  },
+
   _setMainImage: function(mainImage) {
     this.mainImageObj = mainImage;
     // this object also has things like opacity - should we make sure that corresponding values of this

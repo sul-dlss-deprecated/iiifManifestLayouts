@@ -328,7 +328,6 @@ var manifestor = function(options) {
     return function(t) {
         mainImageObj.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
         mainImageObj.setWidth(d.canvas.width, true);
-        mainImageObj.setHeight(d.canvas.height, true);
     };
   }
 
@@ -366,6 +365,21 @@ var manifestor = function(options) {
     viewer.addHandler('pan', function(event) {
       if (viewerState().perspective === 'detail') {
         applyConstraints(_constraintBounds);
+      }
+    });
+
+    viewer.addHandler('canvas-click', function(event) {
+      var hitCanvases = [];
+      var clickPosition = viewer.viewport.pointFromPixel(event.position);
+      for(var key in _canvasObjects) {
+        if(_canvasObjects[key].containsPoint(clickPosition)){
+          hitCanvases.push(_canvasObjects[key]);
+        }
+      }
+      if(event.quick && hitCanvases[0]) {
+        var bounds = hitCanvases[0].mainImageObj.getBounds();
+        viewer.viewport.fitBounds(bounds);
+        hitCanvases[0].openTileSource(bounds.x, bounds.y, bounds.width, viewer);
       }
     });
   };
