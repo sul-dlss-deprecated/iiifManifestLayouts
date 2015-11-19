@@ -485,6 +485,9 @@ var manifestor = function(options) {
   }
 
   function selectCanvas(item) {
+    // Open the detail/tilesource for this canvas
+    _canvasObjects[item].openTileSource(viewer);
+
     var state = viewerState();
     state.selectedCanvas = item;
     state.previousPerspective = state.perspective;
