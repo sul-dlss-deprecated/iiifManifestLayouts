@@ -19,20 +19,21 @@ var CanvasObject = function(config) {
 
 CanvasObject.prototype = {
   openTileSource: function(viewer) {
+    var self = this;
+
     // We've already loaded this tilesource instead of the thumbnail
     if(this.fullyOpened) {
       return;
     }
-    var self = this;
-    var bounds = self.mainImageObj.getBounds();
-    viewer.viewport.fitBounds(bounds);
 
+    // otherwise, continue loading the tileSource.
     viewer.addTiledImage({
-      x: self.x,
-      y: self.y,
-      width: self.width,
+      x: this.x,
+      y: this.y,
+      width: this.width,
       tileSource: this.tileSourceUrl,
       index: 0, // Add the new image below the stand-in.
+
       success: function(event) {
         var main = event.item;
         self.fullyOpened = true;
