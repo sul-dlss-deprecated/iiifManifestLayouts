@@ -377,9 +377,7 @@ var manifestor = function(options) {
         }
       }
       if(event.quick && hitCanvases[0]) {
-        var bounds = hitCanvases[0].mainImageObj.getBounds();
-        viewer.viewport.fitBounds(bounds);
-        hitCanvases[0].openTileSource(bounds.x, bounds.y, bounds.width, viewer);
+        hitCanvases[0].openTileSource(viewer);
       }
     });
   };

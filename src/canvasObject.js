@@ -1,11 +1,12 @@
 'use strict';
 
 var CanvasObject = function(config) {
-  this.needed = config.needed || false;
+  this.fullyOpened = config.fullyOpened || false;
   this.visible = config.visible || true;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
-  this.position = config.position || { x: 0, y: 0 };
+  this.x = config.x || 0;
+  this.y = config.y || 0;
   this.placeholder = config.placeholder || { type: 'image', url: './example-thumbnail.png' };
 
   this.id = config.canvas['@id'];
@@ -17,17 +18,24 @@ var CanvasObject = function(config) {
 };
 
 CanvasObject.prototype = {
-  openTileSource: function(x, y, width, viewer) {
+  openTileSource: function(viewer) {
+    // We've already loaded this tilesource instead of the thumbnail
+    if(this.fullyOpened) {
+      return;
+    }
     var self = this;
+    var bounds = self.mainImageObj.getBounds();
+    viewer.viewport.fitBounds(bounds);
 
     viewer.addTiledImage({
-      x: x,
-      y: y,
-      width: width,
+      x: self.x,
+      y: self.y,
+      width: self.width,
       tileSource: this.tileSourceUrl,
       index: 0, // Add the new image below the stand-in.
       success: function(event) {
         var main = event.item;
+        self.fullyOpened = true;
 
         var tileDrawnHandler = function(event) {
           if (event.tiledImage === main) {
@@ -63,15 +71,48 @@ CanvasObject.prototype = {
 
   //Assumes that the point parameter is already in viewport coordinates.
   containsPoint: function(point) {
-    var rect = this.mainImageObj.getBounds();
-    var rectRight = rect.x + rect.width;
-    var rectBottom = rect.y + rect.height;
+    this._setBoundsInternal(); // make sure we're up to date
+    var rectRight = this.x + this.width;
+    var rectBottom = this.y + this.height;
 
-    return (rect.x <= point.x && rectRight >= point.x && rect.y <= point.y && rectBottom >= point.y);
+    return (this.x <= point.x && rectRight >= point.x && this.y <= point.y && rectBottom >= point.y);
+  },
+
+  setPosition: function(x, y) {
+    this.mainImageObj.setPosition(new OpenSeadragon.Point(x, y), true);
+    this._setBoundsInternal();
+  },
+
+  setWidth: function(width) {
+    this.mainImageObj.setWidth(width, true);
+    this._setBoundsInternal();
+  },
+
+  getBounds: function() {
+    this._setBoundsInternal();
+    return {
+      x: this.x,
+      y: this.y,
+      width: this.width,
+      height: this.height
+    };
+  },
+
+  // Call this to make sure that the CanvasObject's information about the world is the same as the OSD image's.
+  _setBoundsInternal: function() {
+    if(this.mainImageObj) {
+      var bounds = this.mainImageObj.getBounds();
+
+      this.x = bounds.x;
+      this.y = bounds.y;
+      this.width = bounds.width;
+      this.height = bounds.height;
+    }
   },
 
   _setMainImage: function(mainImage) {
     this.mainImageObj = mainImage;
+    this._setBoundsInternal();
     // this object also has things like opacity - should we make sure that corresponding values of this
     // match the attribtes of the CanvasObject? In the case of a conflict, which value wins?
   },
