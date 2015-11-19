@@ -2,7 +2,7 @@
 
 var CanvasObject = function(config) {
   this.fullyOpened = config.fullyOpened || false;
-  this.visible = config.visible || true;
+  this.visible = config.visible || true; // todo: this is not used yet. Do we need it?
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
   this.x = config.x || 0;
@@ -32,6 +32,8 @@ CanvasObject.prototype = {
       y: this.y,
       width: this.width,
       tileSource: this.tileSourceUrl,
+      opacity: this.opacity,
+      clip: this.clipRegion,
       index: 0, // Add the new image below the stand-in.
 
       success: function(event) {
@@ -57,13 +59,15 @@ CanvasObject.prototype = {
     });
   },
 
-  openThumbnail: function(x, y, width, viewer) {
+  openThumbnail: function(viewer) {
     var self = this;
     viewer.addTiledImage({
-      x: x,
-      y: y,
-      width: width,
+      x: this.x,
+      y: this.y,
+      width: this.width,
       tileSource: this.placeholder,
+      opacity: this.opacity,
+      clip: this.clipRegion,
       success: function(event) {
         self._setMainImage(event.item);
       }
@@ -72,7 +76,6 @@ CanvasObject.prototype = {
 
   //Assumes that the point parameter is already in viewport coordinates.
   containsPoint: function(point) {
-    this._setBoundsInternal(); // make sure we're up to date
     var rectRight = this.x + this.width;
     var rectBottom = this.y + this.height;
 
@@ -80,19 +83,33 @@ CanvasObject.prototype = {
   },
 
   setPosition: function(x, y) {
-    this._mainImageObj.setPosition(new OpenSeadragon.Point(x, y), true);
-    this._setBoundsInternal();
+    this.x = x;
+    this.y = y;
+
+    if(this.hasImageObject()) {
+      this._mainImageObj.setPosition(new OpenSeadragon.Point(x, y), true);
+    }
   },
 
   setWidth: function(width) {
-    this._mainImageObj.setWidth(width, true);
-    this._setBoundsInternal();
+    this.width = width;
+
+    if(this.hasImageObject()) {
+      this._mainImageObj.setWidth(width, true);
+    }
+  },
+
+  setHeight: function(height) {
+    this.height = height;
+
+    if(this.hasImageObject) {
+      this._mainImageObj.setHeight(height, true);
+    }
   },
 
   // Returns an OpenSeadragon Rect object - some OpenSeadragon consumers of this function want one,
   // and others can get x, y, width and height out easily.
   getBounds: function() {
-    this._setBoundsInternal();
     return new OpenSeadragon.Rect(this.x, this.y, this.width, this.height);
   },
 
@@ -100,23 +117,8 @@ CanvasObject.prototype = {
     return !!(this._mainImageObj);
   },
 
-  // Call this to make sure that the CanvasObject's information about the world is the same as the OSD image's.
-  _setBoundsInternal: function() {
-    if(this._mainImageObj) {
-      var bounds = this._mainImageObj.getBounds(true);
-
-      this.x = bounds.x;
-      this.y = bounds.y;
-      this.width = bounds.width;
-      this.height = bounds.height;
-    }
-  },
-
   _setMainImage: function(mainImage) {
     this._mainImageObj = mainImage;
-    this._setBoundsInternal();
-    // this object also has things like opacity - should we make sure that corresponding values of this
-    // match the attribtes of the CanvasObject? In the case of a conflict, which value wins?
   },
 
   _fade: function(image, targetOpacity, callback) {
