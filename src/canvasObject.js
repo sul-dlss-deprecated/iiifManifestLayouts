@@ -102,7 +102,7 @@ CanvasObject.prototype = {
   setHeight: function(height) {
     this.height = height;
 
-    if(this.hasImageObject) {
+    if(this.hasImageObject()) {
       this._mainImageObj.setHeight(height, true);
     }
   },

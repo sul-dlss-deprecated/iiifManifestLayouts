@@ -342,6 +342,7 @@ var manifestor = function(options) {
         canvasImageState = _canvasObjects[canvasData.id];
 
     canvasImageState.setPosition(canvasData.x, canvasData.y);
+    canvasImageState.setHeight(canvasData.height);
     canvasImageState.setWidth(canvasData.width);
     canvasImageState.openThumbnail(viewer);
   }
