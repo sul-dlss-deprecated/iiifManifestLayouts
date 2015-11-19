@@ -315,20 +315,21 @@ var manifestor = function(options) {
   }
 
   function translateTilesources(d, i) {
-    var canvasId = d.canvas.id,
-        mainImageObj = _canvasObjects[canvasId].mainImageObj;
+    var canvas = _canvasObjects[d.canvas.id];
 
-    var currentBounds = mainImageObj ? mainImageObj.getBounds(true) : null;
+    if(canvas.hasImageObject) {
+      var currentBounds = canvas.getBounds();
 
-    if (currentBounds === null) { return function() { /*no-op*/ }; }
+      var xi = d3.interpolate(currentBounds.x, d.canvas.x);
+      var yi = d3.interpolate(currentBounds.y, d.canvas.y);
 
-    var xi = d3.interpolate(currentBounds.x, d.canvas.x);
-    var yi = d3.interpolate(currentBounds.y, d.canvas.y);
-
-    return function(t) {
-        mainImageObj.setPosition(new OpenSeadragon.Point(xi(t), yi(t)), true);
-        mainImageObj.setWidth(d.canvas.width, true);
-    };
+      return function(t) {
+        canvas.setPosition(xi(t), yi(t));
+        canvas.setWidth(d.canvas.width);
+      };
+    } else {
+      return function() { /* no-op */ };
+    }
   }
 
   function updateImages(d) {
@@ -377,7 +378,7 @@ var manifestor = function(options) {
         }
       }
       if(event.quick && hitCanvases[0]) {
-        var bounds = hitCanvases[0].mainImageObj.getBounds();
+        var bounds = hitCanvases[0].getBounds();
         viewer.viewport.fitBounds(bounds);
         hitCanvases[0].openTileSource(viewer);
       }

@@ -40,12 +40,12 @@ CanvasObject.prototype = {
 
         var tileDrawnHandler = function(event) {
           if (event.tiledImage === main) {
-            var previousImageObj = self.mainImageObj;
+            var previousImageObj = self._mainImageObj;
 
             viewer.removeHandler('tile-drawn', tileDrawnHandler);
             self._setMainImage(main);
             main.setOpacity(0, true);
-            self.fade(main, 1);
+            self._fade(main, 1);
 
             if(previousImageObj){
               viewer.world.removeItem(previousImageObj);
@@ -80,29 +80,30 @@ CanvasObject.prototype = {
   },
 
   setPosition: function(x, y) {
-    this.mainImageObj.setPosition(new OpenSeadragon.Point(x, y), true);
+    this._mainImageObj.setPosition(new OpenSeadragon.Point(x, y), true);
     this._setBoundsInternal();
   },
 
   setWidth: function(width) {
-    this.mainImageObj.setWidth(width, true);
+    this._mainImageObj.setWidth(width, true);
     this._setBoundsInternal();
   },
 
+  // Returns an OpenSeadragon Rect object - some OpenSeadragon consumers of this function want one,
+  // and others can get x, y, width and height out easily.
   getBounds: function() {
     this._setBoundsInternal();
-    return {
-      x: this.x,
-      y: this.y,
-      width: this.width,
-      height: this.height
-    };
+    return new OpenSeadragon.Rect(this.x, this.y, this.width, this.height);
+  },
+
+  hasImageObject: function() {
+    return !!(this._mainImageObj);
   },
 
   // Call this to make sure that the CanvasObject's information about the world is the same as the OSD image's.
   _setBoundsInternal: function() {
-    if(this.mainImageObj) {
-      var bounds = this.mainImageObj.getBounds();
+    if(this._mainImageObj) {
+      var bounds = this._mainImageObj.getBounds(true);
 
       this.x = bounds.x;
       this.y = bounds.y;
@@ -112,13 +113,13 @@ CanvasObject.prototype = {
   },
 
   _setMainImage: function(mainImage) {
-    this.mainImageObj = mainImage;
+    this._mainImageObj = mainImage;
     this._setBoundsInternal();
     // this object also has things like opacity - should we make sure that corresponding values of this
     // match the attribtes of the CanvasObject? In the case of a conflict, which value wins?
   },
 
-  fade: function(image, targetOpacity, callback) {
+  _fade: function(image, targetOpacity, callback) {
     var currentOpacity = image.getOpacity();
     var step = (targetOpacity - currentOpacity) / 30;
     if (step === 0) {
