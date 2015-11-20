@@ -27,6 +27,7 @@ CanvasObject.prototype = {
     }
 
     // otherwise, continue loading the tileSource.
+    document.dispatchEvent(new CustomEvent('detail-tile-source-requested', { 'detail': this.id }));
     viewer.addTiledImage({
       x: this.x,
       y: this.y,
@@ -52,6 +53,7 @@ CanvasObject.prototype = {
             if(previousImageObj){
               viewer.world.removeItem(previousImageObj);
             }
+            document.dispatchEvent(new CustomEvent('detail-tile-source-opened', { 'detail': self.id }));
           }
         };
         viewer.addHandler('tile-drawn', tileDrawnHandler);
