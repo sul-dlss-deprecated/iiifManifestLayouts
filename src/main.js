@@ -74,10 +74,6 @@ var manifestor = function(options) {
   scrollContainer.append(overlays);
   initOSD();
 
-  // Listen for tile source requests and loads
-  document.addEventListener('detail-tile-source-requested', function(e) { console.log('detail tile source requested', e.detail)});
-  document.addEventListener('detail-tile-source-opened', function(e) { console.log('detail tile source opened', e.detail)});
-
   // set the initial state, which triggers the first rendering.
   viewerState({
     selectedCanvas: selectedCanvas, // @id of the canvas:
