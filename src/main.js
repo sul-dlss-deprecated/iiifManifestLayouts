@@ -325,7 +325,7 @@ var manifestor = function(options) {
 
       return function(t) {
         canvas.setPosition(xi(t), yi(t));
-        canvas.setWidth(d.canvas.width);
+        canvas.setSize(d.canvas.width, d.canvas.height);
       };
     } else {
       return function() { /* no-op */ };
@@ -342,8 +342,7 @@ var manifestor = function(options) {
         canvasImageState = _canvasObjects[canvasData.id];
 
     canvasImageState.setPosition(canvasData.x, canvasData.y);
-    canvasImageState.setHeight(canvasData.height);
-    canvasImageState.setWidth(canvasData.width);
+    canvasImageState.setSize(canvasData.width, canvasData.height);
     canvasImageState.openThumbnail(viewer);
   }
 

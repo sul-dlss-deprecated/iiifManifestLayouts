@@ -91,19 +91,12 @@ CanvasObject.prototype = {
     }
   },
 
-  setWidth: function(width) {
+  setSize: function(width, height) {
     this.width = width;
-
-    if(this.hasImageObject()) {
-      this._mainImageObj.setWidth(width, true);
-    }
-  },
-
-  setHeight: function(height) {
     this.height = height;
 
     if(this.hasImageObject()) {
-      this._mainImageObj.setHeight(height, true);
+      this._mainImageObj.setWidth(width, true);
     }
   },
 
