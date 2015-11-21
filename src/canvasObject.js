@@ -8,6 +8,7 @@ var CanvasObject = function(config) {
   this.x = config.x || 0;
   this.y = config.y || 0;
   this.placeholder = config.placeholder || { type: 'image', url: './example-thumbnail.png' };
+  this.index = config.index;
 
   this.id = config.canvas['@id'];
   this.height = config.canvas.height;
@@ -15,6 +16,7 @@ var CanvasObject = function(config) {
   this.images = config.canvas.images;
   this.label = config.canvas.label;
   this.tileSourceUrl = config.canvas.images[0].resource.service['@id'] + '/info.json';
+  this.viewingHint = config.canvas.viewingHint;
 };
 
 CanvasObject.prototype = {
