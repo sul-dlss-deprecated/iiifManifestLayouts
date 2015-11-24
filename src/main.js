@@ -5,6 +5,7 @@ var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
 var CanvasObject = require('./canvasObject');
 var iiif = require('./iiifUtils');
+var events = require('events');
 
 var manifestor = function(options) {
   var manifest = options.manifest,
@@ -42,7 +43,13 @@ var manifestor = function(options) {
     return manifest.viewingHint ? manifest.viewingHint : 'individuals';
   };
 
+  var _dispatcher = new events.EventEmitter();
   buildCanvasStates(canvases);
+
+    // Debug/example code: Listen for tile source requests and loads
+  _dispatcher.on('detail-tile-source-requested', function(e) { console.log('detail tile source requested', e.detail)});
+  _dispatcher.on('detail-tile-source-opened', function(e) { console.log('detail tile source opened', e.detail)});
+
 
   var overlays = $('<div class="overlaysContainer">').css(
     {'width': '100%',
@@ -530,9 +537,7 @@ var manifestor = function(options) {
     var canvasObjects = {};
 
     canvases.forEach(function(canvas) {
-     canvasObjects[canvas['@id']] = new CanvasObject({
-       canvas: canvas
-     });
+     canvasObjects[canvas['@id']] = new CanvasObject({canvas: canvas}, _dispatcher);
     });
 
     setCanvasObjects(canvasObjects);
