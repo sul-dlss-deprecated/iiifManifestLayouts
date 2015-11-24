@@ -8,6 +8,7 @@ var CanvasObject = function(config, dispatcher) {
   this.x = config.x || 0;
   this.y = config.y || 0;
   this.placeholder = config.placeholder || { type: 'image', url: './example-thumbnail.png' };
+  this.index = config.index;
 
   this.id = config.canvas['@id'];
   this.height = config.canvas.height;
@@ -15,6 +16,7 @@ var CanvasObject = function(config, dispatcher) {
   this.images = config.canvas.images;
   this.label = config.canvas.label;
   this.tileSourceUrl = config.canvas.images[0].resource.service['@id'] + '/info.json';
+  this.viewingHint = config.canvas.viewingHint;
 
   this.dispatcher = dispatcher;
 };
@@ -95,19 +97,12 @@ CanvasObject.prototype = {
     }
   },
 
-  setWidth: function(width) {
+  setSize: function(width, height) {
     this.width = width;
-
-    if(this.hasImageObject()) {
-      this._mainImageObj.setWidth(width, true);
-    }
-  },
-
-  setHeight: function(height) {
     this.height = height;
 
     if(this.hasImageObject()) {
-      this._mainImageObj.setHeight(height, true);
+      this._mainImageObj.setWidth(width, true);
     }
   },
 

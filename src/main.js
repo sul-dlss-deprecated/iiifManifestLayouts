@@ -332,7 +332,7 @@ var manifestor = function(options) {
 
       return function(t) {
         canvas.setPosition(xi(t), yi(t));
-        canvas.setWidth(d.canvas.width);
+        canvas.setSize(d.canvas.width, d.canvas.height);
       };
     } else {
       return function() { /* no-op */ };
@@ -349,8 +349,7 @@ var manifestor = function(options) {
         canvasImageState = _canvasObjects[canvasData.id];
 
     canvasImageState.setPosition(canvasData.x, canvasData.y);
-    canvasImageState.setHeight(canvasData.height);
-    canvasImageState.setWidth(canvasData.width);
+    canvasImageState.setSize(canvasData.width, canvasData.height);
     canvasImageState.openThumbnail(viewer);
   }
 
@@ -492,9 +491,6 @@ var manifestor = function(options) {
   }
 
   function selectCanvas(item) {
-    // Open the detail/tilesource for this canvas
-    _canvasObjects[item].openTileSource(viewer);
-
     var state = viewerState();
     state.selectedCanvas = item;
     state.previousPerspective = state.perspective;
@@ -536,8 +532,12 @@ var manifestor = function(options) {
   function buildCanvasStates(canvases) {
     var canvasObjects = {};
 
-    canvases.forEach(function(canvas) {
-     canvasObjects[canvas['@id']] = new CanvasObject({canvas: canvas}, _dispatcher);
+    canvases.forEach(function(canvas, index) {
+     canvasObjects[canvas['@id']] = new CanvasObject({
+       canvas: canvas,
+       index: index
+     },
+     _dispatcher);
     });
 
     setCanvasObjects(canvasObjects);
@@ -576,94 +576,84 @@ var manifestor = function(options) {
     // viewerState(state);
   }
 
-  function next() {
-    var state = viewerState(),
-        currentCanvasIndex,
-        indexIncrement;
+  function _isValidCanvasIndex(index) {
+    return(index > 0 && index < canvases.length);
+  }
 
-    if (state.viewingMode === "paged") {
-      currentCanvasIndex = currentPagedSequenceCanvasIndex(state.selectedCanvas);
+  function _loadTileSourceForIndex(index) {
+    var canvasId = canvases[index]['@id'];
+    _canvasObjects[canvasId].openTileSource(viewer);
+  }
 
-      if (currentCanvasIndex % 2 === 0) {
-        indexIncrement = currentCanvasIndex + 1;
-      } else {
-        indexIncrement = currentCanvasIndex + 2;
-      }
-    } else {
-      currentCanvasIndex = currentSequenceCanvasIndex(state.selectedCanvas);
-      indexIncrement = currentCanvasIndex + 1;
+  function _selectCanvasForIndex(index) {
+    var canvasId = canvases[index]['@id'];
+    selectCanvas(canvasId);
+  }
+
+  function _navigatePaged(currentIndex, incrementValue) {
+    var newIndex = currentIndex + incrementValue;
+
+    if (currentIndex % 2 !== 0) {
+      newIndex = currentIndex + (2 * incrementValue);
     }
-    // return if next is greater than or equal to maximum page index
-    if (indexIncrement >= currentPagedSequenceCanvases().length) { return false; }
-    selectCanvas(canvases[indexIncrement]['@id']);
+
+    // return if newIndex is out of range
+    if (!_isValidCanvasIndex(newIndex)) {
+      return;
+    }
+
+    // Do not select non-paged canvases in paged mode. Instead, find the next available
+    // canvas that does not have that viewingHint.
+    var getCanvasByIndex = function(index) {
+      var canvasId = canvases[index]['@id'];
+      return _canvasObjects[canvasId];
+    }
+
+    var newCanvas = getCanvasByIndex(newIndex);
+    while(newCanvas.viewingHint === 'non-paged' && _isValidCanvasIndex(newIndex)) {
+      newIndex += incrementValue;
+      newCanvas = getCanvasByIndex(newIndex);
+    }
+
+    _loadTileSourceForIndex(newIndex);
+
+    // Load tilesource for the non-selected side of the pair, if it exists
+    var facingPageIndex = newIndex + incrementValue;
+    if(_isValidCanvasIndex(facingPageIndex)) {
+      _loadTileSourceForIndex(facingPageIndex);
+    }
+
+    _selectCanvasForIndex(newIndex);
+  }
+
+  function _navigateIndividual(currentIndex, incrementValue) {
+    var newIndex = currentIndex + incrementValue;
+
+    // do nothing if newIndex is out of range
+    if (_isValidCanvasIndex(newIndex)) {
+      _loadTileSourceForIndex(newIndex);
+      _selectCanvasForIndex(newIndex);
+    }
+  }
+
+  function _navigate(forward) {
+    var state = viewerState();
+    var currentCanvasIndex = _canvasObjects[state.selectedCanvas].index;
+    var incrementValue = forward ? 1 : -1;
+
+    if(state.viewingMode === 'paged') {
+      _navigatePaged(currentCanvasIndex, incrementValue);
+    } else {
+      _navigateIndividual(currentCanvasIndex, incrementValue);
+    }
+  }
+
+  function next() {
+    _navigate(true);
   }
 
   function previous() {
-    var state = viewerState(),
-        currentCanvasIndex,
-        indexIncrement;
-
-    if (state.viewingMode === "paged") {
-      currentCanvasIndex = currentPagedSequenceCanvasIndex(state.selectedCanvas);
-
-      if (currentCanvasIndex % 2 === 0) {
-        indexIncrement = currentCanvasIndex - 2;
-      } else {
-        indexIncrement = currentCanvasIndex - 1;
-      }
-    } else {
-      currentCanvasIndex = currentSequenceCanvasIndex(state.selectedCanvas);
-      indexIncrement = currentCanvasIndex - 1;
-    }
-    // return if previous is less than minimum page index "0"
-    if (indexIncrement < 0) { return false; }
-    selectCanvas(canvases[indexIncrement]['@id']);
-  }
-
-  /**
-   * Returns current paged sequence canvases
-   * @private
-   * @param
-   * @returns {Object[]}
-   */
-   function currentPagedSequenceCanvases() {
-     var currentCanvases = canvases.filter(function(canvas) {
-       return canvas.viewingHint === 'non-paged' ? false : true;
-     });
-     return currentCanvases;
-   }
-
-  /**
-   * Returns the selected canvas in the current sequence for paged viewing
-   * @private
-   * @param {String} selectedCanvas
-   * @returns {Number}
-   */
-  function currentPagedSequenceCanvasIndex(selectedCanvas) {
-    return currentSequenceCanvasIndex(selectedCanvas, currentPagedSequenceCanvases());
-  }
-
-  /**
-   * Returns the selected canvas for a given sequence, uses canvases if no
-   * currentCanvases argument is provided
-   * @private
-   * @param {String} selectedCanvas
-   * @param {Object[]} [currentCanvases]
-   * @returns {Number}
-   */
-  function currentSequenceCanvasIndex(selectedCanvas, currentCanvases) {
-    var currentCanvasIndex;
-    if (currentCanvases === undefined) {
-      currentCanvases = canvases;
-    }
-
-    canvases.forEach(function(canvas, index) {
-      if (selectedCanvas === canvas['@id']) {
-        currentCanvasIndex = index;
-        return;
-      }
-    });
-    return currentCanvasIndex;
+    _navigate(false);
   }
 
   container.on('click', '.' + canvasClass, function(event) {
