@@ -61,6 +61,15 @@ CanvasObject.prototype = {
           }
         };
         viewer.addHandler('tile-drawn', tileDrawnHandler);
+      },
+
+      error: function(event) {
+        var errorInfo = {
+          id: self.id,
+          message: event.message,
+          source: event.source
+        };
+        self.dispatcher.emit('detail-tile-source-failed', {'detail': errorInfo});
       }
     });
   },
