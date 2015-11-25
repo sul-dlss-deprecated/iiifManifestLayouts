@@ -289,7 +289,7 @@ var manifestLayout = function(options) {
 
   Lines.prototype = {
     _getFacingFrame: function(position) {
-      var facingFrame = this.frames.filter(function(page) {
+      return this.frames.filter(function(page) {
         var value;
         switch (facingPageType(position)) {
           case 'rightPage':
