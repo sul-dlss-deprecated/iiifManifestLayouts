@@ -20,6 +20,7 @@ var manifestor = function(options) {
       labelClass = options.labelClass ? options.labelClass : 'label',
       viewportPadding = options.viewportPadding,
       stateUpdateCallback = options.stateUpdateCallback,
+      accessToken = options.accessToken ? options.accessToken : null,
       _canvasState,
       _canvasImageStates,
       _zooming = false,
@@ -346,11 +347,20 @@ var manifestor = function(options) {
     var canvasData = d.canvas,
         canvasImageState = canvasImageStates()[canvasData.id];
 
+    retrieveImageInfo(canvasImageState.tileSourceUrl, function(imageInfo, status) {
+      var tileSourceInfo;
+      if (status === 'success') {
+        canvasImageState.imageInfo = imageInfo;
+        tileSourceInfo = imageInfo;
+      } else {
+        tileSourceInfo = canvasImageState.tileSourceUrl;
+      }
+      
       viewer.addTiledImage({
         x: canvasData.x,
         y: canvasData.y,
         width: canvasData.width,
-        tileSource: canvasImageState.tileSourceUrl,
+        tileSource: tileSourceInfo,
         index: 0, // Add the new image below the stand-in.
         success: function(event) {
           addMainImageObj(canvasData.id, event.item);
@@ -364,6 +374,28 @@ var manifestor = function(options) {
           viewer.addHandler('tile-drawn', tileDrawnHandler);
         }
       });
+    });
+  }
+
+  function authHeader() {
+    if (accessToken) {
+      return {
+        'Authorization': 'Bearer ' + accessToken
+      };
+    } else {
+      return {};
+    }
+  }
+  
+  function retrieveImageInfo(tileSourceUrl, callback) {
+    $.ajax({
+      url: tileSourceUrl,
+      dataType: 'json',
+      headers: authHeader()
+    })
+    .always(function(data, status) {
+      callback(data, status);
+    });
   }
 
   function fade(image, targetOpacity, callback) {
