@@ -109,11 +109,10 @@
             viewer.on('detail-tile-source-requested', function(e) { console.log('detail tile source requested', e.detail)});
             viewer.on('detail-tile-source-opened', function(e) { console.log('detail tile source opened', e.detail)});
 
-         });
-
-         // We can set events outside of the component.
-         $(window).on('resize', function() {
-             viewer.resize();
+             // We can set events outside of the component.
+             $(window).on('resize', function() {
+                 viewer.resize();
+             });
          });
 
          $('#manifestPicker').on('change', function() {
