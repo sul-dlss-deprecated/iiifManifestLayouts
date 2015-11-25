@@ -27,7 +27,8 @@ var manifestor = function(options) {
       _zooming = false,
       _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()},
       _inZoomConstraints,
-      _lastScrollPosition = 0;
+      _lastScrollPosition = 0,
+      _dispatcher = new events.EventEmitter();
 
   function getViewingDirection() {
     if (sequence && sequence.viewingDirection) {
@@ -43,13 +44,11 @@ var manifestor = function(options) {
     return manifest.viewingHint ? manifest.viewingHint : 'individuals';
   };
 
-  var _dispatcher = new events.EventEmitter();
+  function on(event, handler) {
+    _dispatcher.on(event, handler);
+  };
+
   buildCanvasStates(canvases);
-
-    // Debug/example code: Listen for tile source requests and loads
-  _dispatcher.on('detail-tile-source-requested', function(e) { console.log('detail tile source requested', e.detail)});
-  _dispatcher.on('detail-tile-source-opened', function(e) { console.log('detail tile source opened', e.detail)});
-
 
   var overlays = $('<div class="overlaysContainer">').css(
     {'width': '100%',
@@ -680,7 +679,8 @@ var manifestor = function(options) {
     refreshState: refreshState,
     getState: viewerState,
     setState: viewerState,
-    osd: viewer
+    osd: viewer,
+    on: on
   };
 };
 
