@@ -267,72 +267,90 @@ var manifestLayout = function(options) {
     }
   }
 
-  function fixedHeightAlign(frames, lineWidth, viewingDirection, viewingMode) {
-    var lines = [];
+  /**
+  * Determines a facing page type
+  * @returns {String}
+  */
+  function facingPageType(index) {
+    if (index === 0) {
+      return 'firstPage';
+    } else if ((index % 2) === 0) {
+      return 'rightPage';
+    } else {
+      return 'leftPage';
+    }
+  }
 
-    lines.currentLine = 0;
+  function hasFacingCanvas(position) {
+    var facingCanvases = canvases.filter(function(page) {
+      var value;
+      switch (facingPageType(position)) {
+        case 'rightPage':
+        value = -1;
+        break;
+      case 'leftPage':
+        value = 1;
+        break;
+      case 'firstPage':
+        value = 0;
+        break;
+      }
+      return page.sequencePosition + value === position;
+    });
+    return facingCanvases.length !== 0;
+  }
 
-    lines.addLine = function() {
-      var line = lines[lines.currentLine] = [];
-      line.remaining = lineWidth;
+  var Lines = function(lineWidth){
+    this.currentLine = 0;
+    this.lineWidth = lineWidth;
+  }
+
+  Lines.prototype = {
+    addLine: function() {
+      var line = this[this.currentLine] = [];
+      line.remaining = this.lineWidth;
 
       return line;
-    };
+    },
 
     /**
      * @param frame
      * @returns {Array} [frame x position, line frame is on]
      */
-    lines.addItem = function(frame) {
+    addItem: function(frame) {
       var line = this[this.currentLine],
           lineItemWidth,
           x;
 
-      if (viewingMode === 'paged') {
-        var position = frame.canvas.sequencePosition;
-        // Return the facingFrame, based on the facing page type
-        var facingFrame = frames.filter(function(page) {
-          var value;
-          switch (facingPageType(position)) {
-            case 'rightPage':
-            value = -1;
-            break;
-            case 'leftPage':
-            value = 1;
-            break;
-          }
-          return page.canvas.sequencePosition + value === position;
-        })[0];
-
-        if (facingFrame) {
-          lineItemWidth = frame.width + facingFrame.width;
-        } else {
-          lineItemWidth = frame.width;
-        }
-      } else {
-        lineItemWidth = frame.width;
+      lineItemWidth = frame.width;
+      if (viewingMode === 'paged' && hasFacingCanvas(frame.canvas.sequencePosition)) {
+        lineItemWidth = frame.width + facingFrame.width;
       }
 
       if (!line) { line = this.addLine(); }
 
       if (line.remaining >= lineItemWidth) {
-        x = lineWidth - line.remaining;
+        x = this.lineWidth - line.remaining;
         if (viewingDirection === 'right-to-left') {
           x = line.remaining - frame.x;
         }
         line.remaining -= frame.width;
-        return [x, lines.currentLine];
+        return [x, this.currentLine];
       }
       if (line.remaining >= frame.width && facingPageType(frame.canvas.sequencePosition) === 'rightPage') {
-        x = lineWidth - line.remaining;
-        return [x, lines.currentLine];
+        x = this.lineWidth - line.remaining;
+        return [x, this.currentLine];
       }
       this.currentLine += 1;
-      line = lines.addLine();
+      line = this.addLine();
       x = viewingDirection === 'right-to-left' ? frame.width: line.remaining;
       line.remaining -= frame.width;
-      return [lineWidth - x, this.currentLine];
-    };
+      return [this.lineWidth - x, this.currentLine];
+    }
+  }
+
+  function fixedHeightAlign(frames, lineWidth) {
+    var lines = new Lines(lineWidth);
 
     return frames.map(function(frame) {
       var lineStats = lines.addItem(frame);
@@ -344,20 +362,6 @@ var manifestLayout = function(options) {
     });
   }
 
-  /**
-   * Determines a facing page type
-   * @returns {String}
-   */
-  function facingPageType(index) {
-    if (index === 0) {
-      return 'firstPage';
-    } else if ((index % 2) === 0) {
-      return 'rightPage';
-    } else {
-      return 'leftPage';
-    }
-  }
-
   function overviewLayout() {
     // configure for viewingDirection, viewingMode, framing technique,
     // and alignment Style.
@@ -366,7 +370,7 @@ var manifestLayout = function(options) {
       return fitHeight(canvas, canvasHeight);
     }), viewingMode, viewingDirection, framePadding, facingCanvasPadding);
 
-    return fixedHeightAlign(frames, viewport.paddedWidth, viewingDirection, viewingMode)
+    return fixedHeightAlign(frames, viewport.paddedWidth)
       .map(function(frame){
         frame.x += viewport.width*viewport.padding.left/100;
         frame.y += viewport.height*viewport.padding.top/100;
@@ -388,7 +392,7 @@ var manifestLayout = function(options) {
       return fitHeight(canvas, canvasHeight);
     }), viewingMode, viewingDirection, framePadding, facingCanvasPadding);
 
-    return fixedHeightAlign(frames, viewport.paddedWidth, viewingDirection, viewingMode)
+    return fixedHeightAlign(frames, viewport.paddedWidth)
       .map(function(frame){
         frame.x += viewport.width*viewport.padding.left/100;
         frame.y += viewport.height*viewport.padding.top/100;
