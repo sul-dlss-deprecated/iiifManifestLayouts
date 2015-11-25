@@ -281,31 +281,28 @@ var manifestLayout = function(options) {
     }
   }
 
-  function hasFacingCanvas(position) {
-    var facingCanvases = canvases.filter(function(page) {
-      var value;
-      switch (facingPageType(position)) {
-        case 'rightPage':
-        value = -1;
-        break;
-      case 'leftPage':
-        value = 1;
-        break;
-      case 'firstPage':
-        value = 0;
-        break;
-      }
-      return page.sequencePosition + value === position;
-    });
-    return facingCanvases.length !== 0;
-  }
-
-  var Lines = function(lineWidth){
+  var Lines = function(lineWidth, frames){
     this.currentLine = 0;
     this.lineWidth = lineWidth;
+    this.frames = frames;
   }
 
   Lines.prototype = {
+    _getFacingFrame: function(position) {
+      var facingFrame = this.frames.filter(function(page) {
+        var value;
+        switch (facingPageType(position)) {
+          case 'rightPage':
+          value = -1;
+          break;
+          case 'leftPage':
+          value = 1;
+          break;
+        }
+        return page.canvas.sequencePosition + value === position;
+      })[0];
+    },
+
     addLine: function() {
       var line = this[this.currentLine] = [];
       line.remaining = this.lineWidth;
@@ -323,8 +320,11 @@ var manifestLayout = function(options) {
           x;
 
       lineItemWidth = frame.width;
-      if (viewingMode === 'paged' && hasFacingCanvas(frame.canvas.sequencePosition)) {
-        lineItemWidth = frame.width + facingFrame.width;
+      if (viewingMode === 'paged') {
+        var facingFrame = this._getFacingFrame(frame.canvas.sequencePosition);
+        if(facingFrame){
+          lineItemWidth += facingFrame.width;
+        }
       }
 
       if (!line) { line = this.addLine(); }
@@ -350,7 +350,7 @@ var manifestLayout = function(options) {
   }
 
   function fixedHeightAlign(frames, lineWidth) {
-    var lines = new Lines(lineWidth);
+    var lines = new Lines(lineWidth, frames);
 
     return frames.map(function(frame) {
       var lineStats = lines.addItem(frame);
