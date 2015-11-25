@@ -337,10 +337,6 @@ var manifestLayout = function(options) {
         line.remaining -= frame.width;
         return [x, this.currentLine];
       }
-      if (line.remaining >= frame.width && facingPageType(frame.canvas.sequencePosition) === 'rightPage') {
-        x = this.lineWidth - line.remaining;
-        return [x, this.currentLine];
-      }
       this.currentLine += 1;
       line = this.addLine();
       x = viewingDirection === 'right-to-left' ? frame.width: line.remaining;
