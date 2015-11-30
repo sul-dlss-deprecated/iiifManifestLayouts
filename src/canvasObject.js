@@ -2,7 +2,6 @@
 
 var CanvasObject = function(config, dispatcher) {
   this.fullyOpened = config.fullyOpened || false;
-  this.visible = config.visible || true; // todo: this is not used yet. Do we need it?
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
   this.x = config.x || 0;
@@ -14,6 +13,7 @@ var CanvasObject = function(config, dispatcher) {
   this.height = config.canvas.height;
   this.width = config.canvas.width;
   this.images = config.canvas.images;
+  // details and alternates possibly go here; disambiguate between them.
   this.label = config.canvas.label;
   this.tileSourceUrl = config.canvas.images[0].resource.service['@id'] + '/info.json';
   this.viewingHint = config.canvas.viewingHint;
