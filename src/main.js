@@ -5,6 +5,7 @@ var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
 var CanvasObject = require('./canvasObject');
 var iiif = require('./iiifUtils');
+var events = require('events');
 
 var manifestor = function(options) {
   var manifest = options.manifest,
@@ -26,7 +27,8 @@ var manifestor = function(options) {
       _zooming = false,
       _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()},
       _inZoomConstraints,
-      _lastScrollPosition = 0;
+      _lastScrollPosition = 0,
+      _dispatcher = new events.EventEmitter();
 
   function getViewingDirection() {
     if (sequence && sequence.viewingDirection) {
@@ -40,6 +42,10 @@ var manifestor = function(options) {
       return sequence.viewingHint;
     }
     return manifest.viewingHint ? manifest.viewingHint : 'individuals';
+  };
+
+  function on(event, handler) {
+    _dispatcher.on(event, handler);
   };
 
   buildCanvasStates(canvases);
@@ -533,7 +539,8 @@ var manifestor = function(options) {
      canvasObjects[canvas['@id']] = new CanvasObject({
        canvas: canvas,
        index: index
-     });
+     },
+     _dispatcher);
     });
 
     setCanvasObjects(canvasObjects);
@@ -610,7 +617,7 @@ var manifestor = function(options) {
       newIndex += incrementValue;
       newCanvas = getCanvasByIndex(newIndex);
     }
-    
+
     _loadTileSourceForIndex(newIndex);
 
     // Load tilesource for the non-selected side of the pair, if it exists
@@ -676,7 +683,8 @@ var manifestor = function(options) {
     refreshState: refreshState,
     getState: viewerState,
     setState: viewerState,
-    osd: viewer
+    osd: viewer,
+    on: on
   };
 };
 

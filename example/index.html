@@ -105,6 +105,10 @@
                  viewer.next();
              });
 
+            // Debug/example code: Listen for tile source requests and loads
+            viewer.on('detail-tile-source-requested', function(e) { console.log('detail tile source requested', e.detail)});
+            viewer.on('detail-tile-source-opened', function(e) { console.log('detail tile source opened', e.detail)});
+
              // We can set events outside of the component.
              $(window).on('resize', function() {
                  viewer.resize();
