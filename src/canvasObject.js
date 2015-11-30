@@ -50,9 +50,9 @@ CanvasObject.prototype = {
             var previousImageObj = self._mainImageObj;
 
             viewer.removeHandler('tile-drawn', tileDrawnHandler);
-            self._setMainImage(main);
             main.setOpacity(0, true);
             self._fade(main, 1);
+            self._setMainImage(main);
 
             if(previousImageObj){
               viewer.world.removeItem(previousImageObj);
@@ -127,6 +127,8 @@ CanvasObject.prototype = {
 
   _setMainImage: function(mainImage) {
     this._mainImageObj = mainImage;
+    this._mainImageObj.setPosition(new OpenSeadragon.Point(this.x, this.y), true);
+    this._mainImageObj.setWidth(this.width, true);
   },
 
   _fade: function(image, targetOpacity, callback) {

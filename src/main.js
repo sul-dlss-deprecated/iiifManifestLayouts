@@ -349,7 +349,11 @@ var manifestor = function(options) {
 
     canvasImageState.setPosition(canvasData.x, canvasData.y);
     canvasImageState.setSize(canvasData.width, canvasData.height);
-    canvasImageState.openThumbnail(viewer);
+
+    // This opens the full-size OSD image initially. To open just a
+    // thumbnail, uncomment the following line, and remove the openTileSource call.
+    // canvasImageState.openThumbnail(viewer);
+    canvasImageState.openTileSource(viewer);
   }
 
   function removeImages(d) {
