@@ -104,11 +104,11 @@
              key('l, right', function() {
                  viewer.next();
              });
-         });
 
-         // We can set events outside of the component.
-         $(window).on('resize', function() {
-             viewer.resize();
+             // We can set events outside of the component.
+             $(window).on('resize', function() {
+                 viewer.resize();
+             });
          });
 
          $('#manifestPicker').on('change', function() {
