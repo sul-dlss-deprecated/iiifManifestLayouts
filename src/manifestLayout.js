@@ -267,72 +267,86 @@ var manifestLayout = function(options) {
     }
   }
 
-  function fixedHeightAlign(frames, lineWidth, viewingDirection, viewingMode) {
-    var lines = [];
+  /**
+  * Determines a facing page type
+  * @returns {String}
+  */
+  function facingPageType(index) {
+    if (index === 0) {
+      return 'firstPage';
+    } else if ((index % 2) === 0) {
+      return 'rightPage';
+    } else {
+      return 'leftPage';
+    }
+  }
 
-    lines.currentLine = 0;
+  var Lines = function(lineWidth, frames){
+    this.currentLine = 0;
+    this.lineWidth = lineWidth;
+    this.frames = frames;
+  }
 
-    lines.addLine = function() {
-      var line = lines[lines.currentLine] = [];
-      line.remaining = lineWidth;
+  Lines.prototype = {
+    _getFacingFrame: function(position) {
+      return this.frames.filter(function(page) {
+        var value;
+        switch (facingPageType(position)) {
+          case 'rightPage':
+          value = -1;
+          break;
+          case 'leftPage':
+          value = 1;
+          break;
+        }
+        return page.canvas.sequencePosition + value === position;
+      })[0];
+    },
+
+    addLine: function() {
+      var line = this[this.currentLine] = [];
+      line.remaining = this.lineWidth;
 
       return line;
-    };
+    },
 
     /**
      * @param frame
      * @returns {Array} [frame x position, line frame is on]
      */
-    lines.addItem = function(frame) {
+    addItem: function(frame) {
       var line = this[this.currentLine],
           lineItemWidth,
           x;
 
+      lineItemWidth = frame.width;
       if (viewingMode === 'paged') {
-        var position = frame.canvas.sequencePosition;
-        // Return the facingFrame, based on the facing page type
-        var facingFrame = frames.filter(function(page) {
-          var value;
-          switch (facingPageType(position)) {
-            case 'rightPage':
-            value = -1;
-            break;
-            case 'leftPage':
-            value = 1;
-            break;
-          }
-          return page.canvas.sequencePosition + value === position;
-        })[0];
-
-        if (facingFrame) {
-          lineItemWidth = frame.width + facingFrame.width;
-        } else {
-          lineItemWidth = frame.width;
+        var facingFrame = this._getFacingFrame(frame.canvas.sequencePosition);
+        if(facingFrame){
+          lineItemWidth += facingFrame.width;
         }
-      } else {
-        lineItemWidth = frame.width;
       }
 
       if (!line) { line = this.addLine(); }
 
       if (line.remaining >= lineItemWidth) {
-        x = lineWidth - line.remaining;
+        x = this.lineWidth - line.remaining;
         if (viewingDirection === 'right-to-left') {
           x = line.remaining - frame.x;
         }
         line.remaining -= frame.width;
-        return [x, lines.currentLine];
-      }
-      if (line.remaining >= frame.width && facingPageType(frame.canvas.sequencePosition) === 'rightPage') {
-        x = lineWidth - line.remaining;
-        return [x, lines.currentLine];
+        return [x, this.currentLine];
       }
       this.currentLine += 1;
-      line = lines.addLine();
+      line = this.addLine();
       x = viewingDirection === 'right-to-left' ? frame.width: line.remaining;
       line.remaining -= frame.width;
-      return [lineWidth - x, this.currentLine];
-    };
+      return [this.lineWidth - x, this.currentLine];
+    }
+  }
+
+  function fixedHeightAlign(frames, lineWidth) {
+    var lines = new Lines(lineWidth, frames);
 
     return frames.map(function(frame) {
       var lineStats = lines.addItem(frame);
@@ -344,20 +358,6 @@ var manifestLayout = function(options) {
     });
   }
 
-  /**
-   * Determines a facing page type
-   * @returns {String}
-   */
-  function facingPageType(index) {
-    if (index === 0) {
-      return 'firstPage';
-    } else if ((index % 2) === 0) {
-      return 'rightPage';
-    } else {
-      return 'leftPage';
-    }
-  }
-
   function overviewLayout() {
     // configure for viewingDirection, viewingMode, framing technique,
     // and alignment Style.
@@ -366,7 +366,7 @@ var manifestLayout = function(options) {
       return fitHeight(canvas, canvasHeight);
     }), viewingMode, viewingDirection, framePadding, facingCanvasPadding);
 
-    return fixedHeightAlign(frames, viewport.paddedWidth, viewingDirection, viewingMode)
+    return fixedHeightAlign(frames, viewport.paddedWidth)
       .map(function(frame){
         frame.x += viewport.width*viewport.padding.left/100;
         frame.y += viewport.height*viewport.padding.top/100;
@@ -376,15 +376,83 @@ var manifestLayout = function(options) {
       });
   }
 
+  function detailLayout() {
+    return detailLayoutHorizontal();
+  }
+
+    function detailLayoutHorizontal() {
+    // configure for viewingDirection, viewingMode, framing technique,
+    // and alignment Style.
+    var frames = bindCanvases(canvases.map(pruneCanvas).map(function(canvas) {
+      // resizes canvases for the chosen layout strategy.
+      return fitHeight(canvas, canvasHeight);
+    }), viewingMode, viewingDirection, framePadding, facingCanvasPadding);
+
+    return fixedHeightAlign(frames, viewport.paddedWidth)
+      .map(function(frame){
+        frame.x += viewport.width*viewport.padding.left/100;
+        frame.y += viewport.height*viewport.padding.top/100;
+        frame.canvas.x = frame.x + frame.canvas.localX;
+        frame.canvas.y = frame.y + frame.canvas.localY;
+        return frame;
+      });
+  }
+
+  function detailLayoutVertical(frames, selected, viewport) {
+    return frames.map();
+  }
+
   function intermediateLayout() {
     // configure for viewingDirection, viewingMode,
     // and alignment Style (scaling).
     return intermediateLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
   }
 
-  function detailLayout() {
-    return detailLayoutHorizontal(intermediateLayout());
+  function intermediateLayoutVertical(frames, selected, viewport) {
+    return frames.map();
   }
+
+  function intermediateLayoutHorizontal(frames, selectedCanvas, viewport) {
+    var selectedFrame = frames.filter(function(frame) {
+      return frame.canvas.selected;
+    })[0],
+        facingCanvas = getFacingCanvas(selectedFrame.canvas, frames);
+
+    var canvasPosition = selectedFrame.canvas.sequencePosition;
+
+    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, facingCanvas, viewport);
+
+    if (viewingMode !== 'continuous') {
+      frames.forEach(function(frame, index, allFrames) {
+        if (frame.y === selectedFrame.y && frame.canvas.id !== selectedFrame.canvas.id) {
+          if (viewingMode === 'paged' && frame.canvas.id === facingCanvas.id) {
+            return;
+          }
+          // These are the canvases within the same line of the overview layout.
+          if (index < canvasPosition) {
+            // Those to the left. Push them to the left, out of frame.
+            frame.x = frame.x - (selectedFrame.vantage.leftMargin + framePadding.right*2);
+          } else {
+            // Those to the right. Push them to the right, out of frame.
+            frame.x = frame.x + (selectedFrame.vantage.rightMargin + framePadding.left*2);
+          }
+        } else if (frame.y > selectedFrame.y) {
+          // These are all the canvases below the selected canvas
+          // in the overview layout. Push then down out of frame.
+          frame.y = frame.y + (selectedFrame.vantage.topMargin + framePadding.bottom*2);
+        } else if (frame.y < selectedFrame.y) {
+          // These are all the canvases above the selected canvas
+          // in the overview layout. Push them up out of frame.
+          frame.y = frame.y - (selectedFrame.vantage.bottomMargin + framePadding.top*2);
+        }
+
+        frame.canvas.x = frame.x + frame.canvas.localX;
+        frame.canvas.y = frame.y + frame.canvas.localY;
+      });
+    }
+    return frames;
+  }
+
 
   /**
    * Calculates a vantage for a selected canvas
@@ -556,59 +624,6 @@ var manifestLayout = function(options) {
   function getBoundingBoxForCanvases(selectedCanvases) {
   }
 
-  function detailLayoutHorizontal(frames) {
-    // We need to lay them out in a straight line.
-    // This will give their relative positions
-    // starting from the leftmost side of the leftmost
-    // canvas.
-    var totalX = 0;
-
-    frames.forEach(function(frames) {
-    });
-    return frames;
-  }
-
-  function intermediateLayoutHorizontal(frames, selectedCanvas, viewport) {
-    var selectedFrame = frames.filter(function(frame) {
-      return frame.canvas.selected;
-    })[0],
-        facingCanvas = getFacingCanvas(selectedFrame.canvas, frames);
-
-    var canvasPosition = selectedFrame.canvas.sequencePosition;
-
-    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, facingCanvas, viewport);
-
-    if (viewingMode !== 'continuous') {
-      frames.forEach(function(frame, index, allFrames) {
-        if (frame.y === selectedFrame.y && frame.canvas.id !== selectedFrame.canvas.id) {
-          if (viewingMode === 'paged' && frame.canvas.id === facingCanvas.id) {
-            return;
-          }
-          // These are the canvases within the same line of the overview layout.
-          if (index < canvasPosition) {
-            // Those to the left. Push them to the left, out of frame.
-            frame.x = frame.x - (selectedFrame.vantage.leftMargin + framePadding.right*2);
-          } else {
-            // Those to the right. Push them to the right, out of frame.
-            frame.x = frame.x + (selectedFrame.vantage.rightMargin + framePadding.left*2);
-          }
-        } else if (frame.y > selectedFrame.y) {
-          // These are all the canvases below the selected canvas
-          // in the overview layout. Push then down out of frame.
-          frame.y = frame.y + (selectedFrame.vantage.topMargin + framePadding.bottom*2);
-        } else if (frame.y < selectedFrame.y) {
-          // These are all the canvases above the selected canvas
-          // in the overview layout. Push them up out of frame.
-          frame.y = frame.y - (selectedFrame.vantage.bottomMargin + framePadding.top*2);
-        }
-
-        frame.canvas.x = frame.x + frame.canvas.localX;
-        frame.canvas.y = frame.y + frame.canvas.localY;
-      });
-    }
-    return frames;
-  }
-
   function getFacingCanvas(canvas, frames) {
     var selectedIndex;
 
@@ -629,16 +644,9 @@ var manifestLayout = function(options) {
     }
   }
 
-  function detailLayoutVertical(frames, selected, viewport) {
-    return frames.map();
-  }
-
   function indicesOfParentLine(selectedCanvas) {
   };
 
-  function intermediateLayoutVertical(frames, selected, viewport) {
-    return frames.map();
-  }
 
   return {
     overview: overviewLayout,
