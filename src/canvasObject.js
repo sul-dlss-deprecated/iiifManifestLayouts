@@ -1,6 +1,6 @@
 'use strict';
 
-var CanvasObject = function(config) {
+var CanvasObject = function(config, dispatcher) {
   this.fullyOpened = config.fullyOpened || false;
   this.visible = config.visible || true; // todo: this is not used yet. Do we need it?
   this.clipRegion = config.clipRegion;
@@ -17,6 +17,8 @@ var CanvasObject = function(config) {
   this.label = config.canvas.label;
   this.tileSourceUrl = config.canvas.images[0].resource.service['@id'] + '/info.json';
   this.viewingHint = config.canvas.viewingHint;
+
+  this.dispatcher = dispatcher;
 };
 
 CanvasObject.prototype = {
@@ -29,6 +31,7 @@ CanvasObject.prototype = {
     }
 
     // otherwise, continue loading the tileSource.
+    this.dispatcher.emit('detail-tile-source-requested', { 'detail': this.id });
     viewer.addTiledImage({
       x: this.x,
       y: this.y,
@@ -54,9 +57,19 @@ CanvasObject.prototype = {
             if(previousImageObj){
               viewer.world.removeItem(previousImageObj);
             }
+            self.dispatcher.emit('detail-tile-source-opened', { 'detail': self.id });
           }
         };
         viewer.addHandler('tile-drawn', tileDrawnHandler);
+      },
+
+      error: function(event) {
+        var errorInfo = {
+          id: self.id,
+          message: event.message,
+          source: event.source
+        };
+        self.dispatcher.emit('detail-tile-source-failed', {'detail': errorInfo});
       }
     });
   },
