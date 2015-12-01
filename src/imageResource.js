@@ -7,6 +7,7 @@ var ImageResource = function(config, dispatcher) {
   this.opacity = config.opacity || 1;
   this.x = config.x || 0;
   this.y = config.y || 0;
+  this.height = config.height || 1;
   this.width = config.width || 1;
   this.zIndex = config.zIndex || 0;
   this.url = config.url;
@@ -42,9 +43,10 @@ ImageResource.prototype = {
     // otherwise, continue loading the tileSource.
     this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': this.url });
     self.status = 'requested';
+    var position = this._getPositionInViewer(parentBounds);
     viewer.addTiledImage({
-      x: parentBounds.x + (parentBounds.width * this.x),
-      y: parentBounds.y + (parentBounds.width * this.y),
+      x: position.x,
+      y: position.y,
       width: parentBounds.width * this.width,
       tileSource: this.url,
       opacity: this.opacity,
@@ -88,11 +90,14 @@ ImageResource.prototype = {
     return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
   },
 
-  setPosition: function(parentBounds, immediately) {
-    var position = new OpenSeadragon.Point(
+  _getPositionInViewer: function(parentBounds) {
+    return new OpenSeadragon.Point(
         parentBounds.x + (parentBounds.width * this.x),
         parentBounds.y + (parentBounds.width * this.y));
+  },
 
+  setPosition: function(parentBounds, immediately) {
+    var position = this._getPositionInViewer(parentBounds);
     this.tiledImage.setPosition(position, immediately);
   },
 
@@ -102,12 +107,10 @@ ImageResource.prototype = {
 
   //Assumes that the point parameter is already in viewport coordinates.
   containsPoint: function(point, parentBounds) {
-    var position = new OpenSeadragon.Point(
-      parentBounds.x + (parentBounds.width * this.x),
-      parentBounds.y + (parentBounds.width * this.y));
+    var position = this._getPositionInViewer(parentBounds);
 
     var width = parentBounds.width * this.width;
-    var height = width / aspectRatio // todo: where do I get the aspect ratio?
+    var height = parentBounds.height * this.height;
 
     var rectRight = position.x + width;
     var rectBottom = position.y + height;
