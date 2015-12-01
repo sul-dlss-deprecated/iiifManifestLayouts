@@ -10,11 +10,11 @@ var ImageResource = function(config, dispatcher) {
   this.height = config.height || 1;
   this.width = config.width || 1;
   this.zIndex = config.zIndex || 0;
-  this.url = config.url;
+  this.tileSource = config.tileSource;
   this.dynamic = config.dynamic || false;
   this.imageType = config.imageType || "main"; // can be 'main', 'alternate', or 'detail'
 
-  this.status = 'initialized'; // can be 'requested', 'received', 'pending' or 'shown'
+  this.status = 'initialized'; // can be 'requested', 'received', 'pending','shown', or 'failed'
   this.dispatcher = dispatcher;
 };
 
@@ -35,20 +35,20 @@ ImageResource.prototype = {
   openTileSource: function(viewer, parentBounds, parentHandler) {
     var self = this;
 
-    // We've already loaded this tilesource instead of the thumbnail
-    if(this.fullyOpened) {
+    // We've already loaded this tilesource
+    if(this.status === 'shown') {
       return;
     }
 
     // otherwise, continue loading the tileSource.
-    this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': this.url });
+    this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': this.tileSource });
     self.status = 'requested';
     var position = this._getPositionInViewer(parentBounds);
     viewer.addTiledImage({
       x: position.x,
       y: position.y,
       width: parentBounds.width * this.width,
-      tileSource: this.url,
+      tileSource: this.tileSource,
       opacity: this.opacity,
       clip: this.clipRegion,
       index: this.zIndex,
@@ -60,11 +60,10 @@ ImageResource.prototype = {
         var tileDrawnHandler = function(event) {
           if (event.tiledImage === main) {
             self.tiledImage = main;
-            self.fullyOpened = true;
             self.visible = true;
             self.status = 'shown';
             viewer.removeHandler('tile-drawn', tileDrawnHandler);
-            self.dispatcher.emit('image-resource-tile-source-opened', { 'detail': self.url });
+            self.dispatcher.emit('image-resource-tile-source-opened', { 'detail': self.tileSource });
             parentHandler(event);
           }
         };
@@ -73,10 +72,11 @@ ImageResource.prototype = {
 
       error: function(event) {
         var errorInfo = {
-          id: self.url,
+          id: self.tileSource,
           message: event.message,
           source: event.source
         };
+        self.status = 'failed';
         self.dispatcher.emit('image-resource-tile-source-failed', {'detail': errorInfo});
       }
     });

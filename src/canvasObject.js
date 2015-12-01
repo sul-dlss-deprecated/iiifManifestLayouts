@@ -6,7 +6,12 @@ var CanvasObject = function(config, dispatcher) {
   this.fullyOpened = config.fullyOpened || false;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
-  this.placeholder = config.placeholder || { type: 'image', url: './example-thumbnail.png' };
+  this.placeholder = new ImageResource(
+    {
+      tileSource: config.placeholder || {type: 'image', url: './example-thumbnail.png'}
+    },
+    dispatcher
+  );
   this.index = config.index;
 
   this.id = config.canvas['@id'];
@@ -22,7 +27,7 @@ var CanvasObject = function(config, dispatcher) {
   this.images = config.canvas.images.map(function(image) {
     return new ImageResource(
       {
-        url: image.resource.service['@id'] + '/info.json'
+        tileSource: image.resource.service['@id'] + '/info.json'
       },
       dispatcher
     );
@@ -38,13 +43,12 @@ CanvasObject.prototype = {
     var self = this;
     var onTileDrawn = function(event) {
       var main = event.tiledImage;
-      var previousImageObj = self._mainImageObj;
       main.setOpacity(0, true);
       self._fade(main, 1);
-      self._setMainImage(main);
 
-      if(previousImageObj){
-        viewer.world.removeItem(previousImageObj);
+      if(self.thumbnailImage){
+        viewer.world.removeItem(self.thumbnailImage);
+        self.thumbnailImage = null;
       }
       self.dispatcher.emit('detail-tile-source-opened', { 'detail': self.id });
     };
@@ -53,17 +57,11 @@ CanvasObject.prototype = {
 
   openThumbnail: function(viewer) {
     var self = this;
-    viewer.addTiledImage({
-      x: this.bounds.x,
-      y: this.bounds.y,
-      width: this.bounds.width,
-      tileSource: this.placeholder,
-      opacity: this.opacity,
-      clip: this.clipRegion,
-      success: function(event) {
-        self._setMainImage(event.item);
-      }
-    })
+    var onTileDrawn = function(event) {
+      self.thumbnailImage = event.tiledImage;
+      self.dispatcher.emit('detail-thumbnail-opened', { 'detail': self.id });
+    }
+    this.placeholder.openTileSource(viewer, this.bounds, onTileDrawn);
   },
 
   //Assumes that the point parameter is already in viewport coordinates.
@@ -102,16 +100,6 @@ CanvasObject.prototype = {
   // and others can get x, y, width and height out easily.
   getBounds: function() {
     return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
-  },
-
-  hasImageObject: function() {
-    return !!(this._mainImageObj);
-  },
-
-  _setMainImage: function(mainImage) {
-    this._mainImageObj = mainImage;
-    this._mainImageObj.setPosition(new OpenSeadragon.Point(this.bounds.x, this.bounds.y), true);
-    this._mainImageObj.setWidth(this.bounds.width, true);
   },
 
   _fade: function(image, targetOpacity, callback) {
