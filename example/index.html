@@ -107,7 +107,6 @@
 
             // Debug/example code: Listen for tile source requests and loads
             viewer.on('image-resource-tile-source-failed', function(e) { console.log('Failed to load tilesource', e.detail)});
-            viewer.on('image-resource-tile-source-opened', function(e) { console.log('image resource opened', e.detail)});
 
              // We can set events outside of the component.
              $(window).on('resize', function() {
