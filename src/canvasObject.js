@@ -1,21 +1,33 @@
 'use strict';
 
+var ImageResource = require('./ImageResource');
+
 var CanvasObject = function(config, dispatcher) {
   this.fullyOpened = config.fullyOpened || false;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
-  this.x = config.x || 0;
-  this.y = config.y || 0;
   this.placeholder = config.placeholder || { type: 'image', url: './example-thumbnail.png' };
   this.index = config.index;
 
   this.id = config.canvas['@id'];
-  this.height = config.canvas.height;
-  this.width = config.canvas.width;
-  this.images = config.canvas.images;
+
+  this.bounds = {
+    x : config.x || 0,
+    y : config.y || 0,
+    height : config.canvas.height,
+    width : config.canvas.width
+  };
+
   // details and alternates possibly go here; disambiguate between them.
-  this.label = config.canvas.label;
-  this.tileSourceUrl = config.canvas.images[0].resource.service['@id'] + '/info.json';
+  this.images = config.canvas.images.map(function(image) {
+    return new ImageResource(
+      {
+        url: image.resource.service['@id'] + '/info.json'
+      },
+      dispatcher
+    );
+  });
+    this.label = config.canvas.label;
   this.viewingHint = config.canvas.viewingHint;
 
   this.dispatcher = dispatcher;
@@ -24,62 +36,27 @@ var CanvasObject = function(config, dispatcher) {
 CanvasObject.prototype = {
   openTileSource: function(viewer) {
     var self = this;
+    var onTileDrawn = function(event) {
+      var main = event.tiledImage;
+      var previousImageObj = self._mainImageObj;
+      main.setOpacity(0, true);
+      self._fade(main, 1);
+      self._setMainImage(main);
 
-    // We've already loaded this tilesource instead of the thumbnail
-    if(this.fullyOpened) {
-      return;
-    }
-
-    // otherwise, continue loading the tileSource.
-    this.dispatcher.emit('detail-tile-source-requested', { 'detail': this.id });
-    viewer.addTiledImage({
-      x: this.x,
-      y: this.y,
-      width: this.width,
-      tileSource: this.tileSourceUrl,
-      opacity: this.opacity,
-      clip: this.clipRegion,
-      index: 0, // Add the new image below the stand-in.
-
-      success: function(event) {
-        var main = event.item;
-        self.fullyOpened = true;
-
-        var tileDrawnHandler = function(event) {
-          if (event.tiledImage === main) {
-            var previousImageObj = self._mainImageObj;
-
-            viewer.removeHandler('tile-drawn', tileDrawnHandler);
-            main.setOpacity(0, true);
-            self._fade(main, 1);
-            self._setMainImage(main);
-
-            if(previousImageObj){
-              viewer.world.removeItem(previousImageObj);
-            }
-            self.dispatcher.emit('detail-tile-source-opened', { 'detail': self.id });
-          }
-        };
-        viewer.addHandler('tile-drawn', tileDrawnHandler);
-      },
-
-      error: function(event) {
-        var errorInfo = {
-          id: self.id,
-          message: event.message,
-          source: event.source
-        };
-        self.dispatcher.emit('detail-tile-source-failed', {'detail': errorInfo});
+      if(previousImageObj){
+        viewer.world.removeItem(previousImageObj);
       }
-    });
+      self.dispatcher.emit('detail-tile-source-opened', { 'detail': self.id });
+    };
+    this.images[0].openTileSource(viewer, this.bounds, onTileDrawn);
   },
 
   openThumbnail: function(viewer) {
     var self = this;
     viewer.addTiledImage({
-      x: this.x,
-      y: this.y,
-      width: this.width,
+      x: this.bounds.x,
+      y: this.bounds.y,
+      width: this.bounds.width,
       tileSource: this.placeholder,
       opacity: this.opacity,
       clip: this.clipRegion,
@@ -91,34 +68,40 @@ CanvasObject.prototype = {
 
   //Assumes that the point parameter is already in viewport coordinates.
   containsPoint: function(point) {
-    var rectRight = this.x + this.width;
-    var rectBottom = this.y + this.height;
+    var rectRight = this.bounds.x + this.bounds.width;
+    var rectBottom = this.bounds.y + this.bounds.height;
 
-    return (this.x <= point.x && rectRight >= point.x && this.y <= point.y && rectBottom >= point.y);
+    return (this.bounds.x <= point.x && rectRight >= point.x && this.bounds.y <= point.y && rectBottom >= point.y);
+  },
+
+  getVisibleImages: function() {
+    return this.images.filter(function(image) { return image.visible === true; });
   },
 
   setPosition: function(x, y) {
-    this.x = x;
-    this.y = y;
+    var self = this;
+    this.bounds.x = x;
+    this.bounds.y = y;
 
-    if(this.hasImageObject()) {
-      this._mainImageObj.setPosition(new OpenSeadragon.Point(x, y), true);
-    }
+    this.getVisibleImages().map(function(image) {
+      image.setPosition(self.bounds, true);
+    });
   },
 
   setSize: function(width, height) {
-    this.width = width;
-    this.height = height;
+    var self = this;
+    this.bounds.width = width;
+    this.bounds.height = height;
 
-    if(this.hasImageObject()) {
-      this._mainImageObj.setWidth(width, true);
-    }
+    this.getVisibleImages().map(function(image) {
+      image.setSize(self.bounds.width, true);
+    });
   },
 
   // Returns an OpenSeadragon Rect object - some OpenSeadragon consumers of this function want one,
   // and others can get x, y, width and height out easily.
   getBounds: function() {
-    return new OpenSeadragon.Rect(this.x, this.y, this.width, this.height);
+    return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
   },
 
   hasImageObject: function() {
@@ -127,8 +110,8 @@ CanvasObject.prototype = {
 
   _setMainImage: function(mainImage) {
     this._mainImageObj = mainImage;
-    this._mainImageObj.setPosition(new OpenSeadragon.Point(this.x, this.y), true);
-    this._mainImageObj.setWidth(this.width, true);
+    this._mainImageObj.setPosition(new OpenSeadragon.Point(this.bounds.x, this.bounds.y), true);
+    this._mainImageObj.setWidth(this.bounds.width, true);
   },
 
   _fade: function(image, targetOpacity, callback) {
