@@ -22,16 +22,13 @@ ImageResource.prototype = {
 
   },
 
-  setOpacity: function() {
-
+  setOpacity: function(opacity) {
+    this.opacity = opacity;
+    this.tiledImage.setOpacity(opacity);
   },
 
   getOpacity: function() {
-
-  },
-
-  buildTileSource: function() {
-
+    return this.opacity;
   },
 
   openTileSource: function(viewer, parentBounds, parentHandler) {
@@ -84,11 +81,11 @@ ImageResource.prototype = {
   },
 
   getImageType: function() {
-
+    return this.imageType;
   },
 
   getBounds: function() {
-
+    return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
   },
 
   setPosition: function(parentBounds, immediately) {
@@ -103,12 +100,23 @@ ImageResource.prototype = {
     this.tiledImage.setWidth(parentWidth * this.width, immediately);
   },
 
-  containsPoint: function() {
+  //Assumes that the point parameter is already in viewport coordinates.
+  containsPoint: function(point, parentBounds) {
+    var position = new OpenSeadragon.Point(
+      parentBounds.x + (parentBounds.width * this.x),
+      parentBounds.y + (parentBounds.width * this.y));
 
+    var width = parentBounds.width * this.width;
+    var height = width / aspectRatio // todo: where do I get the aspect ratio?
+
+    var rectRight = position.x + width;
+    var rectBottom = position.y + height;
+
+    return (position.x <= point.x && rectRight >= point.x && position.y <= point.y && rectBottom >= point.y);
   },
 
   getStatus: function() {
-
+    return this.status;
   }
 
   // todo: layering/z-index functions. Should this object know about
