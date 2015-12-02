@@ -1,5 +1,6 @@
 'use strict';
 
+require('openseadragon');
 var ImageResource = require('./ImageResource');
 
 var CanvasObject = function(config, dispatcher) {

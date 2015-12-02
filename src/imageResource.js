@@ -1,5 +1,7 @@
 'use strict';
 
+require('openseadragon');
+
 var ImageResource = function(config, dispatcher) {
   this.needed = config.needed || false;
   this.visible = config.visible || false;
