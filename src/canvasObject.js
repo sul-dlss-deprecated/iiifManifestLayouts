@@ -1,5 +1,7 @@
 'use strict';
 
+require('openseadragon');
+
 var CanvasObject = function(config, dispatcher) {
   this.fullyOpened = config.fullyOpened || false;
   this.visible = config.visible || true; // todo: this is not used yet. Do we need it?
