@@ -6,6 +6,7 @@ var canvasLayout = require('./canvasLayout');
 var CanvasObject = require('./canvasObject');
 var iiif = require('./iiifUtils');
 var events = require('events');
+require('openseadragon');
 
 var manifestor = function(options) {
   var manifest = options.manifest,
