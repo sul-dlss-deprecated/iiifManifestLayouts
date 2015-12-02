@@ -60,6 +60,7 @@ ImageResource.prototype = {
         var tileDrawnHandler = function(event) {
           if (event.tiledImage === main) {
             self.tiledImage = main;
+            self.setPosition(parentBounds);
             self.visible = true;
             self.status = 'shown';
             viewer.removeHandler('tile-drawn', tileDrawnHandler);

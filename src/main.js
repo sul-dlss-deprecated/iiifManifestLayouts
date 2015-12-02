@@ -322,20 +322,15 @@ var manifestor = function(options) {
 
   function translateTilesources(d, i) {
     var canvas = _canvasObjects[d.canvas.id];
+    var currentBounds = canvas.getBounds();
 
-    if(canvas.hasImageObject) {
-      var currentBounds = canvas.getBounds();
+    var xi = d3.interpolate(currentBounds.x, d.canvas.x);
+    var yi = d3.interpolate(currentBounds.y, d.canvas.y);
 
-      var xi = d3.interpolate(currentBounds.x, d.canvas.x);
-      var yi = d3.interpolate(currentBounds.y, d.canvas.y);
-
-      return function(t) {
-        canvas.setPosition(xi(t), yi(t));
-        canvas.setSize(d.canvas.width, d.canvas.height);
-      };
-    } else {
-      return function() { /* no-op */ };
-    }
+    return function(t) {
+      canvas.setPosition(xi(t), yi(t));
+      canvas.setSize(d.canvas.width, d.canvas.height);
+    };
   }
 
   function updateImages(d) {

@@ -50,6 +50,7 @@ CanvasObject.prototype = {
         viewer.world.removeItem(self.thumbnailImage);
         self.thumbnailImage = null;
       }
+      self.fullyOpened = true;
       self.dispatcher.emit('detail-tile-source-opened', { 'detail': self.id });
     };
     this.images[0].openTileSource(viewer, this.bounds, onTileDrawn);
@@ -73,7 +74,7 @@ CanvasObject.prototype = {
   },
 
   getVisibleImages: function() {
-    return this.images.filter(function(image) { return image.visible === true; });
+    return this.images.filter(function(image) { return image.visible == true; });
   },
 
   setPosition: function(x, y) {
@@ -81,9 +82,14 @@ CanvasObject.prototype = {
     this.bounds.x = x;
     this.bounds.y = y;
 
-    this.getVisibleImages().map(function(image) {
-      image.setPosition(self.bounds, true);
-    });
+    if(this.fullyOpened) {
+      this.getVisibleImages().map(function(image) {
+        image.setPosition(self.bounds, true);
+      });
+    }
+    if(this.thumbnailImage) {
+      this.placeholder.setPosition(self.bounds, true);
+    }
   },
 
   setSize: function(width, height) {
@@ -91,9 +97,14 @@ CanvasObject.prototype = {
     this.bounds.width = width;
     this.bounds.height = height;
 
-    this.getVisibleImages().map(function(image) {
-      image.setSize(self.bounds.width, true);
-    });
+    if(this.fullyOpened) {
+      this.getVisibleImages().map(function(image) {
+        image.setSize(self.bounds.width, true);
+      });
+    }
+    if(this.thumbnailImage) {
+      this.placeholder.setSize(self.bounds.width, true);
+    }
   },
 
   // Returns an OpenSeadragon Rect object - some OpenSeadragon consumers of this function want one,
