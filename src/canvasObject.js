@@ -7,12 +7,6 @@ var CanvasObject = function(config, dispatcher) {
   this.fullyOpened = config.fullyOpened || false;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
-  this.placeholder = new ImageResource(
-    {
-      tileSource: config.placeholder || {type: 'image', url: './example-thumbnail.png'}
-    },
-    dispatcher
-  );
   this.index = config.index;
 
   this.id = config.canvas['@id'];
@@ -33,7 +27,15 @@ var CanvasObject = function(config, dispatcher) {
       dispatcher
     );
   });
-    this.label = config.canvas.label;
+
+  this.thumbnail = new ImageResource(
+  {
+    tileSource: config.canvas.thumbnail || this.images[0].tileSource
+  },
+  dispatcher
+  );
+
+  this.label = config.canvas.label;
   this.viewingHint = config.canvas.viewingHint;
 
   this.dispatcher = dispatcher;
@@ -63,7 +65,7 @@ CanvasObject.prototype = {
       self.thumbnailImage = event.tiledImage;
       self.dispatcher.emit('detail-thumbnail-opened', { 'detail': self.id });
     }
-    this.placeholder.openTileSource(viewer, this.bounds, onTileDrawn);
+    this.thumbnail.openTileSource(viewer, this.bounds, onTileDrawn);
   },
 
   //Assumes that the point parameter is already in viewport coordinates.
@@ -89,7 +91,7 @@ CanvasObject.prototype = {
       });
     }
     if(this.thumbnailImage) {
-      this.placeholder.setPosition(self.bounds, true);
+      this.thumbnail.setPosition(self.bounds, true);
     }
   },
 
@@ -104,7 +106,7 @@ CanvasObject.prototype = {
       });
     }
     if(this.thumbnailImage) {
-      this.placeholder.setSize(self.bounds.width, true);
+      this.thumbnail.setSize(self.bounds.width, true);
     }
   },
 
@@ -112,6 +114,10 @@ CanvasObject.prototype = {
   // and others can get x, y, width and height out easily.
   getBounds: function() {
     return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+  },
+
+  getAspectRatio: function() {
+    return this.bounds.width / this.bounds.height;
   },
 
   _fade: function(image, targetOpacity, callback) {
