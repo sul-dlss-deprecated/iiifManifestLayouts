@@ -77,7 +77,15 @@ CanvasObject.prototype = {
   },
 
   getVisibleImages: function() {
-    return this.images.filter(function(image) { return image.visible == true; });
+    return this.images.filter(function(image) { return image.visible === true; });
+  },
+
+  getDetailImages: function() {
+    return this.images.filter(function(image) { return image.imageType === "detail" });
+  },
+
+  getAlternateImages: function() {
+    return this.images.filter(function(image) { return image.imageType === "alternate" });
   },
 
   setPosition: function(x, y) {
