@@ -68,7 +68,7 @@ CanvasObject.prototype = {
       self.thumbnailImage = event.tiledImage;
       self.dispatcher.emit('detail-thumbnail-opened', { 'detail': self.id });
     }
-    this.thumbnail.openTileSource(viewer, this.bounds, onTileDrawn);
+    this.thumbnail.openTileSource(viewer, onTileDrawn);
   },
 
   //Assumes that the point parameter is already in viewport coordinates.
@@ -97,7 +97,7 @@ CanvasObject.prototype = {
     this.bounds.y = y;
 
     if(this.fullyOpened) {
-      this.getVisibleImages().map(function(image) {
+      this.images.forEach(function(image) {
         image.updateForParentChange(true);
       });
     }
@@ -112,7 +112,7 @@ CanvasObject.prototype = {
     this.bounds.height = height;
 
     if(this.fullyOpened) {
-      this.getVisibleImages().map(function(image) {
+      this.images.forEach(function(image) {
         image.updateForParentChange(true);
       });
     }

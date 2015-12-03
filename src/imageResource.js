@@ -34,7 +34,7 @@ ImageResource.prototype = {
     return this.opacity;
   },
 
-  openTileSource: function(viewer, parentBounds, parentHandler) {
+  openTileSource: function(viewer, parentHandler) {
     var self = this;
 
     // We've already loaded this tilesource
