@@ -2,7 +2,7 @@
 
 require('openseadragon');
 
-var ImageResource = function(config, dispatcher) {
+var ImageResource = function(config, parent, dispatcher) {
   this.needed = config.needed || false;
   this.visible = config.visible || false;
   this.clipRegion = config.clipRegion;
@@ -15,8 +15,8 @@ var ImageResource = function(config, dispatcher) {
   this.tileSource = config.tileSource;
   this.dynamic = config.dynamic || false;
   this.imageType = config.imageType || "main"; // can be 'main', 'alternate', or 'detail'
-
   this.status = 'initialized'; // can be 'requested', 'received', 'pending','shown', or 'failed'
+  this.parent = parent;
   this.dispatcher = dispatcher;
 };
 
@@ -45,13 +45,13 @@ ImageResource.prototype = {
     // otherwise, continue loading the tileSource.
     this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': this.tileSource });
     self.status = 'requested';
-    var position = this._getPositionInViewer(parentBounds);
+    var position = this._getPositionInViewer();
     viewer.addTiledImage({
       x: position.x,
       y: position.y,
-      width: parentBounds.width * this.width,
+      width: this.parent.bounds.width * this.width,
       tileSource: this.tileSource,
-      opacity: this.opacity,
+      opacity: this.parent.opacity * this.opacity,
       clip: this.clipRegion,
       index: this.zIndex,
 
@@ -62,7 +62,7 @@ ImageResource.prototype = {
         var tileDrawnHandler = function(event) {
           if (event.tiledImage === main) {
             self.tiledImage = main;
-            self.setPosition(parentBounds);
+            self.updateForParentChange();
             self.visible = true;
             self.status = 'shown';
             viewer.removeHandler('tile-drawn', tileDrawnHandler);
@@ -93,27 +93,24 @@ ImageResource.prototype = {
     return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
   },
 
-  _getPositionInViewer: function(parentBounds) {
+  _getPositionInViewer: function() {
     return new OpenSeadragon.Point(
-        parentBounds.x + (parentBounds.width * this.x),
-        parentBounds.y + (parentBounds.width * this.y));
+        this.parent.bounds.x + (this.parent.bounds.width * this.x),
+        this.parent.bounds.y + (this.parent.bounds.width * this.y));
   },
 
-  setPosition: function(parentBounds, immediately) {
-    var position = this._getPositionInViewer(parentBounds);
+  updateForParentChange: function(immediately) {
+    var position = this._getPositionInViewer();
     this.tiledImage.setPosition(position, immediately);
-  },
-
-  setSize: function(parentWidth, immediately) {
-    this.tiledImage.setWidth(parentWidth * this.width, immediately);
+    this.tiledImage.setWidth(this.parent.bounds.width * this.width, immediately);
   },
 
   //Assumes that the point parameter is already in viewport coordinates.
-  containsPoint: function(point, parentBounds) {
-    var position = this._getPositionInViewer(parentBounds);
+  containsPoint: function(point) {
+    var position = this._getPositionInViewer();
 
-    var width = parentBounds.width * this.width;
-    var height = parentBounds.height * this.height;
+    var width = this.parent.bounds.width * this.width;
+    var height = this.parent.bounds.height * this.height;
 
     var rectRight = position.x + width;
     var rectBottom = position.y + height;

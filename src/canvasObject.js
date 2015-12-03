@@ -4,6 +4,7 @@ require('openseadragon');
 var ImageResource = require('./ImageResource');
 
 var CanvasObject = function(config, dispatcher) {
+  var self = this;
   this.fullyOpened = config.fullyOpened || false;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
@@ -24,6 +25,7 @@ var CanvasObject = function(config, dispatcher) {
       {
         tileSource: image.resource.service['@id'] + '/info.json'
       },
+      self,
       dispatcher
     );
   });
@@ -32,6 +34,7 @@ var CanvasObject = function(config, dispatcher) {
   {
     tileSource: config.canvas.thumbnail || this.images[0].tileSource
   },
+  self,
   dispatcher
   );
 
@@ -56,7 +59,7 @@ CanvasObject.prototype = {
       self.fullyOpened = true;
       self.dispatcher.emit('detail-tile-source-opened', { 'detail': self.id });
     };
-    this.images[0].openTileSource(viewer, this.bounds, onTileDrawn);
+    this.images[0].openTileSource(viewer, onTileDrawn);
   },
 
   openThumbnail: function(viewer) {
@@ -95,11 +98,11 @@ CanvasObject.prototype = {
 
     if(this.fullyOpened) {
       this.getVisibleImages().map(function(image) {
-        image.setPosition(self.bounds, true);
+        image.updateForParentChange(true);
       });
     }
     if(this.thumbnailImage) {
-      this.thumbnail.setPosition(self.bounds, true);
+      this.thumbnail.updateForParentChange(true);
     }
   },
 
@@ -110,11 +113,11 @@ CanvasObject.prototype = {
 
     if(this.fullyOpened) {
       this.getVisibleImages().map(function(image) {
-        image.setSize(self.bounds.width, true);
+        image.updateForParentChange(true);
       });
     }
     if(this.thumbnailImage) {
-      this.thumbnail.setSize(self.bounds.width, true);
+      this.thumbnail.updateForParentChange(true);
     }
   },
 
