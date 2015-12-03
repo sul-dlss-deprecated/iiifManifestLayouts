@@ -98,18 +98,10 @@ CanvasObject.prototype = {
     return this.images.filter(function(image) { return image.imageType === "alternate" });
   },
 
-  setPosition: function(x, y) {
+  setBounds: function(x, y, width, height) {
     var self = this;
     this.bounds.x = x;
     this.bounds.y = y;
-
-    this.images.forEach(function(image) {
-      image.updateForParentChange(true);
-    });
-  },
-
-  setSize: function(width, height) {
-    var self = this;
     this.bounds.width = width;
     this.bounds.height = height;
 

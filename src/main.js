@@ -329,8 +329,7 @@ var manifestor = function(options) {
     var yi = d3.interpolate(currentBounds.y, d.canvas.y);
 
     return function(t) {
-      canvas.setPosition(xi(t), yi(t));
-      canvas.setSize(d.canvas.width, d.canvas.height);
+      canvas.setBounds(xi(t), yi(t), d.canvas.width, d.canvas.height);
     };
   }
 
@@ -343,9 +342,7 @@ var manifestor = function(options) {
     var canvasData = d.canvas,
         canvasImageState = _canvasObjects[canvasData.id];
 
-    canvasImageState.setPosition(canvasData.x, canvasData.y);
-    canvasImageState.setSize(canvasData.width, canvasData.height);
-
+    canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
     canvasImageState.openThumbnail(viewer);
   }
 
