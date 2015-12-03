@@ -383,7 +383,7 @@ var manifestor = function(options) {
       if(event.quick && hitCanvases[0]) {
         var bounds = hitCanvases[0].getBounds();
         viewer.viewport.fitBounds(bounds);
-        hitCanvases[0].openTileSource(viewer);
+        hitCanvases[0].openMainTileSource(viewer);
       }
     });
   };
@@ -575,7 +575,7 @@ var manifestor = function(options) {
 
   function _loadTileSourceForIndex(index) {
     var canvasId = canvases[index]['@id'];
-    _canvasObjects[canvasId].openTileSource(viewer);
+    _canvasObjects[canvasId].openMainTileSource(viewer);
   }
 
   function _selectCanvasForIndex(index) {

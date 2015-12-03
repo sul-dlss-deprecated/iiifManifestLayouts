@@ -5,7 +5,6 @@ var ImageResource = require('./ImageResource');
 
 var CanvasObject = function(config, dispatcher) {
   var self = this;
-  this.fullyOpened = config.fullyOpened || false;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
   this.index = config.index;
@@ -39,31 +38,35 @@ var CanvasObject = function(config, dispatcher) {
 };
 
 CanvasObject.prototype = {
-  openTileSource: function(viewer) {
-    var self = this;
-    var onTileDrawn = function(event) {
-      var main = event.tiledImage;
-      main.setOpacity(0, true);
-      self._fade(main, 1);
+  openTileSource: function(viewer, imageIndex) {
+    this.dispatcher.emit('detail-tile-source-opened', { 'detail': this.id });
+    var thumbnail = this.thumbnail;
+    var image = this.images[imageIndex];
 
-      if(self.thumbnailImage){
-        viewer.world.removeItem(self.thumbnailImage);
-        self.thumbnailImage = null;
+    var onTileDrawn = function(event) {
+      if(event.detail === image.tileSource) {
+        image.hide(true);
+        image.fade(1);
+
+        if(thumbnail){
+          thumbnail.destroy(viewer);
+        }
       }
-      self.fullyOpened = true;
-      self.dispatcher.emit('detail-tile-source-opened', { 'detail': self.id });
     };
-    this.images[0].openTileSource(viewer, onTileDrawn);
+
+    this.dispatcher.once('image-resource-tile-source-opened', onTileDrawn);
+    image.openTileSource(viewer);
+  },
+
+  openMainTileSource: function(viewer) {
+    this.openTileSource(viewer, 0);
   },
 
   openThumbnail: function(viewer) {
+    this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
     var self = this;
-    var onTileDrawn = function(event) {
-      self.thumbnailImage = event.tiledImage;
-      self.dispatcher.emit('detail-thumbnail-opened', { 'detail': self.id });
-    };
 
-    var thumbnail = new ImageResource(
+    this.thumbnail = new ImageResource(
       {
         tileSource: {
           type: 'image',
@@ -74,8 +77,8 @@ CanvasObject.prototype = {
       this.dispatcher
     );
 
-    thumbnail.openTileSource(viewer, onTileDrawn);
-    this.images.push(thumbnail);
+    this.thumbnail.openTileSource(viewer);
+    this.images.push(this.thumbnail);
   },
 
   //Assumes that the point parameter is already in viewport coordinates.
@@ -120,27 +123,6 @@ CanvasObject.prototype = {
     return this.bounds.width / this.bounds.height;
   },
 
-  _fade: function(image, targetOpacity, callback) {
-    var currentOpacity = image.getOpacity();
-    var step = (targetOpacity - currentOpacity) / 30;
-    if (step === 0) {
-      callback();
-      return;
-    }
-
-    var frame = function() {
-      currentOpacity += step;
-      if ((step > 0 && currentOpacity >= targetOpacity) || (step < 0 && currentOpacity <= targetOpacity)) {
-        image.setOpacity(targetOpacity);
-        if (callback) callback();
-        return;
-      }
-
-      image.setOpacity(currentOpacity);
-      OpenSeadragon.requestAnimationFrame(frame);
-    };
-    OpenSeadragon.requestAnimationFrame(frame);
-  }
 };
 
 module.exports = CanvasObject;

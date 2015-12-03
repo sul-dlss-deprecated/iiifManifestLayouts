@@ -21,15 +21,26 @@ var ImageResource = function(config, parent, dispatcher) {
 };
 
 ImageResource.prototype = {
-  hide: function() {
+  hide: function(immediately) {
+    this.previousOpacity = this.opacity;
+    this.setOpacity(0, true);
+    this.visible = false;
+  },
 
+  show: function(immediately) {
+    this.visible = true;
+    if(this.previousOpacity) {
+      this.setOpacity(this.previousOpacity, true);
+    } else {
+      this.setOpacity(1, true);
+    }
   },
 
   // todo: take parent opacity into account here and in the constructor
-  setOpacity: function(opacity) {
+  setOpacity: function(opacity, immediately) {
     this.opacity = opacity;
     if(this.tiledImage) {
-      this.tiledImage.setOpacity(this.opacity);
+      this.tiledImage.setOpacity(this.opacity, immediately);
     }
   },
 
@@ -37,7 +48,7 @@ ImageResource.prototype = {
     return this.opacity;
   },
 
-  openTileSource: function(viewer, parentHandler) {
+  openTileSource: function(viewer) {
     var self = this;
 
     // We've already loaded this tilesource
@@ -70,7 +81,6 @@ ImageResource.prototype = {
             self.status = 'shown';
             viewer.removeHandler('tile-drawn', tileDrawnHandler);
             self.dispatcher.emit('image-resource-tile-source-opened', { 'detail': self.tileSource });
-            parentHandler(event);
           }
         };
         viewer.addHandler('tile-drawn', tileDrawnHandler);
@@ -128,6 +138,36 @@ ImageResource.prototype = {
 
   getStatus: function() {
     return this.status;
+  },
+
+  destroy: function(viewer) {
+    if(this.tiledImage) {
+      viewer.world.removeItem(this.tiledImage);
+      this.tiledImage = null;
+    }
+  },
+
+   fade: function(targetOpacity, callback) {
+    var self = this;
+    var currentOpacity = this.opacity;
+    var step = (targetOpacity - currentOpacity) / 30;
+    if (step === 0) {
+      callback();
+      return;
+    }
+
+    var frame = function() {
+      currentOpacity += step;
+      if ((step > 0 && currentOpacity >= targetOpacity) || (step < 0 && currentOpacity <= targetOpacity)) {
+        self.setOpacity(targetOpacity);
+        if (callback) callback();
+        return;
+      }
+
+      self.setOpacity(currentOpacity);
+      OpenSeadragon.requestAnimationFrame(frame);
+    };
+    OpenSeadragon.requestAnimationFrame(frame);
   }
 
   // todo: layering/z-index functions. Should this object know about
