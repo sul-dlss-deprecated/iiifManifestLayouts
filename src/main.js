@@ -5,6 +5,8 @@ var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
 var CanvasObject = require('./canvasObject');
 var iiif = require('./iiifUtils');
+var events = require('events');
+require('openseadragon');
 
 var manifestor = function(options) {
   var manifest = options.manifest,
@@ -26,7 +28,9 @@ var manifestor = function(options) {
       _zooming = false,
       _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()},
       _inZoomConstraints,
-      _lastScrollPosition = 0;
+      _lastScrollPosition = 0,
+      _dispatcher = new events.EventEmitter(),
+      _destroyed = false;
 
   function getViewingDirection() {
     if (sequence && sequence.viewingDirection) {
@@ -40,6 +44,10 @@ var manifestor = function(options) {
       return sequence.viewingHint;
     }
     return manifest.viewingHint ? manifest.viewingHint : 'individuals';
+  };
+
+  function on(event, handler) {
+    _dispatcher.on(event, handler);
   };
 
   buildCanvasStates(canvases);
@@ -85,6 +93,10 @@ var manifestor = function(options) {
   }, true); // "initial" is true here; don't fire the state callback.
 
   d3.timer(function() {
+    if (_destroyed) {
+      return true;
+    }
+
     viewer.forceRedraw();
   });
 
@@ -533,7 +545,8 @@ var manifestor = function(options) {
      canvasObjects[canvas['@id']] = new CanvasObject({
        canvas: canvas,
        index: index
-     });
+     },
+     _dispatcher);
     });
 
     setCanvasObjects(canvasObjects);
@@ -610,7 +623,7 @@ var manifestor = function(options) {
       newIndex += incrementValue;
       newCanvas = getCanvasByIndex(newIndex);
     }
-    
+
     _loadTileSourceForIndex(newIndex);
 
     // Load tilesource for the non-selected side of the pair, if it exists
@@ -652,6 +665,15 @@ var manifestor = function(options) {
     _navigate(false);
   }
 
+  function destroy() {
+    // TODO: is there more cleanup needed?
+    if (viewer) {
+      viewer.destroy();
+    }
+
+    _destroyed = true; // cancels the timer
+  }
+
   container.on('click', '.' + canvasClass, function(event) {
     selectCanvas($(this).data('id'));
   });
@@ -665,6 +687,7 @@ var manifestor = function(options) {
   });
 
   return {
+    destroy: destroy,
     // scrollThumbs: scrollThumbs,
     next: next,
     previous: previous,
@@ -676,7 +699,8 @@ var manifestor = function(options) {
     refreshState: refreshState,
     getState: viewerState,
     setState: viewerState,
-    osd: viewer
+    osd: viewer,
+    on: on
   };
 };
 
