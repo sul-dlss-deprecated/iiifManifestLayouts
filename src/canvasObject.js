@@ -18,6 +18,8 @@ var CanvasObject = function(config, dispatcher) {
     height : config.canvas.height,
     width : config.canvas.width
   };
+  this.thumbUrl = config.canvas.thumbnail;
+  this.thumbService = config.canvas.images[0].resource.service['@id'];
 
   // details and alternates possibly go here; disambiguate between them.
   this.images = config.canvas.images.map(function(image) {
@@ -29,14 +31,6 @@ var CanvasObject = function(config, dispatcher) {
       dispatcher
     );
   });
-
-  this.thumbnail = new ImageResource(
-  {
-    tileSource: config.canvas.thumbnail || this.images[0].tileSource
-  },
-  self,
-  dispatcher
-  );
 
   this.label = config.canvas.label;
   this.viewingHint = config.canvas.viewingHint;
@@ -67,8 +61,21 @@ CanvasObject.prototype = {
     var onTileDrawn = function(event) {
       self.thumbnailImage = event.tiledImage;
       self.dispatcher.emit('detail-thumbnail-opened', { 'detail': self.id });
-    }
-    this.thumbnail.openTileSource(viewer, onTileDrawn);
+    };
+
+    var thumbnail = new ImageResource(
+      {
+        tileSource: {
+          type: 'image',
+          url: this.thumbUrl || this.thumbService + '/full/' + Math.ceil(this.bounds.width * 2) + ',/0/default.jpg'
+        }
+      },
+      self,
+      this.dispatcher
+    );
+
+    thumbnail.openTileSource(viewer, onTileDrawn);
+    this.images.push(thumbnail);
   },
 
   //Assumes that the point parameter is already in viewport coordinates.
@@ -96,14 +103,9 @@ CanvasObject.prototype = {
     this.bounds.x = x;
     this.bounds.y = y;
 
-    if(this.fullyOpened) {
-      this.images.forEach(function(image) {
-        image.updateForParentChange(true);
-      });
-    }
-    if(this.thumbnailImage) {
-      this.thumbnail.updateForParentChange(true);
-    }
+    this.images.forEach(function(image) {
+      image.updateForParentChange(true);
+    });
   },
 
   setSize: function(width, height) {
@@ -111,14 +113,9 @@ CanvasObject.prototype = {
     this.bounds.width = width;
     this.bounds.height = height;
 
-    if(this.fullyOpened) {
-      this.images.forEach(function(image) {
-        image.updateForParentChange(true);
-      });
-    }
-    if(this.thumbnailImage) {
-      this.thumbnail.updateForParentChange(true);
-    }
+    this.images.forEach(function(image) {
+      image.updateForParentChange(true);
+    });
   },
 
   // Returns an OpenSeadragon Rect object - some OpenSeadragon consumers of this function want one,
