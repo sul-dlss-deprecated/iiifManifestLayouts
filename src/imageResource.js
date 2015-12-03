@@ -48,11 +48,11 @@ ImageResource.prototype = {
     // otherwise, continue loading the tileSource.
     this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': this.tileSource });
     self.status = 'requested';
-    var position = this._getPositionInViewer();
+    var bounds = this._getBoundsInViewer();
     viewer.addTiledImage({
-      x: position.x,
-      y: position.y,
-      width: this.parent.bounds.width * this.width,
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
       tileSource: this.tileSource,
       opacity: this.parent.opacity * this.opacity,
       clip: this.clipRegion,
@@ -96,10 +96,13 @@ ImageResource.prototype = {
     return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
   },
 
-  _getPositionInViewer: function() {
-    return new OpenSeadragon.Point(
+  _getBoundsInViewer: function() {
+    return new OpenSeadragon.Rect(
         this.parent.bounds.x + (this.parent.bounds.width * this.x),
-        this.parent.bounds.y + (this.parent.bounds.width * this.y));
+        this.parent.bounds.y + (this.parent.bounds.width * this.y),
+        this.parent.bounds.width * this.width,
+        this.parent.bounds.height * this.height
+    );
   },
 
   updateForParentChange: function(immediately) {
@@ -111,16 +114,16 @@ ImageResource.prototype = {
   },
 
   //Assumes that the point parameter is already in viewport coordinates.
-  containsPoint: function(point) {
-    var position = this._getPositionInViewer();
+  containsViewerPoint: function(point) {
+    var bounds = this._getBoundsInViewer();
 
     var width = this.parent.bounds.width * this.width;
     var height = this.parent.bounds.height * this.height;
 
-    var rectRight = position.x + width;
-    var rectBottom = position.y + height;
+    var rectRight = bounds.x + bounds.width;
+    var rectBottom = bounds.y + bounds.height;
 
-    return (position.x <= point.x && rectRight >= point.x && position.y <= point.y && rectBottom >= point.y);
+    return (bounds.x <= point.x && rectRight >= point.x && bounds.y <= point.y && rectBottom >= point.y);
   },
 
   getStatus: function() {
