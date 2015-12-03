@@ -25,9 +25,12 @@ ImageResource.prototype = {
 
   },
 
+  // todo: take parent opacity into account here and in the constructor
   setOpacity: function(opacity) {
     this.opacity = opacity;
-    this.tiledImage.setOpacity(opacity);
+    if(this.tiledImage) {
+      this.tiledImage.setOpacity(this.opacity);
+    }
   },
 
   getOpacity: function() {
@@ -100,9 +103,11 @@ ImageResource.prototype = {
   },
 
   updateForParentChange: function(immediately) {
-    var position = this._getPositionInViewer();
-    this.tiledImage.setPosition(position, immediately);
-    this.tiledImage.setWidth(this.parent.bounds.width * this.width, immediately);
+    if(this.tiledImage) {
+      var bounds = this._getBoundsInViewer();
+      this.tiledImage.setPosition(bounds.getTopLeft(), immediately);
+      this.tiledImage.setWidth(bounds.width, immediately);
+    }
   },
 
   //Assumes that the point parameter is already in viewport coordinates.
