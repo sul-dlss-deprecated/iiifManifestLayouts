@@ -29,7 +29,8 @@ var manifestor = function(options) {
       _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()},
       _inZoomConstraints,
       _lastScrollPosition = 0,
-      _dispatcher = new events.EventEmitter();
+      _dispatcher = new events.EventEmitter(),
+      _destroyed = false;
 
   function getViewingDirection() {
     if (sequence && sequence.viewingDirection) {
@@ -92,6 +93,10 @@ var manifestor = function(options) {
   }, true); // "initial" is true here; don't fire the state callback.
 
   d3.timer(function() {
+    if (_destroyed) {
+      return true;
+    }
+
     viewer.forceRedraw();
   });
 
@@ -660,6 +665,15 @@ var manifestor = function(options) {
     _navigate(false);
   }
 
+  function destroy() {
+    // TODO: is there more cleanup needed?
+    if (viewer) {
+      viewer.destroy();
+    }
+
+    _destroyed = true; // cancels the timer
+  }
+
   container.on('click', '.' + canvasClass, function(event) {
     selectCanvas($(this).data('id'));
   });
@@ -673,6 +687,7 @@ var manifestor = function(options) {
   });
 
   return {
+    destroy: destroy,
     // scrollThumbs: scrollThumbs,
     next: next,
     previous: previous,
