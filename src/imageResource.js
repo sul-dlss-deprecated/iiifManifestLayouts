@@ -21,13 +21,13 @@ var ImageResource = function(config) {
 };
 
 ImageResource.prototype = {
-  hide: function(immediately) {
+  hide: function() {
     this.previousOpacity = this.opacity;
     this.setOpacity(0, true);
     this.visible = false;
   },
 
-  show: function(immediately) {
+  show: function() {
     this.visible = true;
     if(this.previousOpacity) {
       this.setOpacity(this.previousOpacity, true);
@@ -37,10 +37,10 @@ ImageResource.prototype = {
   },
 
   // todo: take parent opacity into account here and in the constructor
-  setOpacity: function(opacity, immediately) {
+  setOpacity: function(opacity) {
     this.opacity = opacity;
     if(this.tiledImage) {
-      this.tiledImage.setOpacity(this.opacity, immediately);
+      this.tiledImage.setOpacity(this.opacity);
     }
   },
 
