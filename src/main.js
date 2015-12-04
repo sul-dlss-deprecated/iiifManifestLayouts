@@ -50,8 +50,6 @@ var manifestor = function(options) {
     _dispatcher.on(event, handler);
   };
 
-  buildCanvasStates(canvases);
-
   var overlays = $('<div class="overlaysContainer">').css(
     {'width': '100%',
      'height': '100%',
@@ -81,6 +79,7 @@ var manifestor = function(options) {
   container.append(scrollContainer);
   scrollContainer.append(overlays);
   initOSD();
+  buildCanvasStates(canvases, viewer);
 
   // set the initial state, which triggers the first rendering.
   viewerState({
@@ -348,7 +347,7 @@ var manifestor = function(options) {
         canvasImageState = _canvasObjects[canvasData.id];
 
     canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
-    canvasImageState.openThumbnail(viewer);
+    canvasImageState.openThumbnail();
   }
 
   function removeImages(d) {
@@ -388,7 +387,7 @@ var manifestor = function(options) {
       if(event.quick && hitCanvases[0]) {
         var bounds = hitCanvases[0].getBounds();
         viewer.viewport.fitBounds(bounds);
-        hitCanvases[0].openMainTileSource(viewer);
+        hitCanvases[0].openMainTileSource();
       }
     });
   };
@@ -527,15 +526,16 @@ var manifestor = function(options) {
     };
   }
 
-  function buildCanvasStates(canvases) {
+  function buildCanvasStates(canvases, viewer) {
     var canvasObjects = {};
 
     canvases.forEach(function(canvas, index) {
      canvasObjects[canvas['@id']] = new CanvasObject({
        canvas: canvas,
-       index: index
-     },
-     _dispatcher);
+       index: index,
+       dispatcher: _dispatcher,
+       viewer: viewer
+     });
     });
 
     setCanvasObjects(canvasObjects);
@@ -580,7 +580,7 @@ var manifestor = function(options) {
 
   function _loadTileSourceForIndex(index) {
     var canvasId = canvases[index]['@id'];
-    _canvasObjects[canvasId].openMainTileSource(viewer);
+    _canvasObjects[canvasId].openMainTileSource();
   }
 
   function _selectCanvasForIndex(index) {

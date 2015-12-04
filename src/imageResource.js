@@ -2,7 +2,7 @@
 
 require('openseadragon');
 
-var ImageResource = function(config, parent, dispatcher) {
+var ImageResource = function(config) {
   this.needed = config.needed || false;
   this.visible = config.visible || false;
   this.clipRegion = config.clipRegion;
@@ -16,8 +16,8 @@ var ImageResource = function(config, parent, dispatcher) {
   this.dynamic = config.dynamic || false;
   this.imageType = config.imageType || "main"; // can be 'main', 'alternate', or 'detail'
   this.status = 'initialized'; // can be 'requested', 'received', 'pending','shown', or 'failed'
-  this.parent = parent;
-  this.dispatcher = dispatcher;
+  this.parent = config.parent;
+  this.dispatcher = config.dispatcher;
 };
 
 ImageResource.prototype = {
@@ -48,7 +48,7 @@ ImageResource.prototype = {
     return this.opacity;
   },
 
-  openTileSource: function(viewer) {
+  openTileSource: function() {
     var self = this;
 
     // We've already loaded this tilesource
@@ -58,9 +58,9 @@ ImageResource.prototype = {
 
     // otherwise, continue loading the tileSource.
     this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': this.tileSource });
-    self.status = 'requested';
+    this.status = 'requested';
     var bounds = this._getBoundsInViewer();
-    viewer.addTiledImage({
+    this.parent.viewer.addTiledImage({
       x: bounds.x,
       y: bounds.y,
       width: bounds.width,
@@ -79,11 +79,11 @@ ImageResource.prototype = {
             self.updateForParentChange();
             self.visible = true;
             self.status = 'shown';
-            viewer.removeHandler('tile-drawn', tileDrawnHandler);
+            self.parent.viewer.removeHandler('tile-drawn', tileDrawnHandler);
             self.dispatcher.emit('image-resource-tile-source-opened', { 'detail': self.tileSource });
           }
         };
-        viewer.addHandler('tile-drawn', tileDrawnHandler);
+        self.parent.viewer.addHandler('tile-drawn', tileDrawnHandler);
       },
 
       error: function(event) {
@@ -140,9 +140,9 @@ ImageResource.prototype = {
     return this.status;
   },
 
-  destroy: function(viewer) {
+  destroy: function() {
     if(this.tiledImage) {
-      viewer.world.removeItem(this.tiledImage);
+      this.parent.viewer.world.removeItem(this.tiledImage);
       this.tiledImage = null;
     }
   },

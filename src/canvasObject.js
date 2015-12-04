@@ -3,7 +3,7 @@
 require('openseadragon');
 var ImageResource = require('./ImageResource');
 
-var CanvasObject = function(config, dispatcher) {
+var CanvasObject = function(config) {
   var self = this;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
@@ -18,27 +18,25 @@ var CanvasObject = function(config, dispatcher) {
     width : config.canvas.width
   };
   this.thumbUrl = config.canvas.thumbnail;
+  this.label = config.canvas.label;
+  this.viewingHint = config.canvas.viewingHint;
+
+  this.dispatcher = config.dispatcher;
+  this.viewer = config.viewer;
   this.thumbService = config.canvas.images[0].resource.service['@id'];
 
   // details and alternates possibly go here; disambiguate between them.
   this.images = config.canvas.images.map(function(image) {
-    return new ImageResource(
-      {
-        tileSource: image.resource.service['@id'] + '/info.json'
-      },
-      self,
-      dispatcher
-    );
+    return new ImageResource({
+      tileSource: image.resource.service['@id'] + '/info.json',
+      parent: self,
+      dispatcher: self.dispatcher
+    });
   });
-
-  this.label = config.canvas.label;
-  this.viewingHint = config.canvas.viewingHint;
-
-  this.dispatcher = dispatcher;
 };
 
 CanvasObject.prototype = {
-  openTileSource: function(viewer, imageIndex) {
+  openTileSource: function(imageIndex) {
     this.dispatcher.emit('detail-tile-source-opened', { 'detail': this.id });
     var self = this;
     var image = this.images[imageIndex];
@@ -49,7 +47,7 @@ CanvasObject.prototype = {
         image.fade(1);
 
         if(self.thumbnail){
-          self.thumbnail.destroy(viewer);
+          self.thumbnail.destroy();
           self.images = self.images.splice(self.images.indexOf(self.thumbnail), 1);
           delete self.thumbnail;
         }
@@ -57,28 +55,26 @@ CanvasObject.prototype = {
     };
 
     this.dispatcher.once('image-resource-tile-source-opened', onTileDrawn);
-    image.openTileSource(viewer);
+    image.openTileSource();
   },
 
-  openMainTileSource: function(viewer) {
-    this.openTileSource(viewer, 0);
+  openMainTileSource: function() {
+    this.openTileSource(0);
   },
 
-  openThumbnail: function(viewer) {
+  openThumbnail: function() {
     this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
 
-    this.thumbnail = new ImageResource(
-      {
-        tileSource: {
-          type: 'image',
-          url: this.thumbUrl || this.thumbService + '/full/' + Math.ceil(this.bounds.width * 2) + ',/0/default.jpg'
-        }
+    this.thumbnail = new ImageResource({
+      tileSource: {
+        type: 'image',
+        url: this.thumbUrl || this.thumbService + '/full/' + Math.ceil(this.bounds.width * 2) + ',/0/default.jpg'
       },
-      this,
-      this.dispatcher
-    );
+      parent: this,
+      dispatcher: this.dispatcher
+    });
 
-    this.thumbnail.openTileSource(viewer);
+    this.thumbnail.openTileSource();
     this.images.push(this.thumbnail);
   },
 
