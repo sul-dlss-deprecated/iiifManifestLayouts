@@ -40,7 +40,7 @@ var CanvasObject = function(config, dispatcher) {
 CanvasObject.prototype = {
   openTileSource: function(viewer, imageIndex) {
     this.dispatcher.emit('detail-tile-source-opened', { 'detail': this.id });
-    var thumbnail = this.thumbnail;
+    var self = this;
     var image = this.images[imageIndex];
 
     var onTileDrawn = function(event) {
@@ -48,8 +48,10 @@ CanvasObject.prototype = {
         image.hide(true);
         image.fade(1);
 
-        if(thumbnail){
-          thumbnail.destroy(viewer);
+        if(self.thumbnail){
+          self.thumbnail.destroy(viewer);
+          self.images = self.images.splice(self.images.indexOf(self.thumbnail), 1);
+          delete self.thumbnail;
         }
       }
     };
@@ -64,7 +66,6 @@ CanvasObject.prototype = {
 
   openThumbnail: function(viewer) {
     this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
-    var self = this;
 
     this.thumbnail = new ImageResource(
       {
@@ -73,7 +74,7 @@ CanvasObject.prototype = {
           url: this.thumbUrl || this.thumbService + '/full/' + Math.ceil(this.bounds.width * 2) + ',/0/default.jpg'
         }
       },
-      self,
+      this,
       this.dispatcher
     );
 
