@@ -43,6 +43,7 @@ CanvasObject.prototype = {
 
     var onTileDrawn = function(event) {
       if(event.detail === image.tileSource) {
+        self.dispatcher.removeListener('image-resource-tile-source-opened', onTileDrawn);
         image.hide(true);
         image.fade(1);
 
@@ -54,7 +55,7 @@ CanvasObject.prototype = {
       }
     };
 
-    this.dispatcher.once('image-resource-tile-source-opened', onTileDrawn);
+    this.dispatcher.on('image-resource-tile-source-opened', onTileDrawn);
     image.openTileSource();
   },
 
