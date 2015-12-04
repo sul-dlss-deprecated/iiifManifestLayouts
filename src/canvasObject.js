@@ -23,12 +23,22 @@ var CanvasObject = function(config) {
 
   this.dispatcher = config.dispatcher;
   this.viewer = config.viewer;
-  this.thumbService = config.canvas.images[0].resource.service['@id'];
+
+  // todo: Move this logic into an ImageResourceFactory.
+  var _getImageService = function(image) {
+    if(image.resource.service) {
+      return image.resource.service['@id'];
+    } else {
+      return image.resource['@id'];
+    }
+  };
+
+  this.thumbService = _getImageService(config.canvas.images[0]);
 
   // details and alternates possibly go here; disambiguate between them.
   this.images = config.canvas.images.map(function(image) {
     return new ImageResource({
-      tileSource: image.resource.service['@id'] + '/info.json',
+      tileSource: _getImageService(image) + '/info.json',
       parent: self,
       dispatcher: self.dispatcher
     });
