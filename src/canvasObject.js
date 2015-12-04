@@ -34,25 +34,27 @@ var CanvasObject = function(config) {
 
   this.dispatcher = config.dispatcher;
   this.viewer = config.viewer;
-
+  this.images = [];
   // details and alternates possibly go here; disambiguate between them.
-  this.images = config.canvas.images.map(function(image) {
+  if(config.canvas.images) {
+    this.images = config.canvas.images.map(function(image) {
 
-    // todo: Move this logic into an ImageResourceFactory.
-    var _getImageTilesource = function(image) {
-      if(image.resource.service) {
-        return image.resource.service['@id'] + '/info.json';
-      } else {
-        return image.resource['@id'];
-      }
-    };
+      // todo: Move this logic into an ImageResourceFactory.
+      var _getImageTilesource = function(image) {
+        if(image.resource.service) {
+          return image.resource.service['@id'] + '/info.json';
+        } else {
+          return image.resource['@id'];
+        }
+      };
 
-    return new ImageResource({
-      tileSource: _getImageTilesource(image),
-      parent: self,
-      dispatcher: self.dispatcher
+      return new ImageResource({
+        tileSource: _getImageTilesource(image),
+        parent: self,
+        dispatcher: self.dispatcher
+      });
     });
-  });
+  }
 };
 
 CanvasObject.prototype = {
@@ -84,6 +86,10 @@ CanvasObject.prototype = {
   },
 
   openThumbnail: function() {
+    if(!this.thumbUrl && this.images.length === 0) {
+      // It may be the case that we have no images and no thumbnail in our canvas.
+      return;
+    }
     this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
 
     this.thumbnail = new ImageResource({
