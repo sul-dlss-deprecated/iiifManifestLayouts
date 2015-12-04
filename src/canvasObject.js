@@ -18,27 +18,37 @@ var CanvasObject = function(config) {
     width : config.canvas.width
   };
   this.thumbUrl = config.canvas.thumbnail;
+
+  // todo: Move this logic into an ImageResourceFactory.
+  this._getThumbService = function(width) {
+    var image = config.canvas.images[0];
+    if(image.resource.service) {
+      return image.resource.service['@id'] + '/full/' + Math.ceil(width * 2) + ',/0/default.jpg';
+    } else {
+      return image.resource['@id'];
+    }
+  };
+
   this.label = config.canvas.label;
   this.viewingHint = config.canvas.viewingHint;
 
   this.dispatcher = config.dispatcher;
   this.viewer = config.viewer;
 
-  // todo: Move this logic into an ImageResourceFactory.
-  var _getImageService = function(image) {
-    if(image.resource.service) {
-      return image.resource.service['@id'];
-    } else {
-      return image.resource['@id'];
-    }
-  };
-
-  this.thumbService = _getImageService(config.canvas.images[0]);
-
   // details and alternates possibly go here; disambiguate between them.
   this.images = config.canvas.images.map(function(image) {
+
+    // todo: Move this logic into an ImageResourceFactory.
+    var _getImageTilesource = function(image) {
+      if(image.resource.service) {
+        return image.resource.service['@id'] + '/info.json';
+      } else {
+        return image.resource['@id'];
+      }
+    };
+
     return new ImageResource({
-      tileSource: _getImageService(image) + '/info.json',
+      tileSource: _getImageTilesource(image),
       parent: self,
       dispatcher: self.dispatcher
     });
@@ -79,7 +89,7 @@ CanvasObject.prototype = {
     this.thumbnail = new ImageResource({
       tileSource: {
         type: 'image',
-        url: this.thumbUrl || this.thumbService + '/full/' + Math.ceil(this.bounds.width * 2) + ',/0/default.jpg'
+        url: this.thumbUrl || this._getThumbService(this.bounds.width)
       },
       parent: this,
       dispatcher: this.dispatcher

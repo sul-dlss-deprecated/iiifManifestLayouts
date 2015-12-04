@@ -79,22 +79,12 @@ var manifestLayout = function(options) {
 
   function pruneCanvas(canvas, index) {
 
-    // todo: Move this logic into an ImageResourceFactory.
-    var _getImageService = function(image) {
-      if(image.resource.service) {
-        return image.resource.service['@id'];
-      } else {
-        return image.resource['@id'];
-      }
-    }
-
     var prunedCanvas = {
       id: canvas['@id'],
       label: canvas.label,
       height: canvas.height,
       width: canvas.width,
       aspectRatio: canvas.width/canvas.height,
-      thumbService: _getImageService(canvas.images[0]),
       selected: canvas['@id'] === selectedCanvas ? true : false,
       sequencePosition: index
     };
