@@ -2,6 +2,8 @@
 
 require('openseadragon');
 var ImageResource = require('./ImageResource');
+var ImageResourceFactory = require('./ImageResourceFactory');
+var ThumbnailFactory = require('./ThumbnailFactory');
 
 var CanvasObject = function(config) {
   var self = this;
@@ -17,7 +19,6 @@ var CanvasObject = function(config) {
     height : config.canvas.height,
     width : config.canvas.width
   };
-  this.thumbUrl = config.canvas.thumbnail;
 
   // todo: Move this logic into an ImageResourceFactory.
   this._getThumbService = function(width) {
@@ -35,26 +36,15 @@ var CanvasObject = function(config) {
   this.dispatcher = config.dispatcher;
   this.viewer = config.viewer;
   this.images = [];
+
   // details and alternates possibly go here; disambiguate between them.
   if(config.canvas.images) {
     this.images = config.canvas.images.map(function(image) {
-
-      // todo: Move this logic into an ImageResourceFactory.
-      var _getImageTilesource = function(image) {
-        if(image.resource.service) {
-          return image.resource.service['@id'] + '/info.json';
-        } else {
-          return image.resource['@id'];
-        }
-      };
-
-      return new ImageResource({
-        tileSource: _getImageTilesource(image),
-        parent: self,
-        dispatcher: self.dispatcher
-      });
+      return ImageResourceFactory(image, self);
     });
   }
+
+  this.thumbnail = ThumbnailFactory(config.canvas, self);
 };
 
 CanvasObject.prototype = {
@@ -85,23 +75,11 @@ CanvasObject.prototype = {
   },
 
   openThumbnail: function() {
-    if(!this.thumbUrl && this.images.length === 0) {
-      // It may be the case that we have no images and no thumbnail in our canvas.
-      return;
+    if(this.thumbnail) {
+      this.thumbnail.openTileSource();
+      this.images.push(this.thumbnail);
+      this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
     }
-    this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
-
-    this.thumbnail = new ImageResource({
-      tileSource: {
-        type: 'image',
-        url: this.thumbUrl || this._getThumbService(this.bounds.width)
-      },
-      parent: this,
-      dispatcher: this.dispatcher
-    });
-
-    this.thumbnail.openTileSource();
-    this.images.push(this.thumbnail);
   },
 
   //Assumes that the point parameter is already in viewport coordinates.

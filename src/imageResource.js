@@ -14,10 +14,10 @@ var ImageResource = function(config) {
   this.zIndex = config.zIndex || 0;
   this.tileSource = config.tileSource;
   this.dynamic = config.dynamic || false;
-  this.imageType = config.imageType || "main"; // can be 'main', 'alternate', or 'detail'
+  this.imageType = config.imageType || "main"; // can be 'main', 'alternate', 'detail' or 'thumbnail'
   this.status = 'initialized'; // can be 'requested', 'received', 'pending','shown', or 'failed'
   this.parent = config.parent;
-  this.dispatcher = config.dispatcher;
+  this.dispatcher = this.parent.dispatcher;
 };
 
 ImageResource.prototype = {
@@ -94,7 +94,7 @@ ImageResource.prototype = {
           source: event.source
         };
         self.status = 'failed';
-        self.dispatcher.emit('image-resource-tile-source-failed', {'detail': errorInfo});
+        self.parent.dispatcher.emit('image-resource-tile-source-failed', {'detail': errorInfo});
       }
     });
   },
