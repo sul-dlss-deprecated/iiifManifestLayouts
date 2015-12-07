@@ -20,16 +20,6 @@ var CanvasObject = function(config) {
     width : config.canvas.width
   };
 
-  // todo: Move this logic into an ImageResourceFactory.
-  this._getThumbService = function(width) {
-    var image = config.canvas.images[0];
-    if(image.resource.service) {
-      return image.resource.service['@id'] + '/full/' + Math.ceil(width * 2) + ',/0/default.jpg';
-    } else {
-      return image.resource['@id'];
-    }
-  };
-
   this.label = config.canvas.label;
   this.viewingHint = config.canvas.viewingHint;
 
