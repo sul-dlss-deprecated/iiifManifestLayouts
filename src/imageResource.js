@@ -17,7 +17,8 @@ var ImageResource = function(config) {
   this.imageType = config.imageType || "main"; // can be 'main', 'alternate', 'detail' or 'thumbnail'
   this.status = 'initialized'; // can be 'requested', 'received', 'pending','shown', or 'failed'
   this.parent = config.parent;
-  this.dispatcher = this.parent.dispatcher;
+  this.dispatcher = config.parent.dispatcher;
+  this.viewer = config.parent.viewer;
 };
 
 ImageResource.prototype = {
@@ -61,7 +62,7 @@ ImageResource.prototype = {
     this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': self });
     this.status = 'requested';
     var bounds = this._getBoundsInViewer();
-    this.parent.viewer.addTiledImage({
+    this.viewer.addTiledImage({
       x: bounds.x,
       y: bounds.y,
       width: bounds.width,
@@ -143,7 +144,7 @@ ImageResource.prototype = {
 
   destroy: function() {
     if(this.tiledImage) {
-      this.parent.viewer.world.removeItem(this.tiledImage);
+      this.viewer.world.removeItem(this.tiledImage);
       this.tiledImage = null;
     }
   },
