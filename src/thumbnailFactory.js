@@ -20,7 +20,8 @@ var ThumbnailFactory = function(canvas, parent) {
         buildPyramid: 'false'
       },
       parent: parent,
-      imageType: 'thumbnail'
+      imageType: 'thumbnail',
+      dynammic: false
     };
     return new ImageResource(config);
   }
