@@ -1,9 +1,10 @@
 'use strict';
 
+require('openseadragon');
 var ImageResource = require('./ImageResource');
 
 var _buildImageConfig = function(image) {
-  var _getImageTilesource = function(image) {
+  var _getImageTilesource = function() {
     if(image.resource.service) {
       return image.resource.service['@id'] + '/info.json';
     } else {
@@ -11,8 +12,23 @@ var _buildImageConfig = function(image) {
     }
   };
 
+  var _getSegmentFromUrl = function(url) {
+    var urlParts = url.split('#');
+    var segment = null;
+    if(urlParts.length > 1) { // the url has a segment specified
+      var rectArray = urlParts.split('=').split(',');
+      segment = new OpenSeadragon.Rect(rectArray[0], rectArray[1], rectArray[2], rectArray[3]);
+    }
+    return segment;
+  };
+
+  var id =  _getImageTilesource(image);
+
   return {
-    tileSource: _getImageTilesource(image)
+    tileSource: id,
+    clipRegion: _getSegmentFromUrl(id),
+    bounds: _getSegmentFromUrl(image.on),
+    dynamic: !!(image.resource.service) // todo: it's more complicated than that
   };
 };
 
