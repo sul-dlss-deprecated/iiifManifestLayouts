@@ -43,10 +43,25 @@ var _buildSpecificResource = function(specificResource) {
 
 var ImageResourceFactory = function(image, parent) {
   var resourceType = image.resource['@type']; // can be oa:Choice, oa:SpecificResource, or dctypes:Image
-  var config = _buildImageConfig(image);
+  var config = {};
+
+  switch(resourceType) {
+    case 'dctypes:Image':
+      config = _buildImageConfig(image);
+      break;
+    case 'oa:Choice':
+      console.log('oa:Choice!', image);
+      config = _buildChoiceResource(image);
+      break;
+    case 'oa:SpecificResource':
+      console.log('specific resource!', image);
+      config = _buildSpecificResource(image);
+      break;
+    default:
+      throw new Error("Cannot create an image from type " + resourceType);
+  }
 
   config.parent = parent;
-
   return new ImageResource(config);
 };
 
