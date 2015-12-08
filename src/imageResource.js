@@ -7,10 +7,7 @@ var ImageResource = function(config) {
   this.visible = config.visible || false;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
-  this.x = config.x || 0;
-  this.y = config.y || 0;
-  this.height = config.height || 1;
-  this.width = config.width || 1;
+  this.bounds = config.bounds || new OpenSeadragon.Rect(0, 0, 1, 1);
   this.zIndex = config.zIndex || 0;
   this.tileSource = config.tileSource;
   this.dynamic = config.dynamic || false;
@@ -110,10 +107,10 @@ ImageResource.prototype = {
 
   _getBoundsInViewer: function() {
     return new OpenSeadragon.Rect(
-        this.parent.bounds.x + (this.parent.bounds.width * this.x),
-        this.parent.bounds.y + (this.parent.bounds.width * this.y),
-        this.parent.bounds.width * this.width,
-        this.parent.bounds.height * this.height
+        this.parent.bounds.x + (this.parent.bounds.width * this.bounds.x),
+        this.parent.bounds.y + (this.parent.bounds.width * this.bounds.y),
+        this.parent.bounds.width * this.bounds.width,
+        this.parent.bounds.height * this.bounds.height
     );
   },
 
