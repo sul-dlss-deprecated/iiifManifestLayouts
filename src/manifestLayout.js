@@ -429,18 +429,10 @@ var manifestLayout = function(options) {
     return frames;
   }
 
-  function detailLayoutVertical(frames, selected, viewport) {
-    return frames.map();
-  }
-
   function intermediateLayout(anchor) {
     // configure for viewingDirection, viewingMode,
     // and alignment Style (scaling).
     return intermediateLayoutHorizontal(overviewLayout(anchor));
-  }
-
-  function intermediateLayoutVertical(frames, selected, viewport) {
-    return frames.map();
   }
 
   function intermediateLayoutHorizontal(frames) {
@@ -451,7 +443,7 @@ var manifestLayout = function(options) {
     var selectedFrame = selectedFrames[0];
     var facingCanvas = getFacingCanvas(selectedFrame.canvas, frames);
     var canvasPosition = selectedFrame.canvas.sequencePosition;
-    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, facingCanvas, viewport);
+    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, facingCanvas);
 
     if (viewingMode !== 'continuous') {
       frames.forEach(function(frame, index, allFrames) {
@@ -483,14 +475,14 @@ var manifestLayout = function(options) {
     return frames;
   }
 
-  function getVantageForSelectedCanvas(frames, viewport) {
+  function getVantageForSelectedCanvas(frames) {
     var selectedFrame = frames.filter(function(frame) {
       return frame.canvas.selected;
     })[0];
 
     var facingCanvas = getFacingCanvas(selectedFrame.canvas, frames);
 
-    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, facingCanvas, viewport);
+    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, facingCanvas);
   }
 
   /**
@@ -499,7 +491,7 @@ var manifestLayout = function(options) {
    * @param {Object} previousFrame
    * @param {Object} nextFrame
    */
-  function getVantageForCanvas(selectedCanvas, facingCanvas, viewport) {
+  function getVantageForCanvas(selectedCanvas, facingCanvas) {
     var boundingBoxAspectRatio,
         vantageWidth,
         vantageHeight,
@@ -548,7 +540,7 @@ var manifestLayout = function(options) {
       };
     }
 
-    return getVantage(selectionBoundingBox, viewport);
+    return getVantage(selectionBoundingBox);
   }
 
   /**
@@ -559,7 +551,7 @@ var manifestLayout = function(options) {
    *     or a group of canvases.
    * @param {Object} viewport
    */
-  function getVantage(boundingBox, viewport) {
+  function getVantage(boundingBox) {
     var boundingBoxAspectRatio = boundingBox.width / boundingBox.height,
         vantageWidth,
         vantageHeight,
@@ -636,10 +628,10 @@ var manifestLayout = function(options) {
       rightMargin:horizontalMargin
     };
 
-    return padVantage(vantage, viewport);
+    return padVantage(vantage);
   }
 
-  function padVantage(vantage, viewport) {
+  function padVantage(vantage) {
     var horizontalPaddingRatio = viewport.padding.left + viewport.padding.right;
     var verticalPaddingRatio = viewport.padding.top + viewport.padding.bottom;
 

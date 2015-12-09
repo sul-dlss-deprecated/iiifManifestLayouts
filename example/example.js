@@ -139,6 +139,7 @@ var App = {
     }
 
     this.currentMode = newMode;
+    $('#mode').val(this.currentMode);
 
     if (this.viewer) {
       this.viewer.selectViewingMode(newMode);
