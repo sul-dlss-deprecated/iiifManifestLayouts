@@ -1,159 +1,164 @@
 'use strict';
 
 require('openseadragon');
+var ImageResource = require('./ImageResource');
 
-var CanvasObject = function(config, dispatcher) {
-  this.fullyOpened = config.fullyOpened || false;
-  this.visible = config.visible || true; // todo: this is not used yet. Do we need it?
+var CanvasObject = function(config) {
+  var self = this;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
-  this.x = config.x || 0;
-  this.y = config.y || 0;
-  this.placeholder = config.placeholder || { type: 'image', url: './example-thumbnail.png' };
   this.index = config.index;
 
   this.id = config.canvas['@id'];
-  this.height = config.canvas.height;
-  this.width = config.canvas.width;
-  this.images = config.canvas.images;
+
+  this.bounds = {
+    x : config.x || 0,
+    y : config.y || 0,
+    height : config.canvas.height,
+    width : config.canvas.width
+  };
+  this.thumbUrl = config.canvas.thumbnail;
+
+  // todo: Move this logic into an ImageResourceFactory.
+  this._getThumbService = function(width) {
+    var image = config.canvas.images[0];
+    if(image.resource.service) {
+      return image.resource.service['@id'] + '/full/' + Math.ceil(width * 2) + ',/0/default.jpg';
+    } else {
+      return image.resource['@id'];
+    }
+  };
+
   this.label = config.canvas.label;
-  this.tileSourceUrl = config.canvas.images[0].resource.service['@id'] + '/info.json';
   this.viewingHint = config.canvas.viewingHint;
 
-  this.dispatcher = dispatcher;
+  this.dispatcher = config.dispatcher;
+  this.viewer = config.viewer;
+  this.images = [];
+  // details and alternates possibly go here; disambiguate between them.
+  if(config.canvas.images) {
+    this.images = config.canvas.images.map(function(image) {
+
+      // todo: Move this logic into an ImageResourceFactory.
+      var _getImageTilesource = function(image) {
+        if(image.resource.service) {
+          return image.resource.service['@id'] + '/info.json';
+        } else {
+          return image.resource['@id'];
+        }
+      };
+
+      return new ImageResource({
+        tileSource: _getImageTilesource(image),
+        parent: self,
+        dispatcher: self.dispatcher
+      });
+    });
+  }
 };
 
 CanvasObject.prototype = {
-  openTileSource: function(viewer) {
+  openTileSource: function(imageIndex) {
+    this.dispatcher.emit('detail-tile-source-opened', { 'detail': this.id });
     var self = this;
+    var image = this.images[imageIndex];
 
-    // We've already loaded this tilesource instead of the thumbnail
-    if(this.fullyOpened) {
-      return;
-    }
+    var onTileDrawn = function(event) {
+      if(event.detail.tileSource === image.tileSource) {
+        self.dispatcher.removeListener('image-resource-tile-source-opened', onTileDrawn);
+        image.fade(1);
 
-    // otherwise, continue loading the tileSource.
-    this.dispatcher.emit('detail-tile-source-requested', { 'detail': this.id });
-    viewer.addTiledImage({
-      x: this.x,
-      y: this.y,
-      width: this.width,
-      tileSource: this.tileSourceUrl,
-      opacity: this.opacity,
-      clip: this.clipRegion,
-      index: 0, // Add the new image below the stand-in.
-
-      success: function(event) {
-        var main = event.item;
-        self.fullyOpened = true;
-
-        var tileDrawnHandler = function(event) {
-          if (event.tiledImage === main) {
-            var previousImageObj = self._mainImageObj;
-
-            viewer.removeHandler('tile-drawn', tileDrawnHandler);
-            main.setOpacity(0, true);
-            self._fade(main, 1);
-            self._setMainImage(main);
-
-            if(previousImageObj){
-              viewer.world.removeItem(previousImageObj);
-            }
-            self.dispatcher.emit('detail-tile-source-opened', { 'detail': self.id });
-          }
-        };
-        viewer.addHandler('tile-drawn', tileDrawnHandler);
-      },
-
-      error: function(event) {
-        var errorInfo = {
-          id: self.id,
-          message: event.message,
-          source: event.source
-        };
-        self.dispatcher.emit('detail-tile-source-failed', {'detail': errorInfo});
+        if(self.thumbnail){
+          self.thumbnail.destroy();
+          self.images = self.images.splice(self.images.indexOf(self.thumbnail), 1);
+          delete self.thumbnail;
+        }
       }
-    });
+    };
+
+    this.dispatcher.on('image-resource-tile-source-opened', onTileDrawn);
+    image.openTileSource();
   },
 
-  openThumbnail: function(viewer) {
-    var self = this;
-    viewer.addTiledImage({
-      x: this.x,
-      y: this.y,
-      width: this.width,
-      tileSource: this.placeholder,
-      opacity: this.opacity,
-      clip: this.clipRegion,
-      success: function(event) {
-        self._setMainImage(event.item);
-      }
-    })
+  openMainTileSource: function() {
+    this.openTileSource(0);
+  },
+
+  openThumbnail: function() {
+    if(!this.thumbUrl && this.images.length === 0) {
+      // It may be the case that we have no images and no thumbnail in our canvas.
+      return;
+    }
+    this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
+
+    this.thumbnail = new ImageResource({
+      tileSource: {
+        type: 'image',
+        url: this.thumbUrl || this._getThumbService(this.bounds.width)
+      },
+      parent: this,
+      dispatcher: this.dispatcher
+    });
+
+    this.thumbnail.openTileSource();
+    this.images.push(this.thumbnail);
   },
 
   //Assumes that the point parameter is already in viewport coordinates.
   containsPoint: function(point) {
-    var rectRight = this.x + this.width;
-    var rectBottom = this.y + this.height;
+    var rectRight = this.bounds.x + this.bounds.width;
+    var rectBottom = this.bounds.y + this.bounds.height;
 
-    return (this.x <= point.x && rectRight >= point.x && this.y <= point.y && rectBottom >= point.y);
+    return (this.bounds.x <= point.x && rectRight >= point.x && this.bounds.y <= point.y && rectBottom >= point.y);
   },
 
-  setPosition: function(x, y) {
-    this.x = x;
-    this.y = y;
-
-    if(this.hasImageObject()) {
-      this._mainImageObj.setPosition(new OpenSeadragon.Point(x, y), true);
-    }
+  getVisibleImages: function() {
+    return this.images.filter(function(image) { return image.visible === true; });
   },
 
-  setSize: function(width, height) {
-    this.width = width;
-    this.height = height;
+  getDetailImages: function() {
+    return this.images.filter(function(image) { return image.imageType === "detail" });
+  },
 
-    if(this.hasImageObject()) {
-      this._mainImageObj.setWidth(width, true);
-    }
+  getAlternateImages: function() {
+    return this.images.filter(function(image) { return image.imageType === "alternate" });
+  },
+
+  setBounds: function(x, y, width, height) {
+    var self = this;
+    this.bounds.x = x;
+    this.bounds.y = y;
+    this.bounds.width = width;
+    this.bounds.height = height;
+
+    this.images.forEach(function(image) {
+      image.updateForParentChange(true);
+    });
   },
 
   // Returns an OpenSeadragon Rect object - some OpenSeadragon consumers of this function want one,
   // and others can get x, y, width and height out easily.
   getBounds: function() {
-    return new OpenSeadragon.Rect(this.x, this.y, this.width, this.height);
+    return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
   },
 
-  hasImageObject: function() {
-    return !!(this._mainImageObj);
+  getAspectRatio: function() {
+    return this.bounds.width / this.bounds.height;
   },
 
-  _setMainImage: function(mainImage) {
-    this._mainImageObj = mainImage;
-    this._mainImageObj.setPosition(new OpenSeadragon.Point(this.x, this.y), true);
-    this._mainImageObj.setWidth(this.width, true);
+  getOpacity: function() {
+    return this.opacity;
   },
 
-  _fade: function(image, targetOpacity, callback) {
-    var currentOpacity = image.getOpacity();
-    var step = (targetOpacity - currentOpacity) / 30;
-    if (step === 0) {
-      callback();
-      return;
-    }
-
-    var frame = function() {
-      currentOpacity += step;
-      if ((step > 0 && currentOpacity >= targetOpacity) || (step < 0 && currentOpacity <= targetOpacity)) {
-        image.setOpacity(targetOpacity);
-        if (callback) callback();
-        return;
+  setOpacity: function(opacity) {
+    this.opacity = opacity;
+    this.images.forEach(function(image) {
+      if(image.visible) {
+        image.updateOpacity();
       }
-
-      image.setOpacity(currentOpacity);
-      OpenSeadragon.requestAnimationFrame(frame);
-    };
-    OpenSeadragon.requestAnimationFrame(frame);
+    });
   }
+
 };
 
 module.exports = CanvasObject;
