@@ -50,7 +50,7 @@ CanvasObject.prototype = {
 
         if(self.thumbnail){
           self.thumbnail.destroy();
-          self.images = self.images.splice(self.images.indexOf(self.thumbnail), 1);
+          self.images.splice(self.images.indexOf(self.thumbnail), 1);
           delete self.thumbnail;
         }
       }
