@@ -143,30 +143,36 @@ var manifestor = function(options) {
       facingCanvasPadding: 0.1 // precent of viewport
     });
 
-    var endCallback;
+    var doRender = function (mode, animate, callback) {
+      var canvas = _canvasObjects[viewerState().selectedCanvas];
+      var anchor = canvas.getBounds().getTopLeft();
+      var frames = layout[mode](anchor);
+      renderLayout(frames, animate, callback);
+      return frames;
+    };
+
+    var frames;
     if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
-      endCallback = function() {
-        renderLayout(layout.detail(), false);
-      };
-      renderLayout(layout.intermediate(), true, endCallback);
+      frames = doRender('intermediate', true, function() {
+        doRender('detail', false);
+      });
     } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail') {
-      endCallback = function() {
-        renderLayout(layout.overview(), true);
-      };
-      renderLayout(layout.intermediate(), false, endCallback);
+      frames = doRender('intermediate', false, function() {
+        doRender('overview', true);
+      });
     } else if (userState.perspective === 'detail' && userState.previousPerspective === 'detail') {
-      renderLayout(layout.detail(), true);
+      frames = doRender('detail', true);
     } else if (userState.perspective === 'overview' && userState.previousPerspective === 'overview') {
-      renderLayout(layout.overview(), true);
-  } else if (userState.perspective === 'overview' && !userState.previousPerspective) {
-    renderLayout(layout.overview(), false);
-  } else if (userState.perspective === 'detail' && !userState.previousPerspective) {
-    renderLayout(layout.intermediate(), false);
-  }
+      frames = doRender('overview', true);
+    } else if (userState.perspective === 'overview' && !userState.previousPerspective) {
+      frames = doRender('overview', false);
+    } else if (userState.perspective === 'detail' && !userState.previousPerspective) {
+      frames = doRender('intermediate', false);
+    }
 
     var viewBounds;
     if (userState.perspective === 'detail') {
-      viewBounds = layout.intermediate().filter(function(frame) {
+      viewBounds = frames.filter(function(frame) {
         return frame.canvas.selected;
       })[0].vantage;
 
@@ -180,7 +186,10 @@ var manifestor = function(options) {
       }
       enableZoomAndPan();
     } else {
-      viewBounds = new OpenSeadragon.Rect(0, _lastScrollPosition, viewerState().width, viewerState().height);
+      var left = frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100);
+      var top = (frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100)) + _lastScrollPosition;
+
+      viewBounds = new OpenSeadragon.Rect(left, top, viewerState().width, viewerState().height);
       _zooming = true;
       disableZoomAndPan();
       setScrollElementEvents();

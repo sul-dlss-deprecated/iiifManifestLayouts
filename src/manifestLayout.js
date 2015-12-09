@@ -49,9 +49,9 @@ var manifestLayout = function(options) {
         // fixedHeightRows: fixedHeightLine,
         grid: gridAlign
       },
-      viewport = viewport(containerWidth, containerHeight, options.viewportPadding);
+      viewport = makeViewport(containerWidth, containerHeight, options.viewportPadding);
 
-  function viewport(width, height, viewportPadding) {
+  function makeViewport(width, height, viewportPadding) {
     var horizontalMargin,
         verticalMargin;
 
@@ -285,7 +285,7 @@ var manifestLayout = function(options) {
     this.currentLine = 0;
     this.lineWidth = lineWidth;
     this.frames = frames;
-  }
+  };
 
   Lines.prototype = {
     _getFacingFrame: function(position) {
@@ -343,7 +343,7 @@ var manifestLayout = function(options) {
       line.remaining -= frame.width;
       return [this.lineWidth - x, this.currentLine];
     }
-  }
+  };
 
   function fixedHeightAlign(frames, lineWidth) {
     var lines = new Lines(lineWidth, frames);
@@ -358,7 +358,35 @@ var manifestLayout = function(options) {
     });
   }
 
-  function overviewLayout() {
+  function alignToAnchor(frames, anchor) {
+    var offsetX = 0;
+    var offsetY = 0;
+
+    frames.forEach(function(frame) {
+      if (frame.canvas.selected) {
+        offsetX = anchor.x - (frame.x + frame.canvas.localX);
+        offsetY = anchor.y - (frame.y + frame.canvas.localY);
+      }
+    });
+
+    frames.forEach(function(frame) {
+      frame.x += offsetX;
+      frame.y += offsetY;
+    });
+
+    return frames;
+  }
+
+  function updateCanvases(frames) {
+    frames.forEach(function(frame) {
+      frame.canvas.x = frame.x + frame.canvas.localX;
+      frame.canvas.y = frame.y + frame.canvas.localY;
+    });
+
+    return frames;
+  }
+
+  function overviewLayout(anchor) {
     // configure for viewingDirection, viewingMode, framing technique,
     // and alignment Style.
     var frames = bindCanvases(canvases.map(pruneCanvas).map(function(canvas) {
@@ -366,21 +394,23 @@ var manifestLayout = function(options) {
       return fitHeight(canvas, canvasHeight);
     }), viewingMode, viewingDirection, framePadding, facingCanvasPadding);
 
-    return fixedHeightAlign(frames, viewport.paddedWidth)
+    frames = fixedHeightAlign(frames, viewport.paddedWidth)
       .map(function(frame){
         frame.x += viewport.width*viewport.padding.left/100;
         frame.y += viewport.height*viewport.padding.top/100;
-        frame.canvas.x = frame.x + frame.canvas.localX;
-        frame.canvas.y = frame.y + frame.canvas.localY;
         return frame;
       });
+
+    frames = alignToAnchor(frames, anchor);
+    frames = updateCanvases(frames);
+    return frames;
   }
 
-  function detailLayout() {
-    return detailLayoutHorizontal();
+  function detailLayout(anchor) {
+    return detailLayoutHorizontal(anchor);
   }
 
-    function detailLayoutHorizontal() {
+  function detailLayoutHorizontal(anchor) {
     // configure for viewingDirection, viewingMode, framing technique,
     // and alignment Style.
     var frames = bindCanvases(canvases.map(pruneCanvas).map(function(canvas) {
@@ -388,24 +418,29 @@ var manifestLayout = function(options) {
       return fitHeight(canvas, canvasHeight);
     }), viewingMode, viewingDirection, framePadding, facingCanvasPadding);
 
-    return fixedHeightAlign(frames, viewport.paddedWidth)
-      .map(function(frame){
-        frame.x += viewport.width*viewport.padding.left/100;
-        frame.y += viewport.height*viewport.padding.top/100;
-        frame.canvas.x = frame.x + frame.canvas.localX;
-        frame.canvas.y = frame.y + frame.canvas.localY;
-        return frame;
-      });
+    var x = 0;
+    var y = 0;
+
+    frames.forEach(function(frame) {
+      frame.x = x;
+      frame.y = y;
+      x += frame.width;
+    });
+
+    frames = alignToAnchor(frames, anchor);
+    frames = updateCanvases(frames);
+    getVantageForSelectedCanvas(frames, viewport);
+    return frames;
   }
 
   function detailLayoutVertical(frames, selected, viewport) {
     return frames.map();
   }
 
-  function intermediateLayout() {
+  function intermediateLayout(anchor) {
     // configure for viewingDirection, viewingMode,
     // and alignment Style (scaling).
-    return intermediateLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
+    return intermediateLayoutHorizontal(overviewLayout(anchor), selectedCanvas, viewport);
   }
 
   function intermediateLayoutVertical(frames, selected, viewport) {
@@ -445,14 +480,22 @@ var manifestLayout = function(options) {
           // in the overview layout. Push them up out of frame.
           frame.y = frame.y - (selectedFrame.vantage.bottomMargin + framePadding.top*2);
         }
-
-        frame.canvas.x = frame.x + frame.canvas.localX;
-        frame.canvas.y = frame.y + frame.canvas.localY;
       });
     }
+
+    frames = updateCanvases(frames);
     return frames;
   }
 
+  function getVantageForSelectedCanvas(frames, viewport) {
+    var selectedFrame = frames.filter(function(frame) {
+      return frame.canvas.selected;
+    })[0];
+
+    var facingCanvas = getFacingCanvas(selectedFrame.canvas, frames);
+
+    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, facingCanvas, viewport);
+  }
 
   /**
    * Calculates a vantage for a selected canvas
@@ -645,13 +688,14 @@ var manifestLayout = function(options) {
   }
 
   function indicesOfParentLine(selectedCanvas) {
-  };
+  }
 
 
   return {
     overview: overviewLayout,
     intermediate: intermediateLayout,
-    detail: detailLayout
+    detail: detailLayout,
+    viewport: viewport
   };
 
 };
