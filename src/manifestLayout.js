@@ -78,13 +78,13 @@ var manifestLayout = function(options) {
   }
 
   function pruneCanvas(canvas, index) {
+
     var prunedCanvas = {
       id: canvas['@id'],
       label: canvas.label,
       height: canvas.height,
       width: canvas.width,
       aspectRatio: canvas.width/canvas.height,
-      thumbService: canvas.images[0].resource.service['@id'],
       selected: canvas['@id'] === selectedCanvas ? true : false,
       sequencePosition: index
     };
