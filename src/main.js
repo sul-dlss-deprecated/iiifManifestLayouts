@@ -37,18 +37,18 @@ var manifestor = function(options) {
       return sequence.viewingDirection;
     }
     return manifest.viewingDirection ? manifest.viewingDirection : 'left-to-right';
-  };
+  }
 
   function getViewingHint() {
     if (sequence && sequence.viewingHint) {
       return sequence.viewingHint;
     }
     return manifest.viewingHint ? manifest.viewingHint : 'individuals';
-  };
+  }
 
   function on(event, handler) {
     _dispatcher.on(event, handler);
-  };
+  }
 
   buildCanvasStates(canvases);
 
@@ -143,13 +143,14 @@ var manifestor = function(options) {
       facingCanvasPadding: 0.1 // precent of viewport
     });
 
+    var endCallback;
     if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
-      var endCallback = function() {
-          renderLayout(layout.detail(), false);
+      endCallback = function() {
+        renderLayout(layout.detail(), false);
       };
       renderLayout(layout.intermediate(), true, endCallback);
     } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail') {
-        endCallback = function() {
+      endCallback = function() {
         renderLayout(layout.overview(), true);
       };
       renderLayout(layout.intermediate(), false, endCallback);
@@ -163,8 +164,9 @@ var manifestor = function(options) {
     renderLayout(layout.intermediate(), false);
   }
 
+    var viewBounds;
     if (userState.perspective === 'detail') {
-      var viewBounds = layout.intermediate().filter(function(frame) {
+      viewBounds = layout.intermediate().filter(function(frame) {
         return frame.canvas.selected;
       })[0].vantage;
 
@@ -315,7 +317,7 @@ var manifestor = function(options) {
       .attr('class', labelClass)
       .text(function(d) { return d.canvas.label; });
 
-  };
+  }
 
   function endall(transition, callback) {
     var n = 0;
@@ -402,7 +404,7 @@ var manifestor = function(options) {
         hitCanvases[0].openTileSource(viewer);
       }
     });
-  };
+  }
 
   function synchroniseZoom() {
     var viewerWidth = viewer.container.clientWidth;
@@ -616,7 +618,7 @@ var manifestor = function(options) {
     var getCanvasByIndex = function(index) {
       var canvasId = canvases[index]['@id'];
       return _canvasObjects[canvasId];
-    }
+    };
 
     var newCanvas = getCanvasByIndex(newIndex);
     while(newCanvas.viewingHint === 'non-paged' && _isValidCanvasIndex(newIndex)) {

@@ -1,0 +1,10 @@
+{
+  "browser": true,
+
+  "globals": {
+    "require": true,
+    "$": true,
+    "OpenSeadragon": true,
+    "module": true
+  }
+}
