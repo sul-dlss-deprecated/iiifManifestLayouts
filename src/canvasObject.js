@@ -121,9 +121,7 @@ CanvasObject.prototype = {
   setOpacity: function(opacity) {
     this.opacity = opacity;
     this.images.forEach(function(image) {
-      if(image.visible) {
-        image.updateOpacity();
-      }
+      image.updateOpacity();
     });
   }
 
