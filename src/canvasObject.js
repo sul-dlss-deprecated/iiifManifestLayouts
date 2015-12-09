@@ -147,6 +147,19 @@ CanvasObject.prototype = {
     return this.bounds.width / this.bounds.height;
   },
 
+  getOpacity: function() {
+    return this.opacity;
+  },
+
+  setOpacity: function(opacity) {
+    this.opacity = opacity;
+    this.images.forEach(function(image) {
+      if(image.visible) {
+        image.updateOpacity();
+      }
+    });
+  }
+
 };
 
 module.exports = CanvasObject;

@@ -23,24 +23,25 @@ var ImageResource = function(config) {
 ImageResource.prototype = {
   hide: function() {
     this.previousOpacity = this.opacity;
-    this.setOpacity(0, true);
     this.visible = false;
+    this.updateOpacity(0);
   },
 
   show: function() {
     this.visible = true;
-    if(this.previousOpacity) {
-      this.setOpacity(this.previousOpacity, true);
-    } else {
-      this.setOpacity(1, true);
+    this.updateOpacity(this.opacity);
+  },
+
+  updateOpacity: function(opacity) {
+    if(this.tiledImage) {
+      this.tiledImage.setOpacity(opacity * this.parent.getOpacity());
     }
   },
 
-  // todo: take parent opacity into account here and in the constructor
   setOpacity: function(opacity) {
     this.opacity = opacity;
-    if(this.tiledImage) {
-      this.tiledImage.setOpacity(this.opacity);
+    if(this.visible) {
+      this.updateOpacity(this.opacity);
     }
   },
 
@@ -152,7 +153,7 @@ ImageResource.prototype = {
     var currentOpacity = this.opacity;
     var step = (targetOpacity - currentOpacity) / 30;
     if (step === 0) {
-      callback();
+      if (callback) callback();
       return;
     }
 
