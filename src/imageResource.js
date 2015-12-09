@@ -58,7 +58,7 @@ ImageResource.prototype = {
     }
 
     // otherwise, continue loading the tileSource.
-    this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': this.tileSource });
+    this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': self });
     this.status = 'requested';
     var bounds = this._getBoundsInViewer();
     this.parent.viewer.addTiledImage({
@@ -81,7 +81,7 @@ ImageResource.prototype = {
             self.visible = true;
             self.status = 'shown';
             self.parent.viewer.removeHandler('tile-drawn', tileDrawnHandler);
-            self.dispatcher.emit('image-resource-tile-source-opened', { 'detail': self.tileSource });
+            self.dispatcher.emit('image-resource-tile-source-opened', { 'detail': self });
           }
         };
         self.parent.viewer.addHandler('tile-drawn', tileDrawnHandler);

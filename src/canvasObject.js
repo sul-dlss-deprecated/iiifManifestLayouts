@@ -64,7 +64,7 @@ CanvasObject.prototype = {
     var image = this.images[imageIndex];
 
     var onTileDrawn = function(event) {
-      if(event.detail === image.tileSource) {
+      if(event.detail.tileSource === image.tileSource) {
         self.dispatcher.removeListener('image-resource-tile-source-opened', onTileDrawn);
         image.fade(1);
 
