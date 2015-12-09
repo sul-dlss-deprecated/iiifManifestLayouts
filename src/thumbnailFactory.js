@@ -2,7 +2,7 @@
 
 var ImageResource = require('./ImageResource');
 
-var _getThumbService = function(image, width) {
+var _getThumbUrl = function(image, width) {
   if(image.resource.service) {
     return image.resource.service['@id'] + '/full/' + Math.ceil(width / 4) + ',/0/default.jpg';
   } else {
@@ -16,7 +16,7 @@ var ThumbnailFactory = function(canvas, parent) {
     var config = {
       tileSource: {
         type: 'image',
-        url: canvas.thumbnail || _getThumbService(canvas.images[0], canvas.width),
+        url: canvas.thumbnail || _getThumbUrl(canvas.images[0], canvas.width),
         buildPyramid: 'false'
       },
       parent: parent,

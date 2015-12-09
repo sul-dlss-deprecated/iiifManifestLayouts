@@ -4,11 +4,21 @@ require('openseadragon');
 var ImageResource = require('./ImageResource');
 
 var _buildImageConfig = function(image) {
+  var hasService = !!(image.resource.service);
+  var idObj = image.resource;
+  if(hasService) {
+    idObj = image.resource.service;
+  }
+  var id = idObj['@id'];
+
   var _getImageTilesource = function() {
-    if(image.resource.service) {
-      return image.resource.service['@id'] + '/info.json';
+    if(hasService) {
+      return id + '/info.json';
     } else {
-      return image.resource['@id'];
+      return {
+        type: 'image',
+        url: id
+      };
     }
   };
 
@@ -22,22 +32,23 @@ var _buildImageConfig = function(image) {
     return segment;
   };
 
-  var id =  _getImageTilesource(image);
+
+  var imageTileSource =  _getImageTilesource(image);
 
   return {
-    tileSource: id,
+    tileSource: imageTileSource,
     clipRegion: _getSegmentFromUrl(id),
     bounds: _getSegmentFromUrl(image.on),
-    dynamic: !!(image.resource.service) // todo: it's more complicated than that
+    dynamic: hasService // todo: it's more complicated than that
   };
 };
 
 
-var _buildChoiceResource = function(choice) {
+var _buildChoiceConfig = function(choice) {
 
 };
 
-var _buildSpecificResource = function(specificResource) {
+var _buildSpecificConfig = function(specificResource) {
 
 };
 
@@ -51,11 +62,11 @@ var ImageResourceFactory = function(image, parent) {
       break;
     case 'oa:Choice':
       console.log('oa:Choice!', image);
-      config = _buildChoiceResource(image);
+      config = _buildChoiceConfig(image);
       break;
     case 'oa:SpecificResource':
       console.log('specific resource!', image);
-      config = _buildSpecificResource(image);
+      config = _buildSpecificConfig(image);
       break;
     default:
       throw new Error("Cannot create an image from type " + resourceType);
