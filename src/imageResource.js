@@ -20,27 +20,26 @@ var ImageResource = function(config) {
 
 ImageResource.prototype = {
   hide: function() {
-    this.previousOpacity = this.opacity;
     this.visible = false;
-    this.updateOpacity(0);
+    if(this.tiledImage) {
+      this.tiledImage.setOpacity(0);
+    }
   },
 
   show: function() {
     this.visible = true;
-    this.updateOpacity(this.opacity);
+    this.updateOpacity();
   },
 
-  updateOpacity: function(opacity) {
-    if(this.tiledImage) {
-      this.tiledImage.setOpacity(opacity * this.parent.getOpacity());
+  updateOpacity: function() {
+    if(this.visible && this.tiledImage) {
+      this.tiledImage.setOpacity(this.opacity * this.parent.getOpacity());
     }
   },
 
   setOpacity: function(opacity) {
     this.opacity = opacity;
-    if(this.visible) {
-      this.updateOpacity(this.opacity);
-    }
+    this.updateOpacity();
   },
 
   getOpacity: function() {
@@ -64,7 +63,7 @@ ImageResource.prototype = {
       y: bounds.y,
       width: bounds.width,
       tileSource: this.tileSource,
-      opacity: this.parent.opacity * this.opacity,
+      opacity: this.opacity,
       clip: this.clipRegion,
       index: this.zIndex,
 
@@ -76,6 +75,7 @@ ImageResource.prototype = {
           if (event.tiledImage === main) {
             self.tiledImage = main;
             self.updateForParentChange();
+            self.updateOpacity();
             self.visible = true;
             self.status = 'shown';
             self.parent.viewer.removeHandler('tile-drawn', tileDrawnHandler);
