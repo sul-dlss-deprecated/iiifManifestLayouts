@@ -394,13 +394,7 @@ var manifestLayout = function(options) {
       return fitHeight(canvas, canvasHeight);
     }), viewingMode, viewingDirection, framePadding, facingCanvasPadding);
 
-    frames = fixedHeightAlign(frames, viewport.paddedWidth)
-      .map(function(frame){
-        frame.x += viewport.width*viewport.padding.left/100;
-        frame.y += viewport.height*viewport.padding.top/100;
-        return frame;
-      });
-
+    frames = fixedHeightAlign(frames, viewport.paddedWidth);
     frames = alignToAnchor(frames, anchor);
     frames = updateCanvases(frames);
     return frames;
@@ -411,6 +405,8 @@ var manifestLayout = function(options) {
   }
 
   function detailLayoutHorizontal(anchor) {
+    // TODO: support viewingDirection and viewingMode
+
     // configure for viewingDirection, viewingMode, framing technique,
     // and alignment Style.
     var frames = bindCanvases(canvases.map(pruneCanvas).map(function(canvas) {
@@ -429,7 +425,7 @@ var manifestLayout = function(options) {
 
     frames = alignToAnchor(frames, anchor);
     frames = updateCanvases(frames);
-    getVantageForSelectedCanvas(frames, viewport);
+    frames = intermediateLayoutHorizontal(frames);
     return frames;
   }
 
@@ -440,21 +436,21 @@ var manifestLayout = function(options) {
   function intermediateLayout(anchor) {
     // configure for viewingDirection, viewingMode,
     // and alignment Style (scaling).
-    return intermediateLayoutHorizontal(overviewLayout(anchor), selectedCanvas, viewport);
+    return intermediateLayoutHorizontal(overviewLayout(anchor));
   }
 
   function intermediateLayoutVertical(frames, selected, viewport) {
     return frames.map();
   }
 
-  function intermediateLayoutHorizontal(frames, selectedCanvas, viewport) {
-    var selectedFrame = frames.filter(function(frame) {
+  function intermediateLayoutHorizontal(frames) {
+    var selectedFrames = frames.filter(function(frame) {
       return frame.canvas.selected;
-    })[0],
-        facingCanvas = getFacingCanvas(selectedFrame.canvas, frames);
+    });
 
+    var selectedFrame = selectedFrames[0];
+    var facingCanvas = getFacingCanvas(selectedFrame.canvas, frames);
     var canvasPosition = selectedFrame.canvas.sequencePosition;
-
     selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, facingCanvas, viewport);
 
     if (viewingMode !== 'continuous') {
