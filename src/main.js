@@ -30,7 +30,9 @@ var manifestor = function(options) {
       _inZoomConstraints,
       _lastScrollPosition = 0,
       _dispatcher = new events.EventEmitter(),
-      _destroyed = false;
+      _destroyed = false,
+      overviewLeft = 0,
+      overviewTop = 0;
 
   function getViewingDirection() {
     if (sequence && sequence.viewingDirection) {
@@ -185,10 +187,12 @@ var manifestor = function(options) {
       }
       enableZoomAndPan();
     } else {
-      var left = frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100);
-      var top = (frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100)) + _lastScrollPosition;
+      overviewLeft = frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100);
+      overviewTop = frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100);
 
-      viewBounds = new OpenSeadragon.Rect(left, top, viewerState().width, viewerState().height);
+      viewBounds = new OpenSeadragon.Rect(overviewLeft, overviewTop + _lastScrollPosition,
+        viewerState().width, viewerState().height);
+
       _zooming = true;
       disableZoomAndPan();
       setScrollElementEvents();
@@ -420,9 +424,8 @@ var manifestor = function(options) {
   }
 
   function synchronisePan(panTop, width, height) {
-    var x = width/2;
-    var y = panTop + height/2;
-    viewer.viewport.panTo(new OpenSeadragon.Point(x,y), true);
+    var viewBounds = new OpenSeadragon.Rect(overviewLeft, overviewTop + _lastScrollPosition, width, height);
+    viewer.viewport.fitBounds(viewBounds, true);
   }
 
   function applyConstraints(constraintBounds) {
@@ -599,6 +602,11 @@ var manifestor = function(options) {
     selectCanvas(canvasId);
   }
 
+  var getCanvasByIndex = function(index) {
+    var canvasId = canvases[index]['@id'];
+    return _canvasObjects[canvasId];
+  };
+
   function _navigatePaged(currentIndex, incrementValue) {
     var newIndex = currentIndex + incrementValue;
 
@@ -613,11 +621,6 @@ var manifestor = function(options) {
 
     // Do not select non-paged canvases in paged mode. Instead, find the next available
     // canvas that does not have that viewingHint.
-    var getCanvasByIndex = function(index) {
-      var canvasId = canvases[index]['@id'];
-      return _canvasObjects[canvasId];
-    };
-
     var newCanvas = getCanvasByIndex(newIndex);
     while(newCanvas.viewingHint === 'non-paged' && _isValidCanvasIndex(newIndex)) {
       newIndex += incrementValue;
