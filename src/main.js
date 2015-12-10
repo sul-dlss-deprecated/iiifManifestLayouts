@@ -680,20 +680,27 @@ var manifestor = function(options) {
       viewer.destroy();
     }
 
+    container.off('click', canvasClickHandler);
+    scrollContainer.off('scroll', scrollHandler);
+
     _destroyed = true; // cancels the timer
   }
 
-  container.on('click', '.' + canvasClass, function(event) {
+  function canvasClickHandler(event) {
     selectCanvas($(this).data('id'));
-  });
-  scrollContainer.on('scroll', function(event) {
+  }
+
+  function scrollHandler(event) {
     if (viewerState().perspective === 'overview' && _zooming === false) {
       var width = viewerState().width;
       var height = viewerState().height;
       _lastScrollPosition = $(this).scrollTop();
       synchronisePan(_lastScrollPosition, width, height);
     }
-  });
+  };
+
+  container.on('click', '.' + canvasClass, canvasClickHandler);
+  scrollContainer.on('scroll', scrollHandler);
 
   return {
     destroy: destroy,
