@@ -26,8 +26,16 @@ var App = {
     });
 
     $('#mode').on('change', function(e) {
+      self.currentMode = e.target[e.target.selectedIndex].value;
       if (self.viewer) {
-        self.viewer.selectViewingMode(e.target[e.target.selectedIndex].value);
+        self.viewer.selectViewingMode(self.currentMode);
+      }
+    });
+
+    $('#readingDirection').on('change', function(e) {
+      var value = e.target[e.target.selectedIndex].value;
+      if (self.viewer) {
+        self.viewer.selectViewingDirection(value);
       }
     });
 
@@ -117,11 +125,11 @@ var App = {
 
       // Debug/example code: Listen for tile source requests and loads
       self.viewer.on('detail-tile-source-requested', function(e) {
-        console.log('detail tile source requested', e.detail);
+        // console.log('detail tile source requested', e.detail);
       });
 
       self.viewer.on('detail-tile-source-opened', function(e) {
-        console.log('detail tile source opened', e.detail);
+        // console.log('detail tile source opened', e.detail);
       });
     });
   },
@@ -138,6 +146,7 @@ var App = {
     }
 
     this.currentMode = newMode;
+    $('#mode').val(this.currentMode);
 
     if (this.viewer) {
       this.viewer.selectViewingMode(newMode);

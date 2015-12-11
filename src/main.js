@@ -30,25 +30,27 @@ var manifestor = function(options) {
       _inZoomConstraints,
       _lastScrollPosition = 0,
       _dispatcher = new events.EventEmitter(),
-      _destroyed = false;
+      _destroyed = false,
+      overviewLeft = 0,
+      overviewTop = 0;
 
   function getViewingDirection() {
     if (sequence && sequence.viewingDirection) {
       return sequence.viewingDirection;
     }
     return manifest.viewingDirection ? manifest.viewingDirection : 'left-to-right';
-  };
+  }
 
   function getViewingHint() {
     if (sequence && sequence.viewingHint) {
       return sequence.viewingHint;
     }
     return manifest.viewingHint ? manifest.viewingHint : 'individuals';
-  };
+  }
 
   function on(event, handler) {
     _dispatcher.on(event, handler);
-  };
+  }
 
   var overlays = $('<div class="overlaysContainer">').css(
     {'width': '100%',
@@ -126,7 +128,7 @@ var manifestor = function(options) {
       width: userState.width,
       height: userState.height,
       scaleFactor: userState.scaleFactor,
-      viewingDirection: userState.viewingd,
+      viewingDirection: userState.viewingDirection,
       viewingMode: userState.viewingMode,
       canvasHeight: 100,
       canvasWidth: 100,
@@ -142,28 +144,36 @@ var manifestor = function(options) {
       facingCanvasPadding: 0.1 // precent of viewport
     });
 
-    if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
-      var endCallback = function() {
-          renderLayout(layout.detail(), false);
-      };
-      renderLayout(layout.intermediate(), true, endCallback);
-    } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail') {
-        endCallback = function() {
-        renderLayout(layout.overview(), true);
-      };
-      renderLayout(layout.intermediate(), false, endCallback);
-    } else if (userState.perspective === 'detail' && userState.previousPerspective === 'detail') {
-      renderLayout(layout.detail(), true);
-    } else if (userState.perspective === 'overview' && userState.previousPerspective === 'overview') {
-      renderLayout(layout.overview(), true);
-  } else if (userState.perspective === 'overview' && !userState.previousPerspective) {
-    renderLayout(layout.overview(), false);
-  } else if (userState.perspective === 'detail' && !userState.previousPerspective) {
-    renderLayout(layout.intermediate(), false);
-  }
+    var doRender = function (mode, animate, callback) {
+      var canvas = _canvasObjects[viewerState().selectedCanvas];
+      var anchor = canvas.getBounds().getTopLeft();
+      var frames = layout[mode](anchor);
+      renderLayout(frames, animate, callback);
+      return frames;
+    };
 
+    var frames;
+    if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
+      frames = doRender('intermediate', true, function() {
+        doRender('detail', false);
+      });
+    } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail') {
+      frames = doRender('intermediate', false, function() {
+        doRender('overview', true);
+      });
+    } else if (userState.perspective === 'detail' && userState.previousPerspective === 'detail') {
+      frames = doRender('detail', true);
+    } else if (userState.perspective === 'overview' && userState.previousPerspective === 'overview') {
+      frames = doRender('overview', true);
+    } else if (userState.perspective === 'overview' && !userState.previousPerspective) {
+      frames = doRender('overview', false);
+    } else if (userState.perspective === 'detail' && !userState.previousPerspective) {
+      frames = doRender('intermediate', false);
+    }
+
+    var viewBounds;
     if (userState.perspective === 'detail') {
-      var viewBounds = layout.intermediate().filter(function(frame) {
+      viewBounds = frames.filter(function(frame) {
         return frame.canvas.selected;
       })[0].vantage;
 
@@ -177,7 +187,12 @@ var manifestor = function(options) {
       }
       enableZoomAndPan();
     } else {
-      viewBounds = new OpenSeadragon.Rect(0, _lastScrollPosition, viewerState().width, viewerState().height);
+      overviewLeft = frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100);
+      overviewTop = frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100);
+
+      viewBounds = new OpenSeadragon.Rect(overviewLeft, overviewTop + _lastScrollPosition,
+        viewerState().width, viewerState().height);
+
       _zooming = true;
       disableZoomAndPan();
       setScrollElementEvents();
@@ -314,7 +329,7 @@ var manifestor = function(options) {
       .attr('class', labelClass)
       .text(function(d) { return d.canvas.label; });
 
-  };
+  }
 
   function endall(transition, callback) {
     var n = 0;
@@ -390,7 +405,7 @@ var manifestor = function(options) {
         hitCanvases[0].openMainTileSource();
       }
     });
-  };
+  }
 
   function synchroniseZoom() {
     var viewerWidth = viewer.container.clientWidth;
@@ -409,9 +424,8 @@ var manifestor = function(options) {
   }
 
   function synchronisePan(panTop, width, height) {
-    var x = width/2;
-    var y = panTop + height/2;
-    viewer.viewport.panTo(new OpenSeadragon.Point(x,y), true);
+    var viewBounds = new OpenSeadragon.Rect(overviewLeft, overviewTop + _lastScrollPosition, width, height);
+    viewer.viewport.fitBounds(viewBounds, true);
   }
 
   function applyConstraints(constraintBounds) {
@@ -510,6 +524,12 @@ var manifestor = function(options) {
     viewerState(state);
   }
 
+  function selectViewingDirection(viewingDirection) {
+    var state = viewerState();
+    state.viewingDirection = viewingDirection;
+    viewerState(state);
+  }
+
   function refreshState(newState) {
     var state = viewerState();
 
@@ -588,6 +608,11 @@ var manifestor = function(options) {
     selectCanvas(canvasId);
   }
 
+  var getCanvasByIndex = function(index) {
+    var canvasId = canvases[index]['@id'];
+    return _canvasObjects[canvasId];
+  };
+
   function _navigatePaged(currentIndex, incrementValue) {
     var newIndex = currentIndex + incrementValue;
 
@@ -602,11 +627,6 @@ var manifestor = function(options) {
 
     // Do not select non-paged canvases in paged mode. Instead, find the next available
     // canvas that does not have that viewingHint.
-    var getCanvasByIndex = function(index) {
-      var canvasId = canvases[index]['@id'];
-      return _canvasObjects[canvasId];
-    }
-
     var newCanvas = getCanvasByIndex(newIndex);
     while(newCanvas.viewingHint === 'non-paged' && _isValidCanvasIndex(newIndex)) {
       newIndex += incrementValue;
@@ -684,6 +704,7 @@ var manifestor = function(options) {
     selectCanvas: selectCanvas,
     selectPerspective: selectPerspective,
     selectViewingMode: selectViewingMode,
+    selectViewingDirection: selectViewingDirection,
     updateThumbSize: updateThumbSize,
     refreshState: refreshState,
     getState: viewerState,
