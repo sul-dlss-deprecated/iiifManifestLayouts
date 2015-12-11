@@ -680,8 +680,14 @@ var manifestor = function(options) {
       viewer.destroy();
     }
 
+    overlays.remove();
+    scrollContainer.remove();
+    osdContainer.remove();
     container.off('click', canvasClickHandler);
-    scrollContainer.off('scroll', scrollHandler);
+
+    _viewerState = null
+    _canvasObjects = null;
+    _inZoomConstraints = null;
 
     _destroyed = true; // cancels the timer
   }
