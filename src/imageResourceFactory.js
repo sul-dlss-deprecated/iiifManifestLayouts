@@ -3,11 +3,11 @@
 require('openseadragon');
 var ImageResource = require('./ImageResource');
 
-var _buildImageConfig = function(image) {
-  var hasService = !!(image.resource.service);
-  var idObj = image.resource;
+var _buildImageConfig = function(resource) {
+  var hasService = !!(resource.service);
+  var idObj = resource;
   if(hasService) {
-    idObj = image.resource.service;
+    idObj = resource.service;
   }
   var id = idObj['@id'];
 
@@ -32,8 +32,7 @@ var _buildImageConfig = function(image) {
     return segment;
   };
 
-
-  var imageTileSource =  _getImageTilesource(image);
+  var imageTileSource =  _getImageTilesource();
 
   return {
     tileSource: imageTileSource,
@@ -44,8 +43,12 @@ var _buildImageConfig = function(image) {
 };
 
 
-var _buildChoiceConfig = function(choice) {
-
+var _buildChoiceConfigs = function(choice) {
+  var configs = [];
+  var defaultConfig = _buildImageConfig(choice.default);
+  defaultConfig.imageType = 'default';
+  configs.push(defaultConfig);
+  return configs;
 };
 
 var _buildSpecificConfig = function(specificResource) {
@@ -54,15 +57,20 @@ var _buildSpecificConfig = function(specificResource) {
 
 var ImageResourceFactory = function(image, parent) {
   var resourceType = image.resource['@type']; // can be oa:Choice, oa:SpecificResource, or dctypes:Image
-  var config = {};
 
   switch(resourceType) {
     case 'dctypes:Image':
-      config = _buildImageConfig(image);
+      var config = _buildImageConfig(image.resource);
+      config.parent = parent;
+      return new ImageResource(config); // maybe add this directly to the parent instead
       break;
     case 'oa:Choice':
       console.log('oa:Choice!', image);
-      config = _buildChoiceConfig(image);
+      var configs = _buildChoiceConfigs(image);
+      configs.forEach(function(config) {
+        // todo: return something sensible
+        // add each of these images to the parent
+      })
       break;
     case 'oa:SpecificResource':
       console.log('specific resource!', image);
