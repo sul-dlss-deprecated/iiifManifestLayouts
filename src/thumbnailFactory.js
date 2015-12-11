@@ -12,7 +12,7 @@ var _getThumbUrl = function(image, width) {
 
 var ThumbnailFactory = function(canvas, parent) {
   // It may be the case that we have no images and no thumbnail in our canvas.
-  if(canvas.thumbnail || canvas.images.length > 0) {
+  if(canvas.thumbnail || !!canvas.images) {
     var config = {
       tileSource: {
         type: 'image',
