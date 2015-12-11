@@ -282,66 +282,62 @@ var manifestLayout = function(options) {
   }
 
   var Lines = function(lineWidth, frames){
-    this.currentLine = 0;
+    this.x = 0;
+    this.y = 0;
     this.lineWidth = lineWidth;
     this.frames = frames;
   };
 
   Lines.prototype = {
-    _getFacingFrame: function(position) {
-      return this.frames.filter(function(page) {
-        var value;
-        switch (facingPageType(position)) {
-          case 'rightPage':
-          value = -1;
-          break;
-          case 'leftPage':
-          value = 1;
-          break;
-        }
-        return page.canvas.sequencePosition + value === position;
-      })[0];
-    },
+    _getFacingFrame: function(index) {
+      var type = facingPageType(index);
 
-    addLine: function() {
-      var line = this[this.currentLine] = [];
-      line.remaining = this.lineWidth;
+      if (type === 'leftPage') {
+        return this.frames[index + 1];
+      }
 
-      return line;
+      if (type === 'rightPage') {
+        return this.frames[index - 1];
+      }
+
+      return null;
     },
 
     /**
      * @param frame
-     * @returns {Array} [frame x position, line frame is on]
+     * @returns {Object} x, y
      */
     addItem: function(frame) {
-      var line = this[this.currentLine],
-          lineItemWidth,
-          x;
+      var lineItemWidth = frame.width;
 
-      lineItemWidth = frame.width;
       if (viewingMode === 'paged') {
         var facingFrame = this._getFacingFrame(frame.canvas.sequencePosition);
         if(facingFrame){
-          lineItemWidth += facingFrame.width;
+          if (facingFrame.canvas.sequencePosition > frame.canvas.sequencePosition) {
+            lineItemWidth += facingFrame.width;
+          } else {
+            lineItemWidth = 0;
+          }
         }
       }
 
-      if (!line) { line = this.addLine(); }
-
-      if (line.remaining >= lineItemWidth) {
-        x = this.lineWidth - line.remaining;
-        if (viewingDirection === 'right-to-left') {
-          x = line.remaining - frame.x;
-        }
-        line.remaining -= frame.width;
-        return [x, this.currentLine];
+      if (this.x + lineItemWidth > this.lineWidth) {
+        this.x = 0;
+        this.y += frame.height;
       }
-      this.currentLine += 1;
-      line = this.addLine();
-      x = viewingDirection === 'right-to-left' ? frame.width: line.remaining;
-      line.remaining -= frame.width;
-      return [this.lineWidth - x, this.currentLine];
+
+      var output = {
+        x: this.x,
+        y: this.y
+      };
+
+      this.x += frame.width;
+
+      if (viewingDirection === 'right-to-left') {
+        output.x = this.lineWidth - this.x;
+      }
+
+      return output;
     }
   };
 
@@ -350,8 +346,8 @@ var manifestLayout = function(options) {
 
     return frames.map(function(frame) {
       var lineStats = lines.addItem(frame);
-      frame.x = lineStats[0];
-      frame.y = lineStats[1]*frame.height;
+      frame.x = lineStats.x;
+      frame.y = lineStats.y;
       frame.canvas.x = frame.x + frame.canvas.localX;
       frame.canvas.y = frame.y + frame.canvas.localY;
       return frame;

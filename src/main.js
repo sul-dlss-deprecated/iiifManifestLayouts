@@ -128,7 +128,7 @@ var manifestor = function(options) {
       width: userState.width,
       height: userState.height,
       scaleFactor: userState.scaleFactor,
-      viewingDirection: userState.viewingd,
+      viewingDirection: userState.viewingDirection,
       viewingMode: userState.viewingMode,
       canvasHeight: 100,
       canvasWidth: 100,
@@ -524,6 +524,12 @@ var manifestor = function(options) {
     viewerState(state);
   }
 
+  function selectViewingDirection(viewingDirection) {
+    var state = viewerState();
+    state.viewingDirection = viewingDirection;
+    viewerState(state);
+  }
+
   function refreshState(newState) {
     var state = viewerState();
 
@@ -698,6 +704,7 @@ var manifestor = function(options) {
     selectCanvas: selectCanvas,
     selectPerspective: selectPerspective,
     selectViewingMode: selectViewingMode,
+    selectViewingDirection: selectViewingDirection,
     updateThumbSize: updateThumbSize,
     refreshState: refreshState,
     getState: viewerState,

@@ -32,6 +32,13 @@ var App = {
       }
     });
 
+    $('#readingDirection').on('change', function(e) {
+      var value = e.target[e.target.selectedIndex].value;
+      if (self.viewer) {
+        self.viewer.selectViewingDirection(value);
+      }
+    });
+
     $('#scale').on('input', function() {
       // must be a value between 0.5 and 2;
       // input is between 50 and 200, so
