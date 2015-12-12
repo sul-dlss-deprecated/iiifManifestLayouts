@@ -27,11 +27,11 @@ var CanvasObject = function(config) {
   this.viewer = config.viewer;
   this.images = [];
 
-  // details and alternates possibly go here; disambiguate between them.
   if(config.canvas.images) {
-    this.images = config.canvas.images.map(function(image) {
-      return ImageResourceFactory(image, self);
+    config.canvas.images.forEach(function(image) {
+      self.images = self.images.concat(ImageResourceFactory(image, self));
     });
+    this.dispatcher.emit('images-created', { 'detail': this.images });
   }
 
   this.thumbnail = ThumbnailFactory(config.canvas, self);
@@ -92,6 +92,10 @@ CanvasObject.prototype = {
     return this.images.filter(function(image) { return image.imageType === "alternate" });
   },
 
+  getMainImage: function() {
+    return this.images.filter(function(image) {return image.imageType === "main" });
+  },
+
   setBounds: function(x, y, width, height) {
     var self = this;
     this.bounds.x = x;
@@ -124,7 +128,6 @@ CanvasObject.prototype = {
       image.updateOpacity();
     });
   }
-
 };
 
 module.exports = CanvasObject;
