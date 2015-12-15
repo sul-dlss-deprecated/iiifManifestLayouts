@@ -6,13 +6,13 @@ var _getThumbUrl = function(resource, width) {
   if(resource.service) {
     return resource.service['@id'] + '/full/' + Math.ceil(width / 4) + ',/0/default.jpg';
   } else if(resource.default) {
-    return _getThumbUrl(resource.default);
+    return _getThumbUrl(resource.default, width);
   } else {
     return resource['@id'];
   }
 };
 
-var _makeThumbnailConfig = function(url) {
+var _makeThumbnailConfig = function(url, parent) {
   return {
     tileSource: {
       type: 'image',
@@ -28,7 +28,7 @@ var _makeThumbnailConfig = function(url) {
 var ThumbnailFactory = function(canvas, parent) {
   // The canvas has a thumbnail object.
   if(canvas.thumbnail) {
-    return new ImageResource(_makeThumbnailConfig(canvas.thumbnail));
+    return new ImageResource(_makeThumbnailConfig(canvas.thumbnail, parent));
   }
 
   // If the canvas has no thumbnail object, we try to fall back to using an image from it.
@@ -36,7 +36,8 @@ var ThumbnailFactory = function(canvas, parent) {
   // If there is no thumbnail and only one image in this canvas, there's no reason to make a thumbnail for it-
   // the canvasobject will fall back to opening the main tilesource in the absence of a thumbnail.
   if(canvas.images && canvas.images.length > 1) {
-    return new ImageResource(_getThumbUrl(canvas.images[0].resource, canvas.width));
+    var config = _makeThumbnailConfig(_getThumbUrl(canvas.images[0].resource, canvas.width), parent);
+    return new ImageResource(config);
   }
 };
 
