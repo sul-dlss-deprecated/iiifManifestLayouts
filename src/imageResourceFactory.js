@@ -7,7 +7,8 @@ var _getSegmentFromUrl = function(url) {
   var urlParts = url.split('#');
   var segment = null;
   if(urlParts.length > 1) { // the url has a segment specified
-    var rectArray = urlParts.split('=').split(',');
+    var bounds = urlParts[1].split('=');
+    var rectArray = bounds[1].split(',');
     segment = new OpenSeadragon.Rect(rectArray[0], rectArray[1], rectArray[2], rectArray[3]);
   }
   return segment;
