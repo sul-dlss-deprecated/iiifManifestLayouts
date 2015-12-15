@@ -49,12 +49,13 @@ var _buildChoiceConfigs = function(resource) {
     config.imageType = type;
     config.label = item.label;
     config.zIndex = zIndex;
+    return config;
   }
   var configs = [];
   configs.push(_buildImageChoice(resource.default, 'main', 0));
 
   resource.item.forEach(function(item) {
-    configs.push(_buildImageChoice(item), 'alternate', 1);
+    configs.push(_buildImageChoice(item, 'alternate', 1));
   });
   return configs;
 };

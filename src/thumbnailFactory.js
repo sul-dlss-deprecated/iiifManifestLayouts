@@ -2,11 +2,13 @@
 
 var ImageResource = require('./ImageResource');
 
-var _getThumbUrl = function(image, width) {
-  if(image.resource.service) {
-    return image.resource.service['@id'] + '/full/' + Math.ceil(width / 4) + ',/0/default.jpg';
+var _getThumbUrl = function(resource, width) {
+  if(resource.service) {
+    return resource.service['@id'] + '/full/' + Math.ceil(width / 4) + ',/0/default.jpg';
+  } else if(resource.default) {
+    return _getThumbUrl(resource.default);
   } else {
-    return image.resource['@id'];
+    return resource['@id'];
   }
 };
 
@@ -16,7 +18,7 @@ var ThumbnailFactory = function(canvas, parent) {
     var config = {
       tileSource: {
         type: 'image',
-        url: canvas.thumbnail || _getThumbUrl(canvas.images[0], canvas.width),
+        url: canvas.thumbnail || _getThumbUrl(canvas.images[0].resource, canvas.width),
         buildPyramid: 'false'
       },
       parent: parent,
