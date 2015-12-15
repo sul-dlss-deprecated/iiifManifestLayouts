@@ -15,6 +15,9 @@ var _getSegmentFromUrl = function(url) {
 };
 
 var _buildImageConfig = function(resource) {
+  if(resource == 'rdf:nil') {
+    return; // You can have a choice of "no image"; this is what it looks like.
+  }
   var hasService = !!(resource.service);
   var idObj = resource;
   if(hasService) {
@@ -47,9 +50,11 @@ var _buildChoiceConfigs = function(resource) {
 
   var _buildImageChoice = function(item, type, zIndex) {
     var config = _buildImageConfig(item);
-    config.imageType = type;
-    config.label = item.label;
-    config.zIndex = zIndex;
+    if(!!config) {
+      config.imageType = type;
+      config.label = item.label;
+      config.zIndex = zIndex;
+    }
     return config;
   }
   var configs = [];
@@ -65,8 +70,10 @@ var ImageResourceFactory = function(image, parent) {
   var resourceType = image.resource['@type']; // can be oa:Choice, oa:SpecificResource, or dctypes:Image
 
   var _addConfigAttributes = function(config) {
-    config.parent = parent;
-    config.bounds = _getSegmentFromUrl(image.on);
+    if(!!config) {
+      config.parent = parent;
+      config.bounds = _getSegmentFromUrl(image.on);
+    }
   };
 
   switch(resourceType) {

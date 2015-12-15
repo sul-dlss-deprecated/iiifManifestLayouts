@@ -3,6 +3,9 @@
 require('openseadragon');
 
 var ImageResource = function(config) {
+  if(!config) {
+    return;
+  }
   this.needed = config.needed || false;
   this.visible = config.visible || false;
   this.clipRegion = config.clipRegion;
