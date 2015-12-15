@@ -49,9 +49,9 @@ var manifestLayout = function(options) {
         // fixedHeightRows: fixedHeightLine,
         grid: gridAlign
       },
-      viewport = viewport(containerWidth, containerHeight, options.viewportPadding);
+      viewport = makeViewport(containerWidth, containerHeight, options.viewportPadding);
 
-  function viewport(width, height, viewportPadding) {
+  function makeViewport(width, height, viewportPadding) {
     var horizontalMargin,
         verticalMargin;
 
@@ -267,87 +267,10 @@ var manifestLayout = function(options) {
     }
   }
 
-  function fixedHeightAlign(frames, lineWidth, viewingDirection, viewingMode) {
-    var lines = [];
-
-    lines.currentLine = 0;
-
-    lines.addLine = function() {
-      var line = lines[lines.currentLine] = [];
-      line.remaining = lineWidth;
-
-      return line;
-    };
-
-    /**
-     * @param frame
-     * @returns {Array} [frame x position, line frame is on]
-     */
-    lines.addItem = function(frame) {
-      var line = this[this.currentLine],
-          lineItemWidth,
-          x;
-
-      if (viewingMode === 'paged') {
-        var position = frame.canvas.sequencePosition;
-        // Return the facingFrame, based on the facing page type
-        var facingFrame = frames.filter(function(page) {
-          var value;
-          switch (facingPageType(position)) {
-            case 'rightPage':
-            value = -1;
-            break;
-            case 'leftPage':
-            value = 1;
-            break;
-          }
-          return page.canvas.sequencePosition + value === position;
-        })[0];
-
-        if (facingFrame) {
-          lineItemWidth = frame.width + facingFrame.width;
-        } else {
-          lineItemWidth = frame.width;
-        }
-      } else {
-        lineItemWidth = frame.width;
-      }
-
-      if (!line) { line = this.addLine(); }
-
-      if (line.remaining >= lineItemWidth) {
-        x = lineWidth - line.remaining;
-        if (viewingDirection === 'right-to-left') {
-          x = line.remaining - frame.x;
-        }
-        line.remaining -= frame.width;
-        return [x, lines.currentLine];
-      }
-      if (line.remaining >= frame.width && facingPageType(frame.canvas.sequencePosition) === 'rightPage') {
-        x = lineWidth - line.remaining;
-        return [x, lines.currentLine];
-      }
-      this.currentLine += 1;
-      line = lines.addLine();
-      x = viewingDirection === 'right-to-left' ? frame.width: line.remaining;
-      line.remaining -= frame.width;
-      return [lineWidth - x, this.currentLine];
-    };
-
-    return frames.map(function(frame) {
-      var lineStats = lines.addItem(frame);
-      frame.x = lineStats[0];
-      frame.y = lineStats[1]*frame.height;
-      frame.canvas.x = frame.x + frame.canvas.localX;
-      frame.canvas.y = frame.y + frame.canvas.localY;
-      return frame;
-    });
-  }
-
   /**
-   * Determines a facing page type
-   * @returns {String}
-   */
+  * Determines a facing page type
+  * @returns {String}
+  */
   function facingPageType(index) {
     if (index === 0) {
       return 'firstPage';
@@ -358,7 +281,108 @@ var manifestLayout = function(options) {
     }
   }
 
-  function overviewLayout() {
+  var Lines = function(lineWidth, frames){
+    this.x = 0;
+    this.y = 0;
+    this.lineWidth = lineWidth;
+    this.frames = frames;
+  };
+
+  Lines.prototype = {
+    _getFacingFrame: function(index) {
+      var type = facingPageType(index);
+
+      if (type === 'leftPage') {
+        return this.frames[index + 1];
+      }
+
+      if (type === 'rightPage') {
+        return this.frames[index - 1];
+      }
+
+      return null;
+    },
+
+    /**
+     * @param frame
+     * @returns {Object} x, y
+     */
+    addItem: function(frame) {
+      var lineItemWidth = frame.width;
+
+      if (viewingMode === 'paged') {
+        var facingFrame = this._getFacingFrame(frame.canvas.sequencePosition);
+        if(facingFrame){
+          if (facingFrame.canvas.sequencePosition > frame.canvas.sequencePosition) {
+            lineItemWidth += facingFrame.width;
+          } else {
+            lineItemWidth = 0;
+          }
+        }
+      }
+
+      if (this.x + lineItemWidth > this.lineWidth) {
+        this.x = 0;
+        this.y += frame.height;
+      }
+
+      var output = {
+        x: this.x,
+        y: this.y
+      };
+
+      this.x += frame.width;
+
+      if (viewingDirection === 'right-to-left') {
+        output.x = this.lineWidth - this.x;
+      }
+
+      return output;
+    }
+  };
+
+  function fixedHeightAlign(frames, lineWidth) {
+    var lines = new Lines(lineWidth, frames);
+
+    return frames.map(function(frame) {
+      var lineStats = lines.addItem(frame);
+      frame.x = lineStats.x;
+      frame.y = lineStats.y;
+      frame.canvas.x = frame.x + frame.canvas.localX;
+      frame.canvas.y = frame.y + frame.canvas.localY;
+      return frame;
+    });
+  }
+
+  function alignToAnchor(frames, anchor) {
+    var offsetX = 0;
+    var offsetY = 0;
+
+    frames.forEach(function(frame) {
+      if (frame.canvas.selected) {
+        offsetX = anchor.x - (frame.x + frame.canvas.localX);
+        offsetY = anchor.y - (frame.y + frame.canvas.localY);
+      }
+    });
+
+    frames.forEach(function(frame) {
+      frame.x += offsetX;
+      frame.y += offsetY;
+    });
+
+    return frames;
+  }
+
+  function updateCanvases(frames) {
+    frames.forEach(function(frame) {
+      frame.canvas.x = frame.x + frame.canvas.localX;
+      frame.canvas.y = frame.y + frame.canvas.localY;
+    });
+
+    return frames;
+  }
+
+  function overviewLayout(anchor) {
     // configure for viewingDirection, viewingMode, framing technique,
     // and alignment Style.
     var frames = bindCanvases(canvases.map(pruneCanvas).map(function(canvas) {
@@ -366,24 +390,95 @@ var manifestLayout = function(options) {
       return fitHeight(canvas, canvasHeight);
     }), viewingMode, viewingDirection, framePadding, facingCanvasPadding);
 
-    return fixedHeightAlign(frames, viewport.paddedWidth, viewingDirection, viewingMode)
-      .map(function(frame){
-        frame.x += viewport.width*viewport.padding.left/100;
-        frame.y += viewport.height*viewport.padding.top/100;
-        frame.canvas.x = frame.x + frame.canvas.localX;
-        frame.canvas.y = frame.y + frame.canvas.localY;
-        return frame;
-      });
+    frames = fixedHeightAlign(frames, viewport.paddedWidth);
+    frames = alignToAnchor(frames, anchor);
+    frames = updateCanvases(frames);
+    return frames;
   }
 
-  function intermediateLayout() {
+  function detailLayout(anchor) {
+    return detailLayoutHorizontal(anchor);
+  }
+
+  function detailLayoutHorizontal(anchor) {
+    // TODO: support viewingDirection and viewingMode
+
+    // configure for viewingDirection, viewingMode, framing technique,
+    // and alignment Style.
+    var frames = bindCanvases(canvases.map(pruneCanvas).map(function(canvas) {
+      // resizes canvases for the chosen layout strategy.
+      return fitHeight(canvas, canvasHeight);
+    }), viewingMode, viewingDirection, framePadding, facingCanvasPadding);
+
+    var x = 0;
+    var y = 0;
+
+    frames.forEach(function(frame) {
+      frame.x = x;
+      frame.y = y;
+      x += frame.width;
+    });
+
+    frames = alignToAnchor(frames, anchor);
+    frames = updateCanvases(frames);
+    frames = intermediateLayoutHorizontal(frames);
+    return frames;
+  }
+
+  function intermediateLayout(anchor) {
     // configure for viewingDirection, viewingMode,
     // and alignment Style (scaling).
-    return intermediateLayoutHorizontal(overviewLayout(), selectedCanvas, viewport);
+    return intermediateLayoutHorizontal(overviewLayout(anchor));
   }
 
-  function detailLayout() {
-    return detailLayoutHorizontal(intermediateLayout());
+  function intermediateLayoutHorizontal(frames) {
+    var selectedFrames = frames.filter(function(frame) {
+      return frame.canvas.selected;
+    });
+
+    var selectedFrame = selectedFrames[0];
+    var facingCanvas = getFacingCanvas(selectedFrame.canvas, frames);
+    var canvasPosition = selectedFrame.canvas.sequencePosition;
+    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, facingCanvas);
+
+    if (viewingMode !== 'continuous') {
+      frames.forEach(function(frame, index, allFrames) {
+        if (frame.y === selectedFrame.y && frame.canvas.id !== selectedFrame.canvas.id) {
+          if (viewingMode === 'paged' && frame.canvas.id === facingCanvas.id) {
+            return;
+          }
+          // These are the canvases within the same line of the overview layout.
+          if (index < canvasPosition) {
+            // Those to the left. Push them to the left, out of frame.
+            frame.x = frame.x - (selectedFrame.vantage.leftMargin + framePadding.right*2);
+          } else {
+            // Those to the right. Push them to the right, out of frame.
+            frame.x = frame.x + (selectedFrame.vantage.rightMargin + framePadding.left*2);
+          }
+        } else if (frame.y > selectedFrame.y) {
+          // These are all the canvases below the selected canvas
+          // in the overview layout. Push then down out of frame.
+          frame.y = frame.y + (selectedFrame.vantage.topMargin + framePadding.bottom*2);
+        } else if (frame.y < selectedFrame.y) {
+          // These are all the canvases above the selected canvas
+          // in the overview layout. Push them up out of frame.
+          frame.y = frame.y - (selectedFrame.vantage.bottomMargin + framePadding.top*2);
+        }
+      });
+    }
+
+    frames = updateCanvases(frames);
+    return frames;
+  }
+
+  function getVantageForSelectedCanvas(frames) {
+    var selectedFrame = frames.filter(function(frame) {
+      return frame.canvas.selected;
+    })[0];
+
+    var facingCanvas = getFacingCanvas(selectedFrame.canvas, frames);
+
+    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, facingCanvas);
   }
 
   /**
@@ -392,7 +487,7 @@ var manifestLayout = function(options) {
    * @param {Object} previousFrame
    * @param {Object} nextFrame
    */
-  function getVantageForCanvas(selectedCanvas, facingCanvas, viewport) {
+  function getVantageForCanvas(selectedCanvas, facingCanvas) {
     var boundingBoxAspectRatio,
         vantageWidth,
         vantageHeight,
@@ -441,7 +536,7 @@ var manifestLayout = function(options) {
       };
     }
 
-    return getVantage(selectionBoundingBox, viewport);
+    return getVantage(selectionBoundingBox);
   }
 
   /**
@@ -452,7 +547,7 @@ var manifestLayout = function(options) {
    *     or a group of canvases.
    * @param {Object} viewport
    */
-  function getVantage(boundingBox, viewport) {
+  function getVantage(boundingBox) {
     var boundingBoxAspectRatio = boundingBox.width / boundingBox.height,
         vantageWidth,
         vantageHeight,
@@ -529,10 +624,10 @@ var manifestLayout = function(options) {
       rightMargin:horizontalMargin
     };
 
-    return padVantage(vantage, viewport);
+    return padVantage(vantage);
   }
 
-  function padVantage(vantage, viewport) {
+  function padVantage(vantage) {
     var horizontalPaddingRatio = viewport.padding.left + viewport.padding.right;
     var verticalPaddingRatio = viewport.padding.top + viewport.padding.bottom;
 
@@ -556,59 +651,6 @@ var manifestLayout = function(options) {
   function getBoundingBoxForCanvases(selectedCanvases) {
   }
 
-  function detailLayoutHorizontal(frames) {
-    // We need to lay them out in a straight line.
-    // This will give their relative positions
-    // starting from the leftmost side of the leftmost
-    // canvas.
-    var totalX = 0;
-
-    frames.forEach(function(frames) {
-    });
-    return frames;
-  }
-
-  function intermediateLayoutHorizontal(frames, selectedCanvas, viewport) {
-    var selectedFrame = frames.filter(function(frame) {
-      return frame.canvas.selected;
-    })[0],
-        facingCanvas = getFacingCanvas(selectedFrame.canvas, frames);
-
-    var canvasPosition = selectedFrame.canvas.sequencePosition;
-
-    selectedFrame.vantage = getVantageForCanvas(selectedFrame.canvas, facingCanvas, viewport);
-
-    if (viewingMode !== 'continuous') {
-      frames.forEach(function(frame, index, allFrames) {
-        if (frame.y === selectedFrame.y && frame.canvas.id !== selectedFrame.canvas.id) {
-          if (viewingMode === 'paged' && frame.canvas.id === facingCanvas.id) {
-            return;
-          }
-          // These are the canvases within the same line of the overview layout.
-          if (index < canvasPosition) {
-            // Those to the left. Push them to the left, out of frame.
-            frame.x = frame.x - (selectedFrame.vantage.leftMargin + framePadding.right*2);
-          } else {
-            // Those to the right. Push them to the right, out of frame.
-            frame.x = frame.x + (selectedFrame.vantage.rightMargin + framePadding.left*2);
-          }
-        } else if (frame.y > selectedFrame.y) {
-          // These are all the canvases below the selected canvas
-          // in the overview layout. Push then down out of frame.
-          frame.y = frame.y + (selectedFrame.vantage.topMargin + framePadding.bottom*2);
-        } else if (frame.y < selectedFrame.y) {
-          // These are all the canvases above the selected canvas
-          // in the overview layout. Push them up out of frame.
-          frame.y = frame.y - (selectedFrame.vantage.bottomMargin + framePadding.top*2);
-        }
-
-        frame.canvas.x = frame.x + frame.canvas.localX;
-        frame.canvas.y = frame.y + frame.canvas.localY;
-      });
-    }
-    return frames;
-  }
-
   function getFacingCanvas(canvas, frames) {
     var selectedIndex;
 
@@ -629,21 +671,15 @@ var manifestLayout = function(options) {
     }
   }
 
-  function detailLayoutVertical(frames, selected, viewport) {
-    return frames.map();
-  }
-
   function indicesOfParentLine(selectedCanvas) {
-  };
-
-  function intermediateLayoutVertical(frames, selected, viewport) {
-    return frames.map();
   }
+
 
   return {
     overview: overviewLayout,
     intermediate: intermediateLayout,
-    detail: detailLayout
+    detail: detailLayout,
+    viewport: viewport
   };
 
 };

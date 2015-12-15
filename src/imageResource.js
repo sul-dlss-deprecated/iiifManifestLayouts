@@ -7,42 +7,39 @@ var ImageResource = function(config) {
   this.visible = config.visible || false;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
-  this.x = config.x || 0;
-  this.y = config.y || 0;
-  this.height = config.height || 1;
-  this.width = config.width || 1;
+  this.bounds = config.bounds || new OpenSeadragon.Rect(0, 0, 1, 1);
   this.zIndex = config.zIndex || 0;
   this.tileSource = config.tileSource;
   this.dynamic = config.dynamic || false;
-  this.imageType = config.imageType || "main"; // can be 'main', 'alternate', or 'detail'
+  this.imageType = config.imageType || "main"; // can be 'main', 'alternate', 'detail' or 'thumbnail'
   this.status = 'initialized'; // can be 'requested', 'received', 'pending','shown', or 'failed'
   this.parent = config.parent;
-  this.dispatcher = config.dispatcher;
+  this.dispatcher = config.parent.dispatcher;
+  this.viewer = config.parent.viewer;
 };
 
 ImageResource.prototype = {
   hide: function() {
-    this.previousOpacity = this.opacity;
     this.visible = false;
-    this.updateOpacity(0);
+    if(this.tiledImage) {
+      this.tiledImage.setOpacity(0);
+    }
   },
 
   show: function() {
     this.visible = true;
-    this.updateOpacity(this.opacity);
+    this.updateOpacity();
   },
 
-  updateOpacity: function(opacity) {
-    if(this.tiledImage) {
-      this.tiledImage.setOpacity(opacity * this.parent.getOpacity());
+  updateOpacity: function() {
+    if(this.visible && this.tiledImage) {
+      this.tiledImage.setOpacity(this.opacity * this.parent.getOpacity());
     }
   },
 
   setOpacity: function(opacity) {
     this.opacity = opacity;
-    if(this.visible) {
-      this.updateOpacity(this.opacity);
-    }
+    this.updateOpacity();
   },
 
   getOpacity: function() {
@@ -61,12 +58,12 @@ ImageResource.prototype = {
     this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': self });
     this.status = 'requested';
     var bounds = this._getBoundsInViewer();
-    this.parent.viewer.addTiledImage({
+    this.viewer.addTiledImage({
       x: bounds.x,
       y: bounds.y,
       width: bounds.width,
       tileSource: this.tileSource,
-      opacity: this.parent.opacity * this.opacity,
+      opacity: this.opacity,
       clip: this.clipRegion,
       index: this.zIndex,
 
@@ -78,6 +75,7 @@ ImageResource.prototype = {
           if (event.tiledImage === main) {
             self.tiledImage = main;
             self.updateForParentChange();
+            self.updateOpacity();
             self.visible = true;
             self.status = 'shown';
             self.parent.viewer.removeHandler('tile-drawn', tileDrawnHandler);
@@ -94,7 +92,7 @@ ImageResource.prototype = {
           source: event.source
         };
         self.status = 'failed';
-        self.dispatcher.emit('image-resource-tile-source-failed', {'detail': errorInfo});
+        self.parent.dispatcher.emit('image-resource-tile-source-failed', {'detail': errorInfo});
       }
     });
   },
@@ -109,10 +107,10 @@ ImageResource.prototype = {
 
   _getBoundsInViewer: function() {
     return new OpenSeadragon.Rect(
-        this.parent.bounds.x + (this.parent.bounds.width * this.x),
-        this.parent.bounds.y + (this.parent.bounds.width * this.y),
-        this.parent.bounds.width * this.width,
-        this.parent.bounds.height * this.height
+        this.parent.bounds.x + (this.parent.bounds.width * this.bounds.x),
+        this.parent.bounds.y + (this.parent.bounds.width * this.bounds.y),
+        this.parent.bounds.width * this.bounds.width,
+        this.parent.bounds.height * this.bounds.height
     );
   },
 
@@ -143,7 +141,7 @@ ImageResource.prototype = {
 
   destroy: function() {
     if(this.tiledImage) {
-      this.parent.viewer.world.removeItem(this.tiledImage);
+      this.viewer.world.removeItem(this.tiledImage);
       this.tiledImage = null;
     }
   },

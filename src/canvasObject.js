@@ -2,6 +2,8 @@
 
 require('openseadragon');
 var ImageResource = require('./ImageResource');
+var ImageResourceFactory = require('./ImageResourceFactory');
+var ThumbnailFactory = require('./ThumbnailFactory');
 
 var CanvasObject = function(config) {
   var self = this;
@@ -17,17 +19,6 @@ var CanvasObject = function(config) {
     height : config.canvas.height,
     width : config.canvas.width
   };
-  this.thumbUrl = config.canvas.thumbnail;
-
-  // todo: Move this logic into an ImageResourceFactory.
-  this._getThumbService = function(width) {
-    var image = config.canvas.images[0];
-    if(image.resource.service) {
-      return image.resource.service['@id'] + '/full/' + Math.ceil(width * 2) + ',/0/default.jpg';
-    } else {
-      return image.resource['@id'];
-    }
-  };
 
   this.label = config.canvas.label;
   this.viewingHint = config.canvas.viewingHint;
@@ -35,26 +26,15 @@ var CanvasObject = function(config) {
   this.dispatcher = config.dispatcher;
   this.viewer = config.viewer;
   this.images = [];
-  // details and alternates possibly go here; disambiguate between them.
+
   if(config.canvas.images) {
-    this.images = config.canvas.images.map(function(image) {
-
-      // todo: Move this logic into an ImageResourceFactory.
-      var _getImageTilesource = function(image) {
-        if(image.resource.service) {
-          return image.resource.service['@id'] + '/info.json';
-        } else {
-          return image.resource['@id'];
-        }
-      };
-
-      return new ImageResource({
-        tileSource: _getImageTilesource(image),
-        parent: self,
-        dispatcher: self.dispatcher
-      });
+    config.canvas.images.forEach(function(image) {
+      self.images = self.images.concat(ImageResourceFactory(image, self));
     });
+    this.dispatcher.emit('images-created', { 'detail': this.images });
   }
+
+  this.thumbnail = ThumbnailFactory(config.canvas, self);
 };
 
 CanvasObject.prototype = {
@@ -70,7 +50,7 @@ CanvasObject.prototype = {
 
         if(self.thumbnail){
           self.thumbnail.destroy();
-          self.images = self.images.splice(self.images.indexOf(self.thumbnail), 1);
+          self.images.splice(self.images.indexOf(self.thumbnail), 1);
           delete self.thumbnail;
         }
       }
@@ -85,23 +65,11 @@ CanvasObject.prototype = {
   },
 
   openThumbnail: function() {
-    if(!this.thumbUrl && this.images.length === 0) {
-      // It may be the case that we have no images and no thumbnail in our canvas.
-      return;
+    if(this.thumbnail) {
+      this.thumbnail.openTileSource();
+      this.images.push(this.thumbnail);
+      this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
     }
-    this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
-
-    this.thumbnail = new ImageResource({
-      tileSource: {
-        type: 'image',
-        url: this.thumbUrl || this._getThumbService(this.bounds.width)
-      },
-      parent: this,
-      dispatcher: this.dispatcher
-    });
-
-    this.thumbnail.openTileSource();
-    this.images.push(this.thumbnail);
   },
 
   //Assumes that the point parameter is already in viewport coordinates.
@@ -122,6 +90,10 @@ CanvasObject.prototype = {
 
   getAlternateImages: function() {
     return this.images.filter(function(image) { return image.imageType === "alternate" });
+  },
+
+  getMainImage: function() {
+    return this.images.filter(function(image) {return image.imageType === "main" });
   },
 
   setBounds: function(x, y, width, height) {
@@ -153,12 +125,9 @@ CanvasObject.prototype = {
   setOpacity: function(opacity) {
     this.opacity = opacity;
     this.images.forEach(function(image) {
-      if(image.visible) {
-        image.updateOpacity();
-      }
+      image.updateOpacity();
     });
   }
-
 };
 
 module.exports = CanvasObject;
