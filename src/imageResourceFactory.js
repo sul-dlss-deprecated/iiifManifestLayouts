@@ -90,7 +90,7 @@ var ImageResourceFactory = function(image, parent) {
       });
       break;
     case 'oa:SpecificResource':
-      var config = _buildImageConfig(image.resource);
+      var config = _buildImageConfig(image.resource.full);
       _addConfigAttributes(config);
       if(image.selector && image.selector.region) {
         var clipArray = image.selector.region.split(',');
