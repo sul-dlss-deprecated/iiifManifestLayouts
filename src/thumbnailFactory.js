@@ -12,20 +12,31 @@ var _getThumbUrl = function(resource, width) {
   }
 };
 
+var _makeThumbnailConfig = function(url) {
+  return {
+    tileSource: {
+      type: 'image',
+      url: url
+    },
+    parent: parent,
+    buildPyramid: 'false',
+    imageType: 'thumbnail',
+    dynammic: false
+  };
+};
+
 var ThumbnailFactory = function(canvas, parent) {
-  // It may be the case that we have no images and no thumbnail in our canvas.
-  if(canvas.thumbnail || !!canvas.images) {
-    var config = {
-      tileSource: {
-        type: 'image',
-        url: canvas.thumbnail || _getThumbUrl(canvas.images[0].resource, canvas.width),
-        buildPyramid: 'false'
-      },
-      parent: parent,
-      imageType: 'thumbnail',
-      dynammic: false
-    };
-    return new ImageResource(config);
+  // The canvas has a thumbnail object.
+  if(canvas.thumbnail) {
+    return new ImageResource(_makeThumbnailConfig(canvas.thumbnail));
+  }
+
+  // If the canvas has no thumbnail object, we try to fall back to using an image from it.
+  // If the canvas has no images and no thumbnail, we can't do anything, so we don't bother.
+  // If there is no thumbnail and only one image in this canvas, there's no reason to make a thumbnail for it-
+  // the canvasobject will fall back to opening the main tilesource in the absence of a thumbnail.
+  if(canvas.images && canvas.images.length > 1) {
+    return new ImageResource(_getThumbUrl(canvas.images[0].resource, canvas.width));
   }
 };
 

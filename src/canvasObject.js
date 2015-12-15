@@ -39,9 +39,20 @@ var CanvasObject = function(config) {
 
 CanvasObject.prototype = {
   openTileSource: function(imageIndex) {
+    if(this.images.length === 0) {
+      return; // there are no images to open
+    }
+
+    if(this.images.length <= imageIndex) {
+      // array index out of bounds
+      throw new Error("Cannot open tileSource " + imageIndex);
+    }
+
+    var image = this.images[imageIndex];
+
+
     this.dispatcher.emit('detail-tile-source-opened', { 'detail': this.id });
     var self = this;
-    var image = this.images[imageIndex];
 
     var onTileDrawn = function(event) {
       if(event.detail.tileSource === image.tileSource) {
@@ -69,6 +80,8 @@ CanvasObject.prototype = {
       this.thumbnail.openTileSource();
       this.images.push(this.thumbnail);
       this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
+    } else { // sometimes there isn't a thumbnail
+      this.openMainTileSource();
     }
   },
 
