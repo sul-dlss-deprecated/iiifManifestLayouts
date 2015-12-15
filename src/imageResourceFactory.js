@@ -8,7 +8,9 @@ var _getSegmentFromUrl = function(url) {
   var segment = null;
   if(urlParts.length > 1) { // the url has a segment specified
     var bounds = urlParts[1].split('=');
-    var rectArray = bounds[1].split(',');
+    var rectArray = bounds[1].split(',').map(function(number) {
+      return parseInt(number, 10);
+    });
     segment = new OpenSeadragon.Rect(rectArray[0], rectArray[1], rectArray[2], rectArray[3]);
   }
   return segment;
@@ -73,6 +75,9 @@ var ImageResourceFactory = function(image, parent) {
     if(!!config) {
       config.parent = parent;
       config.bounds = _getSegmentFromUrl(image.on);
+      if(config.bounds) {
+        config.imageType = 'detail';
+      }
     }
   };
 
