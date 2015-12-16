@@ -84,7 +84,7 @@ ImageResource.prototype = {
             self.tiledImage = main;
             self.updateForParentChange();
             self.updateOpacity();
-            self.visible = true;
+            self.show();
             self.status = 'shown';
             self.parent.viewer.removeHandler('tile-drawn', tileDrawnHandler);
             self.dispatcher.emit('image-resource-tile-source-opened', { 'detail': self });
