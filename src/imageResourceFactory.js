@@ -74,9 +74,17 @@ var ImageResourceFactory = function(image, parent) {
   var _addConfigAttributes = function(config) {
     if(!!config) {
       config.parent = parent;
-      config.bounds = _getSegmentFromUrl(image.on);
-      if(config.bounds) {
+      var bounds = _getSegmentFromUrl(image.on);
+      if(bounds) {
         config.imageType = 'detail';
+
+        // We want to deal with these in terms of percentages relative to the canvas.
+        config.bounds = new OpenSeadragon.Rect(
+          bounds.x / parent.bounds.width,
+          bounds.y / parent.bounds.width,
+          bounds.width / parent.bounds.width,
+          bounds.height / parent.bounds.height
+        );
       }
     }
   };
