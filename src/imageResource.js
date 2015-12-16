@@ -4,6 +4,8 @@ require('openseadragon');
 
 var ImageResource = function(config) {
   if(!config) {
+     // todo: do something better here. We need the notion of 'no image' to make sense somehow, in terms
+     // of how the images array works in the canvasObject (do we just not add it there?)
     return;
   }
   this.needed = config.needed || false;
@@ -60,14 +62,15 @@ ImageResource.prototype = {
     // otherwise, continue loading the tileSource.
     this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': self });
     this.status = 'requested';
-    var bounds = this._getBoundsInViewer();
+    var bounds = this._getBoundsInViewer(this.bounds);
+    var clip = this._getBoundsInViewer(this.clipRegion);
     this.viewer.addTiledImage({
       x: bounds.x,
       y: bounds.y,
       width: bounds.width,
       tileSource: this.tileSource,
       opacity: this.opacity,
-      clip: this.clipRegion,
+      clip: clip,
       index: this.zIndex,
 
       success: function(event) {
@@ -108,18 +111,20 @@ ImageResource.prototype = {
     return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
   },
 
-  _getBoundsInViewer: function() {
-    return new OpenSeadragon.Rect(
-        this.parent.bounds.x + (this.parent.bounds.width * this.bounds.x),
-        this.parent.bounds.y + (this.parent.bounds.width * this.bounds.y),
-        this.parent.bounds.width * this.bounds.width,
-        this.parent.bounds.height * this.bounds.height
-    );
+  _getBoundsInViewer: function(rect) {
+    if(rect) {
+      return new OpenSeadragon.Rect(
+          this.parent.bounds.x + (this.parent.bounds.width * rect.x),
+          this.parent.bounds.y + (this.parent.bounds.width * rect.y),
+          this.parent.bounds.width * rect.width,
+          this.parent.bounds.height * rect.height
+      );
+    }
   },
 
   updateForParentChange: function(immediately) {
     if(this.tiledImage) {
-      var bounds = this._getBoundsInViewer();
+      var bounds = this._getBoundsInViewer(this.bounds);
       this.tiledImage.setPosition(bounds.getTopLeft(), immediately);
       this.tiledImage.setWidth(bounds.width, immediately);
     }
@@ -127,7 +132,7 @@ ImageResource.prototype = {
 
   //Assumes that the point parameter is already in viewport coordinates.
   containsViewerPoint: function(point) {
-    var bounds = this._getBoundsInViewer();
+    var bounds = this._getBoundsInViewer(this.bounds);
 
     var width = this.parent.bounds.width * this.width;
     var height = this.parent.bounds.height * this.height;
