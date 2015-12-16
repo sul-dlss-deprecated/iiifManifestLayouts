@@ -27,7 +27,7 @@ ImageResource.prototype = {
   hide: function() {
     this.visible = false;
     if(this.tiledImage) {
-      this.tiledImage.setOpacity(0);
+      this.tiledImage.updateOpacity();
     }
   },
 
@@ -37,8 +37,12 @@ ImageResource.prototype = {
   },
 
   updateOpacity: function() {
-    if(this.visible && this.tiledImage) {
-      this.tiledImage.setOpacity(this.opacity * this.parent.getOpacity());
+    if(this.tiledImage) {
+      if(this.visible) {
+        this.tiledImage.setOpacity(this.opacity * this.parent.getOpacity());
+      } else {
+        this.tiledImage.setOpacity(0);
+      }
     }
   },
 
