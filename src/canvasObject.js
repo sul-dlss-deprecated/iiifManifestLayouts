@@ -64,10 +64,6 @@ CanvasObject.prototype = {
           self.images.splice(self.images.indexOf(self.thumbnail), 1);
           delete self.thumbnail;
         }
-        // debug
-        if(image.imageType != 'detail') {
-          image.hide();
-        }
       }
     };
 
