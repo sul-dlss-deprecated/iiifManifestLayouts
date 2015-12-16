@@ -53,7 +53,7 @@ var _buildChoiceConfigs = function(resource) {
 
   var _buildImageChoice = function(item, type, zIndex) {
     var config = _buildImageConfig(item);
-    if(!!config) {
+    if(config) {
       config.imageType = type;
       config.label = item.label;
       config.zIndex = zIndex;
@@ -61,10 +61,16 @@ var _buildChoiceConfigs = function(resource) {
     return config;
   }
   var configs = [];
-  configs.push(_buildImageChoice(resource.default, 'main', 0));
+  var choice = _buildImageChoice(resource.default, 'main', 0);
+  if(choice) {
+    configs.push(choice);
+  }
 
   resource.item.forEach(function(item) {
-    configs.push(_buildImageChoice(item, 'alternate', 1));
+    var choice = _buildImageChoice(item, 'alternate', 1);
+    if(choice) {
+      configs.push(choice);
+    }
   });
   return configs;
 };
@@ -82,42 +88,41 @@ var ImageResourceFactory = function(image, parent) {
     );
   };
 
-  var _addConfigAttributes = function(config) {
+  var _makeImageFromConfig = function(config) {
     if(config) {
       config.parent = parent;
       var bounds = _getSegmentFromUrl(image.on);
       if(bounds) {
         config.imageType = 'detail';
         config.bounds = _makeCoordinatesPercentages(bounds);
+        config.zIndex = 0;
       }
       if(config.clipRegion) {
         config.clipRegion = _makeCoordinatesPercentages(config.clipRegion);
       }
+      return new ImageResource(config);
     }
   };
 
   switch(resourceType) {
     case 'dctypes:Image':
       var config = _buildImageConfig(image.resource);
-      _addConfigAttributes(config);
-      return new ImageResource(config);
+      return _makeImageFromConfig(config);
       break;
     case 'oa:Choice':
       var configs = _buildChoiceConfigs(image.resource);
       return configs.map(function(config) {
-        _addConfigAttributes(config);
-        return new ImageResource(config);
+        return _makeImageFromConfig(config);
       });
       break;
     case 'oa:SpecificResource':
-      var config = _buildImageConfig(image.resource.full);
-      if(image.selector && image.selector.region) {
+      var config = _buildImageConfig(image.resource);
+      if(config && image.selector && image.selector.region) {
         var clipArray = image.selector.region.split(',');
         config.clipRegion = new OpenSeadragon.Rect(clipArray[0], clipArray[1], clipArray[2], clipArray[3]);
         config.zIndex = 0;
       }
-      _addConfigAttributes(config);
-      return new ImageResource(config);
+      return _makeImageFromConfig(config);
       break;
     default:
       throw new Error("Cannot create an image from type " + resourceType);

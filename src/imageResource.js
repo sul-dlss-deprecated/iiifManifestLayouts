@@ -3,17 +3,12 @@
 require('openseadragon');
 
 var ImageResource = function(config) {
-  if(!config) {
-     // todo: do something better here. We need the notion of 'no image' to make sense somehow, in terms
-     // of how the images array works in the canvasObject (do we just not add it there?)
-    return;
-  }
   this.needed = config.needed || false;
   this.visible = config.visible || false;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
   this.bounds = config.bounds || new OpenSeadragon.Rect(0, 0, 1, 1);
-  this.zIndex = config.zIndex || 0;
+  this.zIndex = config.zIndex || 1;
   this.tileSource = config.tileSource;
   this.dynamic = config.dynamic || false;
   this.imageType = config.imageType || "main"; // can be 'main', 'alternate', 'detail' or 'thumbnail'

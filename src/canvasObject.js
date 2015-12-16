@@ -29,7 +29,10 @@ var CanvasObject = function(config) {
 
   if(config.canvas.images) {
     config.canvas.images.forEach(function(image) {
-      self.images = self.images.concat(ImageResourceFactory(image, self));
+      var imageResources = ImageResourceFactory(image, self);
+      if(imageResources) {
+        self.images = self.images.concat(imageResources);
+      }
     });
     this.dispatcher.emit('images-created', { 'detail': this.images });
   }
@@ -47,11 +50,9 @@ CanvasObject.prototype = {
       // array index out of bounds
       throw new Error("Cannot open tileSource " + imageIndex);
     }
+    this.dispatcher.emit('detail-tile-source-opened', { 'detail': this.id });
 
     var image = this.images[imageIndex];
-
-
-    this.dispatcher.emit('detail-tile-source-opened', { 'detail': this.id });
     var self = this;
 
     var onTileDrawn = function(event) {
