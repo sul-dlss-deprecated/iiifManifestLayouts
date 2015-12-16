@@ -11,12 +11,15 @@ var ImageResource = function(config) {
   this.needed = config.needed || false;
   this.visible = config.visible || false;
   this.clipRegion = config.clipRegion;
+  console.log("clip", this.clipRegion);
   this.opacity = config.opacity || 1;
   this.bounds = config.bounds || new OpenSeadragon.Rect(0, 0, 1, 1);
+  console.log("bounds", this.bounds);
   this.zIndex = config.zIndex || 0;
   this.tileSource = config.tileSource;
   this.dynamic = config.dynamic || false;
   this.imageType = config.imageType || "main"; // can be 'main', 'alternate', 'detail' or 'thumbnail'
+  console.log(this.imageType);
   this.status = 'initialized'; // can be 'requested', 'received', 'pending','shown', or 'failed'
   this.parent = config.parent;
   this.dispatcher = config.parent.dispatcher;
@@ -26,9 +29,7 @@ var ImageResource = function(config) {
 ImageResource.prototype = {
   hide: function() {
     this.visible = false;
-    if(this.tiledImage) {
-      this.tiledImage.updateOpacity();
-    }
+    this.updateOpacity();
   },
 
   show: function() {

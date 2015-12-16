@@ -64,6 +64,10 @@ CanvasObject.prototype = {
           self.images.splice(self.images.indexOf(self.thumbnail), 1);
           delete self.thumbnail;
         }
+        // debug
+        if(image.imageType != 'detail') {
+          image.hide();
+        }
       }
     };
 
@@ -73,6 +77,13 @@ CanvasObject.prototype = {
 
   openMainTileSource: function() {
     this.openTileSource(0);
+  },
+
+  openAllTileSources: function() {
+    var i = 0;
+    for(i; i < this.images.length; i++) {
+      this.openTileSource(i);
+    }
   },
 
   openThumbnail: function() {
