@@ -28,6 +28,10 @@ var _buildImageConfig = function(resource) {
   }
   var id = idObj['@id'];
 
+  if(!id && resource.full) {
+    return _buildImageConfig(resource.full);
+  }
+
   var _getImageTilesource = function() {
     if(hasService) {
       return id + '/info.json';
