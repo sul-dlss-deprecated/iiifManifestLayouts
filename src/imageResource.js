@@ -3,6 +3,7 @@
 require('openseadragon');
 
 var ImageResource = function(config) {
+  this.label = config.label || "No Label";
   this.needed = config.needed || false;
   this.visible = config.visible || false;
   this.clipRegion = config.clipRegion;

@@ -133,12 +133,28 @@ var App = {
       });
 
       self.viewer.on('canvas-selected', function(event) {
-        $images = $('#images-list');
-        event.detail.images.forEach(function(image) {
-          $('<p>')
-            .text(image.imageType)
-            .appendTo($images);
+        var canvas = event.detail;
+        $alternateImages = $('#alternate-images-list');
+        $detailImages = $('#detail-images-list');
 
+        $alternateImages.empty();
+        $detailImages.empty();
+
+        canvas.getMainImages().forEach(function(image) {
+          $('<li>')
+            .text(image.label + " (default)")
+            .appendTo($alternateImages);
+        });
+        canvas.getAlternateImages().forEach(function(image) {
+          $('<li>')
+            .text(image.label)
+            .appendTo($alternateImages);
+        });
+
+        canvas.getDetailImages().forEach(function(image) {
+          $('<p>')
+            .text(image.label )
+            .appendTo($detailImages);
         });
       });
     });

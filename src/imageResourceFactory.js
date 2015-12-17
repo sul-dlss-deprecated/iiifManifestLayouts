@@ -46,6 +46,7 @@ var _buildImageConfig = function(resource) {
   var imageTileSource =  _getImageTilesource();
 
   return {
+    label: resource.label,
     tileSource: imageTileSource,
     clipRegion: _getSegmentFromUrl(id),
     dynamic: hasService // todo: it's more complicated than that
@@ -59,19 +60,18 @@ var _buildChoiceConfigs = function(resource) {
     var config = _buildImageConfig(item);
     if(config) {
       config.imageType = type;
-      config.label = item.label;
       config.zIndex = zIndex;
     }
     return config;
   }
   var configs = [];
-  var choice = _buildImageChoice(resource.default, 'main', 0);
+  var choice = _buildImageChoice(resource.default, 'main', 1);
   if(choice) {
     configs.push(choice);
   }
 
   resource.item.forEach(function(item) {
-    var choice = _buildImageChoice(item, 'alternate', 1);
+    var choice = _buildImageChoice(item, 'alternate', 2);
     if(choice) {
       configs.push(choice);
     }
