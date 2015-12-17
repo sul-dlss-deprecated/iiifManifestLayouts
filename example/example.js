@@ -131,6 +131,16 @@ var App = {
       self.viewer.on('detail-tile-source-opened', function(e) {
         // console.log('detail tile source opened', e.detail);
       });
+
+      self.viewer.on('canvas-selected', function(event) {
+        $images = $('#images-list');
+        event.detail.images.forEach(function(image) {
+          $('<p>')
+            .text(image.imageType)
+            .appendTo($images);
+
+        });
+      });
     });
   },
 

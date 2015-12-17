@@ -507,6 +507,7 @@ var manifestor = function(options) {
     state.previousPerspective = state.perspective;
     state.perspective = 'detail';
     viewerState(state);
+    _dispatcher.emit('canvas-selected', { detail: _canvasObjects[item] });
   }
 
   function selectPerspective(perspective) {

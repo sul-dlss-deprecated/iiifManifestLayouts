@@ -34,7 +34,6 @@ var CanvasObject = function(config) {
         self.images = self.images.concat(imageResources);
       }
     });
-    this.dispatcher.emit('images-created', { 'detail': this.images });
   }
 
   this.thumbnail = ThumbnailFactory(config.canvas, self);
