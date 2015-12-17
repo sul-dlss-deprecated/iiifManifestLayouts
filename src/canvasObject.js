@@ -61,8 +61,8 @@ CanvasObject.prototype = {
         image.fade(1);
 
         if(self.thumbnail){
+          self.thumbnail.removeFromCanvas();
           self.thumbnail.destroy();
-          self.images.splice(self.images.indexOf(self.thumbnail), 1);
           delete self.thumbnail;
         }
       }
@@ -113,7 +113,7 @@ CanvasObject.prototype = {
     return this.images.filter(function(image) { return image.imageType === "alternate" });
   },
 
-  getMainImage: function() {
+  getMainImages: function() {
     return this.images.filter(function(image) {return image.imageType === "main" });
   },
 

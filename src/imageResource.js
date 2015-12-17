@@ -8,7 +8,7 @@ var ImageResource = function(config) {
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
   this.bounds = config.bounds || new OpenSeadragon.Rect(0, 0, 1, 1);
-  this.zIndex = config.zIndex || 1;
+  this.zIndex = config.zIndex || 0;
   this.tileSource = config.tileSource;
   this.dynamic = config.dynamic || false;
   this.imageType = config.imageType || "main"; // can be 'main', 'alternate', 'detail' or 'thumbnail'
@@ -172,10 +172,33 @@ ImageResource.prototype = {
       OpenSeadragon.requestAnimationFrame(frame);
     };
     OpenSeadragon.requestAnimationFrame(frame);
-  }
+  },
 
-  // todo: layering/z-index functions. Should this object know about
-  // its sibling image objects? If so, how?
+  updateItemIndex: function() {
+    if(this.tiledImage) {
+      var world = new OpenSeadragon.World({viewer: this.viewer});
+      world.setItemIndex(this.tiledImage, this.zIndex);
+    }
+  },
+
+  removeFromCanvas: function() {
+    var previous = this.parent.images.indexOf(this);
+    this.parent.images.splice(previous, 1);
+  },
+
+  moveToTop: function() {
+    this.zIndex = 0;
+    this.removeFromCanvas();
+    this.parent.images.unshift(this);
+    this.updateItemIndex();
+  },
+
+  moveToBottom: function() {
+    this.zIndex = this.parent.images.length - 1;
+    this.removeFromCanvas();
+    this.parent.images.push(this);
+    this.updateItemIndex();
+  }
 }
 
 module.exports = ImageResource;
