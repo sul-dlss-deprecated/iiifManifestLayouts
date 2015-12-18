@@ -62,6 +62,7 @@ ImageResource.prototype = {
     this.status = 'requested';
     var bounds = this._getBoundsInViewer(this.bounds);
     var clip = this._getBoundsInViewer(this.clipRegion);
+    console.log("config zindex:", this.zIndex);
     this.viewer.addTiledImage({
       x: bounds.x,
       y: bounds.y,
@@ -82,7 +83,13 @@ ImageResource.prototype = {
             self.updateOpacity();
             self.show();
             self.status = 'shown';
-            self.parent.viewer.removeHandler('tile-drawn', tileDrawnHandler);
+            // debug helpers
+            console.log(self.label, "bounds:",self.tiledImage.getBounds());
+            console.log(self.label, "clip:",self.tiledImage.getClip());
+            console.log(self.label, "zindex:", self.viewer.world.getIndexOfItem(self.tiledImage));
+            // end debug helpers
+
+            self.viewer.removeHandler('tile-drawn', tileDrawnHandler);
             self.dispatcher.emit('image-resource-tile-source-opened', { 'detail': self });
           }
         };
@@ -176,9 +183,9 @@ ImageResource.prototype = {
   },
 
   updateItemIndex: function() {
-    if(this.tiledImage) {
-      var world = new OpenSeadragon.World({viewer: this.viewer});
-      world.setItemIndex(this.tiledImage, this.zIndex);
+    if(this.tiledImage && this.parent.images.length > 0) {
+      this.viewer.world.setItemIndex(this.tiledImage, this.zIndex);
+      console.log("new index",this.viewer.world.getIndexOfItem(this.tiledImage));
     }
   },
 

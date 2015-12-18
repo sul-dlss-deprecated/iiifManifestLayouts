@@ -71,7 +71,7 @@ var _buildChoiceConfigs = function(resource) {
   }
 
   resource.item.forEach(function(item) {
-    var choice = _buildImageChoice(item, 'alternate', 2);
+    var choice = _buildImageChoice(item, 'alternate', 0);
     if(choice) {
       configs.push(choice);
     }
@@ -99,7 +99,7 @@ var ImageResourceFactory = function(image, parent) {
       if(bounds) {
         config.imageType = 'detail';
         config.bounds = _makeCoordinatesPercentages(bounds);
-        config.zIndex = 0;
+        config.zIndex = 2;
       }
       if(config.clipRegion) {
         config.clipRegion = _makeCoordinatesPercentages(config.clipRegion);
@@ -124,7 +124,6 @@ var ImageResourceFactory = function(image, parent) {
       if(config && image.selector && image.selector.region) {
         var clipArray = image.selector.region.split(',');
         config.clipRegion = new OpenSeadragon.Rect(clipArray[0], clipArray[1], clipArray[2], clipArray[3]);
-        config.zIndex = 0;
       }
       return _makeImageFromConfig(config);
       break;
