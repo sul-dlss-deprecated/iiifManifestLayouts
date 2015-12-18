@@ -84,9 +84,9 @@ ImageResource.prototype = {
             self.show();
             self.status = 'shown';
             // debug helpers
-            console.log(self.label, "bounds:",self.tiledImage.getBounds());
-            console.log(self.label, "clip:",self.tiledImage.getClip());
-            console.log(self.label, "zindex:", self.viewer.world.getIndexOfItem(self.tiledImage));
+           // console.log(self.label, "bounds:",self.tiledImage.getBounds());
+           // console.log(self.label, "clip:",self.tiledImage.getClip());
+           // console.log(self.label, "zindex:", self.viewer.world.getIndexOfItem(self.tiledImage));
             // end debug helpers
 
             self.viewer.removeHandler('tile-drawn', tileDrawnHandler);
