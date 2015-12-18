@@ -132,10 +132,6 @@ var App = {
         // console.log('detail tile source requested', e.detail);
       });
 
-      self.viewer.on('detail-tile-source-opened', function(e) {
-        // console.log('detail tile source opened', e.detail);
-      });
-
       self.$images.sortable({
         stop: function(event, ui) {
           var inputs = event.target.querySelectorAll('input');
@@ -160,6 +156,10 @@ var App = {
       self.viewer.on('image-show', function(e) {
         _setCheckbox(e.detail, true);
       });
+
+      self.viewer.on('image-resource-tile-source-opened', function(e) {
+        _setCheckbox(e.detail.id, e.detail.visible);
+      })
 
       self.viewer.on('canvas-selected', function(event) {
         self.canvas = event.detail;
