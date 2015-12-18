@@ -402,7 +402,7 @@ var manifestor = function(options) {
       if(event.quick && hitCanvases[0]) {
         var bounds = hitCanvases[0].getBounds();
         viewer.viewport.fitBounds(bounds);
-        hitCanvases[0].openAllTileSources();
+        hitCanvases[0].openMainTileSource();
       }
     });
   }

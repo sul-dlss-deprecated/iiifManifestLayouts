@@ -136,6 +136,19 @@ var App = {
         // console.log('detail tile source opened', e.detail);
       });
 
+      var _setCheckbox = function(id, value) {
+        var checkbox = $("input[data-image='" + id + "']");
+        checkbox.prop('checked', value);
+      };
+
+      self.viewer.on('image-hide', function(e) {
+        _setCheckbox(e.detail, false);
+      });
+
+      self.viewer.on('image-show', function(e) {
+        _setCheckbox(e.detail, true);
+      });
+
       self.viewer.on('canvas-selected', function(event) {
         var canvas = event.detail;
 
@@ -146,17 +159,24 @@ var App = {
           if(image.imageType === 'main') {
             text += " (default)";
           }
+          if(image.imageType === 'detail') {
+            text +=" (detail)";
+          }
           if(image.imageType !== 'thumbnail') {
             var listItem = $('<li>');
             var label = $('<label>').text(text + " - "+ image.zIndex);
 
             var checkbox = $('<input type=checkbox>');
-            checkbox.prop('id', 'image-toggle-' + image.id);
+            checkbox.data('image', image.id);
             checkbox.prop('checked', image.visible);
 
             checkbox.change(image, function(event) {
               if(event.target.checked) {
-                image.show();
+                if(image.status === 'shown') {
+                  image.show();
+                } else {
+                  image.openTileSource();
+                }
               } else {
                 image.hide();
               }

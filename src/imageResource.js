@@ -3,6 +3,7 @@
 require('openseadragon');
 
 var ImageResource = function(config) {
+  this.id = config.id;
   this.label = config.label || "No Label";
   this.needed = config.needed || false;
   this.visible = config.visible || false;
@@ -23,13 +24,13 @@ ImageResource.prototype = {
   hide: function() {
     this.visible = false;
     this.updateOpacity();
-    this.dispatcher.emit('image-hide', {detail: this});
+    this.dispatcher.emit('image-hide', {detail: this.id});
   },
 
   show: function() {
     this.visible = true;
     this.updateOpacity();
-    this.dispatcher.emit('image-show', {detail: this});
+    this.dispatcher.emit('image-show', {detail: this.id});
   },
 
   updateOpacity: function() {
@@ -64,7 +65,6 @@ ImageResource.prototype = {
     this.status = 'requested';
     var bounds = this._getBoundsInViewer(this.bounds);
     var clip = this._getBoundsInViewer(this.clipRegion);
-    console.log("config zindex:", this.zIndex);
     this.viewer.addTiledImage({
       x: bounds.x,
       y: bounds.y,

@@ -46,6 +46,7 @@ var _buildImageConfig = function(resource) {
   var imageTileSource =  _getImageTilesource();
 
   return {
+    id: id,
     label: resource.label,
     tileSource: imageTileSource,
     clipRegion: _getSegmentFromUrl(id),
