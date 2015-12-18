@@ -65,9 +65,6 @@ ImageResource.prototype = {
     this.status = 'requested';
     var bounds = this._getBoundsInViewer(this.bounds);
     var clip = this._getBoundsInViewer(this.clipRegion);
-    if(!this.zIndex) {
-      this.zIndex = this.parent.images.indexOf(this);
-    }
 
     this.viewer.addTiledImage({
       x: bounds.x,
@@ -93,7 +90,6 @@ ImageResource.prototype = {
             // debug helpers
            // console.log(self.label, "bounds:",self.tiledImage.getBounds());
            // console.log(self.label, "clip:",self.tiledImage.getClip());
-            console.log(self.label, "zindex:", self.viewer.world.getIndexOfItem(self.tiledImage));
             // end debug helpers
 
             self.viewer.removeHandler('tile-drawn', tileDrawnHandler);
@@ -187,6 +183,10 @@ ImageResource.prototype = {
       OpenSeadragon.requestAnimationFrame(frame);
     };
     OpenSeadragon.requestAnimationFrame(frame);
+  },
+
+  updateIndexFromParent: function() {
+    this.zIndex = this.parent.images.indexOf(this);
   },
 
   updateItemIndex: function() {

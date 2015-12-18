@@ -36,6 +36,9 @@ var CanvasObject = function(config) {
     });
   }
 
+  this.images.forEach(function(image) {
+    image.updateIndexFromParent;
+  });
   this.thumbnail = ThumbnailFactory(config.canvas, self);
 };
 
