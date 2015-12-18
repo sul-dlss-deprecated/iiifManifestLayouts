@@ -6,6 +6,9 @@ var App = {
     this.currentMode = 'individuals';
 
     this.$manifestPicker = $('#manifestPicker');
+    this.$images = $('#images-list');
+
+    this.$images.empty();
 
     $('<option>')
       .val('http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json')
@@ -93,6 +96,7 @@ var App = {
     var self = this;
 
     var manifestUrl = this.$manifestPicker.val();
+    this.$images.empty();
 
     $.get(manifestUrl, function(manifest) {
       /* http://iiif.io/api/presentation/2.0/example/fixtures/24/manifest.json */
@@ -134,27 +138,19 @@ var App = {
 
       self.viewer.on('canvas-selected', function(event) {
         var canvas = event.detail;
-        $alternateImages = $('#alternate-images-list');
-        $detailImages = $('#detail-images-list');
 
-        $alternateImages.empty();
-        $detailImages.empty();
+        self.$images.empty();
 
-        canvas.getMainImages().forEach(function(image) {
-          $('<li>')
-            .text(image.label + " (default)")
-            .appendTo($alternateImages);
-        });
-        canvas.getAlternateImages().forEach(function(image) {
-          $('<li>')
-            .text(image.label)
-            .appendTo($alternateImages);
-        });
-
-        canvas.getDetailImages().forEach(function(image) {
-          $('<p>')
-            .text(image.label )
-            .appendTo($detailImages);
+        canvas.images.forEach(function(image) {
+          var text = image.label;
+          if(image.imageType === 'main') {
+            text += " (default)";
+          }
+          if(image.imageType !== 'thumbnail') {
+            $('<li>')
+              .text(text + " - "+ image.zIndex)
+              .appendTo(self.$images);
+          }
         });
       });
     });
