@@ -136,8 +136,20 @@ var App = {
         // console.log('detail tile source opened', e.detail);
       });
 
-      var _setCheckbox = function(id, value) {
-        var checkbox = $("input[data-image='" + id + "']");
+      self.$images.sortable({
+        stop: function(event, ui) {
+          var inputs = event.target.querySelectorAll('input');
+          var i = 0;
+          for(i; i < inputs.length; i++) {
+            // zIndex is backwards from this UI; 0 is on the bottom for zIndex, but 0 is the top
+            // of this sortable UI element array.
+            self.canvas.getImageById(inputs[i].id).moveToIndex(inputs.length - (i + 1));
+          }
+        }
+      });
+
+      var _setCheckbox = function(id, value) {;
+        var checkbox = $("#" + id);
         checkbox.prop('checked', value);
       };
 
@@ -150,11 +162,11 @@ var App = {
       });
 
       self.viewer.on('canvas-selected', function(event) {
-        var canvas = event.detail;
+        self.canvas = event.detail;
 
         self.$images.empty();
 
-        canvas.images.forEach(function(image) {
+        self.canvas.images.forEach(function(image) {
           var text = image.label;
           if(image.imageType === 'main') {
             text += " (default)";
@@ -163,11 +175,11 @@ var App = {
             text +=" (detail)";
           }
           if(image.imageType !== 'thumbnail') {
-            var listItem = $('<li>').sortable();
+            var listItem = $('<li>');
             var label = $('<label>').text(text);
 
             var checkbox = $('<input type=checkbox>');
-            checkbox.data('image', image.id);
+            checkbox.prop('id', image.id);
             checkbox.prop('checked', image.visible);
 
             checkbox.change(image, function(event) {

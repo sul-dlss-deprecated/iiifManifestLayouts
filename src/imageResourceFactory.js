@@ -46,7 +46,7 @@ var _buildImageConfig = function(resource) {
   var imageTileSource =  _getImageTilesource();
 
   return {
-    id: id,
+    id: id.replace(/[^a-z0-9-_]+/gi, ""), // this is to use in the DOM, so remove special characters
     label: resource.label,
     tileSource: imageTileSource,
     clipRegion: _getSegmentFromUrl(id),

@@ -101,6 +101,10 @@ CanvasObject.prototype = {
     return this.images.filter(function(image) {return image.imageType === "main" })[0];
   },
 
+  getImageById: function(id) {
+    return this.images.filter(function(image) {return image.id === id})[0];
+  },
+
   setBounds: function(x, y, width, height) {
     var self = this;
     this.bounds.x = x;
