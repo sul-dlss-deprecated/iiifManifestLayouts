@@ -10,7 +10,7 @@ var ImageResource = function(config) {
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
   this.bounds = config.bounds || new OpenSeadragon.Rect(0, 0, 1, 1);
-  this.zIndex = config.zIndex || 0;
+  this.zIndex = config.zIndex;
   this.tileSource = config.tileSource;
   this.dynamic = config.dynamic || false;
   this.imageType = config.imageType || "main"; // can be 'main', 'alternate', 'detail' or 'thumbnail'
@@ -65,6 +65,10 @@ ImageResource.prototype = {
     this.status = 'requested';
     var bounds = this._getBoundsInViewer(this.bounds);
     var clip = this._getBoundsInViewer(this.clipRegion);
+    if(!this.zIndex) {
+      this.zIndex = this.parent.images.indexOf(this);
+    }
+
     this.viewer.addTiledImage({
       x: bounds.x,
       y: bounds.y,
@@ -83,12 +87,13 @@ ImageResource.prototype = {
             self.tiledImage = main;
             self.updateForParentChange();
             self.updateOpacity();
+            self.updateItemIndex();
             self.show();
             self.status = 'shown';
             // debug helpers
            // console.log(self.label, "bounds:",self.tiledImage.getBounds());
            // console.log(self.label, "clip:",self.tiledImage.getClip());
-           // console.log(self.label, "zindex:", self.viewer.world.getIndexOfItem(self.tiledImage));
+            console.log(self.label, "zindex:", self.viewer.world.getIndexOfItem(self.tiledImage));
             // end debug helpers
 
             self.viewer.removeHandler('tile-drawn', tileDrawnHandler);
@@ -185,7 +190,7 @@ ImageResource.prototype = {
   },
 
   updateItemIndex: function() {
-    if(this.tiledImage && this.parent.images.length > 0) {
+    if(this.tiledImage) {
       this.viewer.world.setItemIndex(this.tiledImage, this.zIndex);
       console.log("new index",this.viewer.world.getIndexOfItem(this.tiledImage));
     }
@@ -196,19 +201,57 @@ ImageResource.prototype = {
     this.parent.images.splice(previous, 1);
   },
 
-  moveToTop: function() {
-    this.zIndex = 0;
-    this.removeFromCanvas();
-    this.parent.images.unshift(this);
+  moveToIndex: function(index) {
+    var oldIndex = this.parent.images.indexOf(this);
+
+    if ( index === oldIndex || oldIndex === -1 ) {
+        return;
+    }
+    if ( index >= this.parent.images.length ) {
+        throw new Error( "Index bigger than number of images." );
+    }
+
+    this.zIndex = index;
+    this.parent.images.splice( oldIndex, 1 );
+    this.parent.images.splice( index, 0, this );
     this.updateItemIndex();
   },
 
+  moveToTop: function() {
+    this.moveToIndex(0);
+  },
+
   moveToBottom: function() {
-    this.zIndex = this.parent.images.length - 1;
-    this.removeFromCanvas();
-    this.parent.images.push(this);
-    this.updateItemIndex();
-  }
+    this.moveToIndex(this.parent.images.length - 1);
+  },
+
+  insertAboveIndex: function(index) {
+    if(index !== 0) {
+      this.moveToIndex(index - 1);
+    }
+  },
+
+  insertBelowIndex: function(index) {
+    if(index < this.parent.images.length - 1) {
+      this.moveToIndex(index + 1);
+    }
+  },
+
+  insertAboveResource: function(resource) {
+    insertAboveIndex(this.parent.images.indexOf(resource));
+  },
+
+  insertBelowResource: function(resource) {
+    this.insertBelowIndex(this.parent.images.indexOf(resource));
+  },
+
+  moveUpOne: function() {
+    this.insertAboveResource(this);
+  },
+
+  moveDownOne: function() {
+    this.insertBelowResource(this);
+  },
 }
 
 module.exports = ImageResource;

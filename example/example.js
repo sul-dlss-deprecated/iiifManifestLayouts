@@ -163,8 +163,8 @@ var App = {
             text +=" (detail)";
           }
           if(image.imageType !== 'thumbnail') {
-            var listItem = $('<li>');
-            var label = $('<label>').text(text + " - "+ image.zIndex);
+            var listItem = $('<li>').sortable();
+            var label = $('<label>').text(text);
 
             var checkbox = $('<input type=checkbox>');
             checkbox.data('image', image.id);

@@ -57,22 +57,21 @@ var _buildImageConfig = function(resource) {
 
 var _buildChoiceConfigs = function(resource) {
 
-  var _buildImageChoice = function(item, type, zIndex) {
+  var _buildImageChoice = function(item, type) {
     var config = _buildImageConfig(item);
     if(config) {
       config.imageType = type;
-      config.zIndex = zIndex;
     }
     return config;
   }
   var configs = [];
-  var choice = _buildImageChoice(resource.default, 'main', 1);
+  var choice = _buildImageChoice(resource.default, 'main');
   if(choice) {
     configs.push(choice);
   }
 
   resource.item.forEach(function(item) {
-    var choice = _buildImageChoice(item, 'alternate', 0);
+    var choice = _buildImageChoice(item, 'alternate');
     if(choice) {
       configs.push(choice);
     }
@@ -100,7 +99,6 @@ var ImageResourceFactory = function(image, parent) {
       if(bounds) {
         config.imageType = 'detail';
         config.bounds = _makeCoordinatesPercentages(bounds);
-        config.zIndex = 2;
       }
       if(config.clipRegion) {
         config.clipRegion = _makeCoordinatesPercentages(config.clipRegion);
