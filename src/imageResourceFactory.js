@@ -101,9 +101,6 @@ var ImageResourceFactory = function(image, parent) {
         config.imageType = 'detail';
         config.bounds = _makeCoordinatesPercentages(bounds);
       }
-      if(config.clipRegion) {
-        config.clipRegion = _makeCoordinatesPercentages(config.clipRegion);
-      }
       return new ImageResource(config);
     }
   };

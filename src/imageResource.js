@@ -64,7 +64,6 @@ ImageResource.prototype = {
     this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': self });
     this.status = 'requested';
     var bounds = this._getBoundsInViewer(this.bounds);
-    var clip = this._getBoundsInViewer(this.clipRegion);
 
     this.viewer.addTiledImage({
       x: bounds.x,
@@ -72,7 +71,7 @@ ImageResource.prototype = {
       width: bounds.width,
       tileSource: this.tileSource,
       opacity: this.opacity,
-      clip: clip,
+      clip: this.clipRegion,
       index: this.zIndex,
 
       success: function(event) {
@@ -87,10 +86,6 @@ ImageResource.prototype = {
             self.updateItemIndex();
             self.show();
             self.status = 'shown';
-            // debug helpers
-           // console.log(self.label, "bounds:",self.tiledImage.getBounds());
-           // console.log(self.label, "clip:",self.tiledImage.getClip());
-            // end debug helpers
 
             self.viewer.removeHandler('tile-drawn', tileDrawnHandler);
             self.dispatcher.emit('image-resource-tile-source-opened', { 'detail': self });
