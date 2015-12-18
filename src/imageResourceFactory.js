@@ -46,7 +46,8 @@ var _buildImageConfig = function(resource) {
   var imageTileSource =  _getImageTilesource();
 
   return {
-    id: id.replace(/[^a-z0-9-_]+/gi, ""), // this is to use in the DOM, so remove special characters
+    // the ID is to use in the DOM, so remove special characters. The URL may not be unique, so add a salt.
+    id: id.replace(/[^a-z0-9-_]+/gi, "") + Math.random(),
     label: resource.label,
     tileSource: imageTileSource,
     clipRegion: _getSegmentFromUrl(id),
