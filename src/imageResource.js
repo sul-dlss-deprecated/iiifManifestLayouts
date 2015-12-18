@@ -190,9 +190,8 @@ ImageResource.prototype = {
   },
 
   updateItemIndex: function() {
-    if(this.tiledImage) {
+    if(this.tiledImage && this.viewer.world.getItemCount() > this.zIndex) {
       this.viewer.world.setItemIndex(this.tiledImage, this.zIndex);
-      console.log("new index",this.viewer.world.getIndexOfItem(this.tiledImage));
     }
   },
 
@@ -204,7 +203,7 @@ ImageResource.prototype = {
   moveToIndex: function(index) {
     var oldIndex = this.parent.images.indexOf(this);
 
-    if ( index === oldIndex || oldIndex === -1 ) {
+    if (index === oldIndex || oldIndex === -1 ) {
         return;
     }
     if ( index >= this.parent.images.length ) {
@@ -217,21 +216,21 @@ ImageResource.prototype = {
     this.updateItemIndex();
   },
 
-  moveToTop: function() {
+  moveToBottom: function() {
     this.moveToIndex(0);
   },
 
-  moveToBottom: function() {
+  moveToTop: function() {
     this.moveToIndex(this.parent.images.length - 1);
   },
 
-  insertAboveIndex: function(index) {
+  insertBelowIndex: function(index) {
     if(index !== 0) {
       this.moveToIndex(index - 1);
     }
   },
 
-  insertBelowIndex: function(index) {
+  insertAboveIndex: function(index) {
     if(index < this.parent.images.length - 1) {
       this.moveToIndex(index + 1);
     }
