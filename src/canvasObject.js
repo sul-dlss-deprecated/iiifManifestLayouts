@@ -40,18 +40,14 @@ var CanvasObject = function(config) {
 };
 
 CanvasObject.prototype = {
-  openTileSource: function(imageIndex) {
+  openMainTileSource: function(imageIndex) {
     if(this.images.length === 0) {
       return; // there are no images to open
     }
 
-    if(this.images.length <= imageIndex) {
-      // array index out of bounds
-      throw new Error("Cannot open tileSource " + imageIndex);
-    }
     this.dispatcher.emit('detail-tile-source-opened', { 'detail': this.id });
 
-    var image = this.images[imageIndex];
+    var image = this.getMainImage();
     var self = this;
 
     var onTileDrawn = function(event) {
@@ -69,17 +65,6 @@ CanvasObject.prototype = {
 
     this.dispatcher.on('image-resource-tile-source-opened', onTileDrawn);
     image.openTileSource();
-  },
-
-  openMainTileSource: function() {
-    this.openTileSource(0);
-  },
-
-  openAllTileSources: function() {
-    var i = 0;
-    for(i; i < this.images.length; i++) {
-      this.openTileSource(i);
-    }
   },
 
   openThumbnail: function() {
@@ -112,8 +97,8 @@ CanvasObject.prototype = {
     return this.images.filter(function(image) { return image.imageType === "alternate" });
   },
 
-  getMainImages: function() {
-    return this.images.filter(function(image) {return image.imageType === "main" });
+  getMainImage: function() {
+    return this.images.filter(function(image) {return image.imageType === "main" })[0];
   },
 
   setBounds: function(x, y, width, height) {
