@@ -23,11 +23,13 @@ ImageResource.prototype = {
   hide: function() {
     this.visible = false;
     this.updateOpacity();
+    this.dispatcher.emit('image-hide', {detail: this});
   },
 
   show: function() {
     this.visible = true;
     this.updateOpacity();
+    this.dispatcher.emit('image-show', {detail: this});
   },
 
   updateOpacity: function() {

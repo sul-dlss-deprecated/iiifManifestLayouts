@@ -147,9 +147,23 @@ var App = {
             text += " (default)";
           }
           if(image.imageType !== 'thumbnail') {
-            $('<li>')
-              .text(text + " - "+ image.zIndex)
-              .appendTo(self.$images);
+            var listItem = $('<li>');
+            var label = $('<label>').text(text + " - "+ image.zIndex);
+
+            var checkbox = $('<input type=checkbox>');
+            checkbox.prop('id', 'image-toggle-' + image.id);
+            checkbox.prop('checked', image.visible);
+
+            checkbox.change(image, function(event) {
+              if(event.target.checked) {
+                image.show();
+              } else {
+                image.hide();
+              }
+            });
+            label.append(checkbox);
+            listItem.append(label);
+            listItem.appendTo(self.$images);
           }
         });
       });
