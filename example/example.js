@@ -195,7 +195,7 @@ var App = {
             });
             label.append(checkbox);
             listItem.append(label);
-            listItem.appendTo(self.$images);
+            listItem.prependTo(self.$images);
           }
         });
       });
