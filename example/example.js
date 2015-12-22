@@ -139,7 +139,7 @@ var App = {
           for(i; i < inputs.length; i++) {
             // zIndex is backwards from this UI; 0 is on the bottom for zIndex, but 0 is the top
             // of this sortable UI element array.
-            self.canvas.getImageById(inputs[i].id).moveToIndex(inputs.length - (i + 1));
+            self.selectedCanvas.getImageById(inputs[i].id).moveToIndex(inputs.length - (i + 1));
           }
         }
       });
@@ -159,14 +159,15 @@ var App = {
 
       self.viewer.on('image-resource-tile-source-opened', function(e) {
         _setCheckbox(e.detail.id, e.detail.visible);
-      })
+      });
 
-      self.viewer.on('canvas-selected', function(event) {
-        self.canvas = event.detail;
+      var _setImagesForCanvas = function(canvas) {
+        self.selectedCanvas = canvas;
+        console.log(self.selectedCanvas);
 
         self.$images.empty();
 
-        self.canvas.images.forEach(function(image) {
+        self.selectedCanvas.images.forEach(function(image) {
           var text = image.label;
           if(image.imageType === 'main') {
             text += " (default)";
@@ -198,6 +199,15 @@ var App = {
             listItem.prependTo(self.$images);
           }
         });
+      };
+
+      var selectedCanvas = self.viewer.getSelectedCanvas();
+      if(selectedCanvas) {
+        _setImagesForCanvas(selectedCanvas);
+      }
+
+      self.viewer.on('canvas-selected', function(event) {
+        _setImagesForCanvas(event.detail);
       });
     });
   },
