@@ -510,6 +510,11 @@ var manifestor = function(options) {
     _dispatcher.emit('canvas-selected', { detail: _canvasObjects[item] });
   }
 
+  function getSelectedCanvas() {
+    var state = viewerState();
+    return _canvasObjects[state.selectedCanvas];
+  }
+
   function selectPerspective(perspective) {
     var state = viewerState();
     state.previousPerspective = state.perspective;
@@ -724,7 +729,8 @@ var manifestor = function(options) {
     getState: viewerState,
     setState: viewerState,
     osd: viewer,
-    on: on
+    on: on,
+    getSelectedCanvas: getSelectedCanvas
   };
 };
 
