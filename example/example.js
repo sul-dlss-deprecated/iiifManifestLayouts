@@ -163,8 +163,6 @@ var App = {
 
       var _setImagesForCanvas = function(canvas) {
         self.selectedCanvas = canvas;
-        console.log(self.selectedCanvas);
-
         self.$images.empty();
 
         self.selectedCanvas.images.forEach(function(image) {
