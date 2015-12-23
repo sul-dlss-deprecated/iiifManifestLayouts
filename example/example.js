@@ -144,8 +144,8 @@ var App = {
         }
       });
 
-      var _setCheckbox = function(id, value) {;
-        var checkbox = $("#" + id);
+      var _setCheckbox = function(id, value) {
+        var checkbox = $('#' + id);
         checkbox.prop('checked', value);
       };
 
