@@ -137,9 +137,11 @@ var App = {
           var inputs = event.target.querySelectorAll('input');
           var i = 0;
           for(i; i < inputs.length; i++) {
+
             // zIndex is backwards from this UI; 0 is on the bottom for zIndex, but 0 is the top
             // of this sortable UI element array.
-            self.selectedCanvas.getImageById(inputs[i].id).moveToIndex(inputs.length - (i + 1));
+            var image = self.selectedCanvas.getImageById(inputs[i].id);
+            self.selectedCanvas.moveToIndex(image, inputs.length - (i + 1));
           }
         }
       });

@@ -64,6 +64,7 @@ ImageResource.prototype = {
     this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': self });
     this.status = 'requested';
     var bounds = this._getBoundsInViewer(this.bounds);
+    this.updateIndexFromParent();
 
     this.viewer.addTiledImage({
       x: bounds.x,
@@ -193,58 +194,6 @@ ImageResource.prototype = {
   removeFromCanvas: function() {
     var previous = this.parent.images.indexOf(this);
     this.parent.images.splice(previous, 1);
-  },
-
-  moveToIndex: function(index) {
-    var oldIndex = this.parent.images.indexOf(this);
-
-    if (index === oldIndex || oldIndex === -1 ) {
-        return;
-    }
-    if ( index >= this.parent.images.length ) {
-        throw new Error( "Index bigger than number of images." );
-    }
-
-    this.zIndex = index;
-    this.parent.images.splice( oldIndex, 1 );
-    this.parent.images.splice( index, 0, this );
-    this.updateItemIndex();
-  },
-
-  moveToBottom: function() {
-    this.moveToIndex(0);
-  },
-
-  moveToTop: function() {
-    this.moveToIndex(this.parent.images.length - 1);
-  },
-
-  insertBelowIndex: function(index) {
-    if(index !== 0) {
-      this.moveToIndex(index - 1);
-    }
-  },
-
-  insertAboveIndex: function(index) {
-    if(index < this.parent.images.length - 1) {
-      this.moveToIndex(index + 1);
-    }
-  },
-
-  insertAboveResource: function(resource) {
-    insertAboveIndex(this.parent.images.indexOf(resource));
-  },
-
-  insertBelowResource: function(resource) {
-    this.insertBelowIndex(this.parent.images.indexOf(resource));
-  },
-
-  moveUpOne: function() {
-    this.insertAboveResource(this);
-  },
-
-  moveDownOne: function() {
-    this.insertBelowResource(this);
   },
 }
 

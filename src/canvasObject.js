@@ -139,7 +139,59 @@ CanvasObject.prototype = {
     this.images.forEach(function(image) {
       image.updateOpacity();
     });
-  }
+  },
+
+  moveToIndex: function(image, index) {
+    var oldIndex = this.images.indexOf(image);
+
+    if (index === oldIndex || oldIndex === -1 ) {
+        return;
+    }
+    if ( index >= this.images.length ) {
+        throw new Error( "Index bigger than number of images." );
+    }
+
+    image.zIndex = index;
+    this.images.splice( oldIndex, 1 );
+    this.images.splice( index, 0, image );
+    image.updateItemIndex();
+  },
+
+  moveToBottom: function(image) {
+    this.moveToIndex(image, 0);
+  },
+
+  moveToTop: function(image) {
+    this.moveToIndex(image, this.images.length - 1);
+  },
+
+  insertAboveIndex: function(image, index) {
+    if(index !== 0) {
+      this.moveToIndex(image, index - 1);
+    }
+  },
+
+  insertBelowIndex: function(image, index) {
+    if(index < this.images.length - 1) {
+      this.moveToIndex(image, index + 1);
+    }
+  },
+
+  insertAboveResource: function(image, resource) {
+    this.insertAboveIndex(image, this.images.indexOf(resource));
+  },
+
+  insertBelowResource: function(image, resource) {
+    this.insertBelowIndex(image, this.images.indexOf(resource));
+  },
+
+  moveUpOne: function(image) {
+    this.insertAboveResource(image, image);
+  },
+
+  moveDownOne: function(image) {
+    this.insertBelowResource(image, image);
+  },
 };
 
 module.exports = CanvasObject;
