@@ -36,9 +36,7 @@ var CanvasObject = function(config) {
     });
   }
 
-  this.images.forEach(function(image) {
-    image.updateIndexFromParent;
-  });
+  this._floatImagesToBottom();
   this.thumbnail = ThumbnailFactory(config.canvas, self);
 };
 
@@ -141,7 +139,16 @@ CanvasObject.prototype = {
     });
   },
 
+  _floatImagesToBottom: function() {
+    var i = 0;
+    for(i; i < this.images; i++) {
+      this.images[i].zIndex = i;
+      this.images[i].updateItemIndex();
+    }
+  },
+
   moveToIndex: function(image, index) {
+    this._floatImagesToBottom();
     var oldIndex = this.images.indexOf(image);
 
     if (index === oldIndex || oldIndex === -1 ) {

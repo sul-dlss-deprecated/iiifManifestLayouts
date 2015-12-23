@@ -64,7 +64,6 @@ ImageResource.prototype = {
     this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': self });
     this.status = 'requested';
     var bounds = this._getBoundsInViewer(this.bounds);
-    this.updateIndexFromParent();
 
     this.viewer.addTiledImage({
       x: bounds.x,
@@ -179,10 +178,6 @@ ImageResource.prototype = {
       OpenSeadragon.requestAnimationFrame(frame);
     };
     OpenSeadragon.requestAnimationFrame(frame);
-  },
-
-  updateIndexFromParent: function() {
-    this.zIndex = this.parent.images.indexOf(this);
   },
 
   updateItemIndex: function() {
