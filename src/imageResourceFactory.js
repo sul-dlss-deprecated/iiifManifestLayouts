@@ -21,19 +21,28 @@ var _buildImageConfig = function(resource) {
   if(resource == 'rdf:nil') {
     return; // You can have a choice of "no image"; this is what it looks like.
   }
-  var hasService = !!(resource.service);
+
+  if(resource.full) {
+    return _buildImageConfig(resource.full);
+  }
+
+  // determine whether the resource is dynamic
+  var _isDynamic = function() {
+    return (!!(resource.service) &&
+    resource.service['@context'] == "http://iiif.io/api/image/2/context.json" &&
+    !resource.service.width);
+  };
+
+  var isDynamic = _isDynamic();
+
   var idObj = resource;
-  if(hasService) {
+  if (isDynamic) {
     idObj = resource.service;
   }
   var id = idObj['@id'];
 
-  if(!id && resource.full) {
-    return _buildImageConfig(resource.full);
-  }
-
   var _getImageTilesource = function() {
-    if(hasService) {
+    if (isDynamic) {
       return id + '/info.json';
     } else {
       return {
@@ -51,7 +60,7 @@ var _buildImageConfig = function(resource) {
     label: resource.label,
     tileSource: imageTileSource,
     clipRegion: _getSegmentFromUrl(id),
-    dynamic: hasService // todo: it's more complicated than that
+    dynamic: isDynamic
   };
 };
 
