@@ -3,16 +3,20 @@
 require('openseadragon');
 var ImageResource = require('./ImageResource');
 
+var _getRectFromStringArray = function(arr) {
+  var rectArray = arr.map(function(number) {
+    return parseInt(number, 10);
+  });
+
+  return new OpenSeadragon.Rect(rectArray[0] , rectArray[1], rectArray[2], rectArray[3]);
+};
+
 var _getSegmentFromUrl = function(url) {
   var urlParts = url.split('#');
   var segment = null;
   if(urlParts.length > 1) { // the url has a segment specified
     var bounds = urlParts[1].split('=');
-    var rectArray = bounds[1].split(',').map(function(number) {
-      return parseInt(number, 10);
-    });
-
-    segment = new OpenSeadragon.Rect(rectArray[0] , rectArray[1], rectArray[2], rectArray[3]);
+    segment = _getRectFromStringArray(bounds[1].split(','));
   }
   return segment;
 };
@@ -126,10 +130,12 @@ var ImageResourceFactory = function(image, parent) {
       });
       break;
     case 'oa:SpecificResource':
-      var config = _buildImageConfig(image.resource);
-      if(config && image.selector && image.selector.region) {
-        var clipArray = image.selector.region.split(',');
-        config.clipRegion = new OpenSeadragon.Rect(clipArray[0], clipArray[1], clipArray[2], clipArray[3]);
+      var resource = image.resource;
+      var config = _buildImageConfig(resource);
+
+      if(config && resource.selector && resource.selector.region) {
+        var clipArray = resource.selector.region.split(',');
+        config.clipRegion = _getRectFromStringArray(clipArray);
       }
       return _makeImageFromConfig(config);
       break;
