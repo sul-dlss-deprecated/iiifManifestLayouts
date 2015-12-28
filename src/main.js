@@ -31,8 +31,9 @@ var manifestor = function(options) {
       _lastScrollPosition = 0,
       _dispatcher = new events.EventEmitter(),
       _destroyed = false,
-      overviewLeft = 0,
-      overviewTop = 0;
+      _overviewLeft = 0,
+      _overviewTop = 0,
+      _previousState = {};
 
   function getViewingDirection() {
     if (sequence && sequence.viewingDirection) {
@@ -119,6 +120,29 @@ var manifestor = function(options) {
   function render() {
     var userState = viewerState();
 
+    // Figure out what's changed
+    var differences = [];
+    var key;
+    for (key in _previousState) {
+      if (_previousState.hasOwnProperty(key) && (!userState.hasOwnProperty(key) ||
+          _previousState[key] !== userState[key])) {
+        differences.push(key);
+      }
+    }
+
+    for (key in userState) {
+      if (userState.hasOwnProperty(key) && !_previousState.hasOwnProperty(key)) {
+        differences.push(key);
+      }
+    }
+
+    var previousPerspective = '';
+    if (userState.perspective !== _previousState.perspective) {
+      previousPerspective = _previousState.perspective;
+    }
+
+    // console.log('[render] state differences', differences);
+
     // Layout is configured from current user state. The
     // layout algorithm, viewing hints, animations (such as
     // initial layout without animation) are all
@@ -144,32 +168,42 @@ var manifestor = function(options) {
       facingCanvasPadding: 0.1 // precent of viewport
     });
 
-    var doRender = function (mode, animate, callback) {
-      var canvas = _canvasObjects[viewerState().selectedCanvas];
+    var getFrames = function (mode) {
+      var canvas = _canvasObjects[userState.selectedCanvas];
       var anchor = canvas.getBounds().getTopLeft();
       var frames = layout[mode](anchor);
+      return frames;
+    };
+
+    var doRender = function (mode, animate, callback) {
+      if (differences.length === 1 && differences[0] === 'scaleFactor') {
+        animate = false;
+      }
+
+      var frames = getFrames(mode);
       renderLayout(frames, animate, callback);
       return frames;
     };
 
     var frames;
-    if (userState.perspective === 'detail' && userState.previousPerspective === 'overview') {
+
+    if (userState.perspective === 'detail' && previousPerspective === 'overview') {
       frames = doRender('intermediate', true, function() {
         doRender('detail', false);
       });
-    } else if (userState.perspective === 'overview' && userState.previousPerspective === 'detail') {
-      frames = doRender('intermediate', false, function() {
+    } else if (userState.perspective === 'overview' && previousPerspective === 'detail') {
+      frames = getFrames('overview');
+      doRender('intermediate', false, function() {
         doRender('overview', true);
       });
-    } else if (userState.perspective === 'detail' && userState.previousPerspective === 'detail') {
-      frames = doRender('detail', true);
-    } else if (userState.perspective === 'overview' && userState.previousPerspective === 'overview') {
-      frames = doRender('overview', true);
-    } else if (userState.perspective === 'overview' && !userState.previousPerspective) {
-      frames = doRender('overview', false);
-    } else if (userState.perspective === 'detail' && !userState.previousPerspective) {
-      frames = doRender('intermediate', false);
+    } else {
+      var animateRender = (userState.selectedCanvas !== _previousState.selectedCanvas ||
+        userState.viewingMode !== _previousState.viewingMode);
+
+      frames = doRender(userState.perspective, animateRender);
     }
+
+    var animateViewport = previousPerspective || userState.selectedCanvas !== _previousState.selectedCanvas;
 
     var viewBounds;
     if (userState.perspective === 'detail') {
@@ -180,33 +214,33 @@ var manifestor = function(options) {
       updateConstraintBounds(viewBounds);
       var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
       setScrollElementEvents();
-      if (userState.previousPerspective) {
-        viewer.viewport.fitBounds(osdBounds, false);
-      } else {
-        viewer.viewport.fitBounds(osdBounds, true);
-      }
+      viewer.viewport.fitBounds(osdBounds, !animateViewport);
       enableZoomAndPan();
     } else {
-      overviewLeft = frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100);
-      overviewTop = frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100);
+      _overviewLeft = frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100);
+      _overviewTop = frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100);
 
-      viewBounds = new OpenSeadragon.Rect(overviewLeft, overviewTop + _lastScrollPosition,
+      viewBounds = new OpenSeadragon.Rect(_overviewLeft, _overviewTop + _lastScrollPosition,
         viewerState().width, viewerState().height);
 
       _zooming = true;
       disableZoomAndPan();
       setScrollElementEvents();
-
-      if (userState.previousPerspective) {
-        viewer.viewport.fitBounds(viewBounds, false);
-      } else {
-        viewer.viewport.fitBounds(viewBounds, true);
-      }
+      viewer.viewport.fitBounds(viewBounds, !animateViewport);
 
       setTimeout(function(){
         _zooming = false;
         setScrollElementEvents();
       }, 1200);
+    }
+
+    // Copy state
+    _previousState = {};
+
+    for (key in userState) {
+      if (userState.hasOwnProperty(key)) {
+        _previousState[key] = userState[key];
+      }
     }
   }
 
@@ -424,7 +458,7 @@ var manifestor = function(options) {
   }
 
   function synchronisePan(panTop, width, height) {
-    var viewBounds = new OpenSeadragon.Rect(overviewLeft, overviewTop + _lastScrollPosition, width, height);
+    var viewBounds = new OpenSeadragon.Rect(_overviewLeft, _overviewTop + _lastScrollPosition, width, height);
     viewer.viewport.fitBounds(viewBounds, true);
   }
 
@@ -504,7 +538,6 @@ var manifestor = function(options) {
   function selectCanvas(item) {
     var state = viewerState();
     state.selectedCanvas = item;
-    state.previousPerspective = state.perspective;
     state.perspective = 'detail';
     viewerState(state);
     _dispatcher.emit('canvas-selected', { detail: _canvasObjects[item] });
@@ -517,16 +550,13 @@ var manifestor = function(options) {
 
   function selectPerspective(perspective) {
     var state = viewerState();
-    state.previousPerspective = state.perspective;
     state.perspective = perspective;
     viewerState(state);
   }
 
   function selectViewingMode(viewingMode) {
     var state = viewerState();
-    state.previousPerspective = state.perspective;
     state.viewingMode = viewingMode;
-
     viewerState(state);
   }
 
