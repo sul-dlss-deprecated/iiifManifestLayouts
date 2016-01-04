@@ -3,46 +3,49 @@
 require('openseadragon');
 
 var ImageResource = function(config) {
+  this.id = config.id;
+  this.label = config.label || "No Label";
   this.needed = config.needed || false;
   this.visible = config.visible || false;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
-  this.x = config.x || 0;
-  this.y = config.y || 0;
-  this.height = config.height || 1;
-  this.width = config.width || 1;
-  this.zIndex = config.zIndex || 0;
+  this.bounds = config.bounds || new OpenSeadragon.Rect(0, 0, 1, 1);
+  this.zIndex = config.zIndex;
   this.tileSource = config.tileSource;
   this.dynamic = config.dynamic || false;
-  this.imageType = config.imageType || "main"; // can be 'main', 'alternate', or 'detail'
+  this.imageType = config.imageType || "main"; // can be 'main', 'alternate', 'detail' or 'thumbnail'
   this.status = 'initialized'; // can be 'requested', 'received', 'pending','shown', or 'failed'
   this.parent = config.parent;
-  this.dispatcher = config.dispatcher;
+  this.dispatcher = config.parent.dispatcher;
+  this.viewer = config.parent.viewer;
 };
 
 ImageResource.prototype = {
   hide: function() {
-    this.previousOpacity = this.opacity;
     this.visible = false;
-    this.updateOpacity(0);
+    this.updateOpacity();
+    this.dispatcher.emit('image-hide', {detail: this.id});
   },
 
   show: function() {
     this.visible = true;
-    this.updateOpacity(this.opacity);
+    this.updateOpacity();
+    this.dispatcher.emit('image-show', {detail: this.id});
   },
 
-  updateOpacity: function(opacity) {
+  updateOpacity: function() {
     if(this.tiledImage) {
-      this.tiledImage.setOpacity(opacity * this.parent.getOpacity());
+      if(this.visible) {
+        this.tiledImage.setOpacity(this.opacity * this.parent.getOpacity());
+      } else {
+        this.tiledImage.setOpacity(0);
+      }
     }
   },
 
   setOpacity: function(opacity) {
     this.opacity = opacity;
-    if(this.visible) {
-      this.updateOpacity(this.opacity);
-    }
+    this.updateOpacity();
   },
 
   getOpacity: function() {
@@ -60,13 +63,14 @@ ImageResource.prototype = {
     // otherwise, continue loading the tileSource.
     this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': self });
     this.status = 'requested';
-    var bounds = this._getBoundsInViewer();
-    this.parent.viewer.addTiledImage({
+    var bounds = this._getBoundsInViewer(this.bounds);
+
+    this.viewer.addTiledImage({
       x: bounds.x,
       y: bounds.y,
       width: bounds.width,
       tileSource: this.tileSource,
-      opacity: this.parent.opacity * this.opacity,
+      opacity: this.opacity,
       clip: this.clipRegion,
       index: this.zIndex,
 
@@ -78,9 +82,12 @@ ImageResource.prototype = {
           if (event.tiledImage === main) {
             self.tiledImage = main;
             self.updateForParentChange();
-            self.visible = true;
+            self.updateOpacity();
+            self.updateItemIndex();
+            self.show();
             self.status = 'shown';
-            self.parent.viewer.removeHandler('tile-drawn', tileDrawnHandler);
+
+            self.viewer.removeHandler('tile-drawn', tileDrawnHandler);
             self.dispatcher.emit('image-resource-tile-source-opened', { 'detail': self });
           }
         };
@@ -94,7 +101,7 @@ ImageResource.prototype = {
           source: event.source
         };
         self.status = 'failed';
-        self.dispatcher.emit('image-resource-tile-source-failed', {'detail': errorInfo});
+        self.parent.dispatcher.emit('image-resource-tile-source-failed', {'detail': errorInfo});
       }
     });
   },
@@ -107,18 +114,20 @@ ImageResource.prototype = {
     return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
   },
 
-  _getBoundsInViewer: function() {
-    return new OpenSeadragon.Rect(
-        this.parent.bounds.x + (this.parent.bounds.width * this.x),
-        this.parent.bounds.y + (this.parent.bounds.width * this.y),
-        this.parent.bounds.width * this.width,
-        this.parent.bounds.height * this.height
-    );
+  _getBoundsInViewer: function(rect) {
+    if(rect) {
+      return new OpenSeadragon.Rect(
+          this.parent.bounds.x + (this.parent.bounds.width * rect.x),
+          this.parent.bounds.y + (this.parent.bounds.width * rect.y),
+          this.parent.bounds.width * rect.width,
+          this.parent.bounds.height * rect.height
+      );
+    }
   },
 
   updateForParentChange: function(immediately) {
     if(this.tiledImage) {
-      var bounds = this._getBoundsInViewer();
+      var bounds = this._getBoundsInViewer(this.bounds);
       this.tiledImage.setPosition(bounds.getTopLeft(), immediately);
       this.tiledImage.setWidth(bounds.width, immediately);
     }
@@ -126,7 +135,7 @@ ImageResource.prototype = {
 
   //Assumes that the point parameter is already in viewport coordinates.
   containsViewerPoint: function(point) {
-    var bounds = this._getBoundsInViewer();
+    var bounds = this._getBoundsInViewer(this.bounds);
 
     var width = this.parent.bounds.width * this.width;
     var height = this.parent.bounds.height * this.height;
@@ -143,7 +152,7 @@ ImageResource.prototype = {
 
   destroy: function() {
     if(this.tiledImage) {
-      this.parent.viewer.world.removeItem(this.tiledImage);
+      this.viewer.world.removeItem(this.tiledImage);
       this.tiledImage = null;
     }
   },
@@ -169,10 +178,18 @@ ImageResource.prototype = {
       OpenSeadragon.requestAnimationFrame(frame);
     };
     OpenSeadragon.requestAnimationFrame(frame);
-  }
+  },
 
-  // todo: layering/z-index functions. Should this object know about
-  // its sibling image objects? If so, how?
+  updateItemIndex: function() {
+    if(this.tiledImage && this.viewer.world.getItemCount() > this.zIndex) {
+      this.viewer.world.setItemIndex(this.tiledImage, this.zIndex);
+    }
+  },
+
+  removeFromCanvas: function() {
+    var previous = this.parent.images.indexOf(this);
+    this.parent.images.splice(previous, 1);
+  },
 }
 
 module.exports = ImageResource;

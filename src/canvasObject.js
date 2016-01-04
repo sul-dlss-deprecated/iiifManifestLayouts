@@ -2,6 +2,8 @@
 
 require('openseadragon');
 var ImageResource = require('./ImageResource');
+var ImageResourceFactory = require('./ImageResourceFactory');
+var ThumbnailFactory = require('./ThumbnailFactory');
 
 var CanvasObject = function(config) {
   var self = this;
@@ -17,17 +19,6 @@ var CanvasObject = function(config) {
     height : config.canvas.height,
     width : config.canvas.width
   };
-  this.thumbUrl = config.canvas.thumbnail;
-
-  // todo: Move this logic into an ImageResourceFactory.
-  this._getThumbService = function(width) {
-    var image = config.canvas.images[0];
-    if(image.resource.service) {
-      return image.resource.service['@id'] + '/full/' + Math.ceil(width * 2) + ',/0/default.jpg';
-    } else {
-      return image.resource['@id'];
-    }
-  };
 
   this.label = config.canvas.label;
   this.viewingHint = config.canvas.viewingHint;
@@ -35,33 +26,30 @@ var CanvasObject = function(config) {
   this.dispatcher = config.dispatcher;
   this.viewer = config.viewer;
   this.images = [];
-  // details and alternates possibly go here; disambiguate between them.
+
   if(config.canvas.images) {
-    this.images = config.canvas.images.map(function(image) {
-
-      // todo: Move this logic into an ImageResourceFactory.
-      var _getImageTilesource = function(image) {
-        if(image.resource.service) {
-          return image.resource.service['@id'] + '/info.json';
-        } else {
-          return image.resource['@id'];
-        }
-      };
-
-      return new ImageResource({
-        tileSource: _getImageTilesource(image),
-        parent: self,
-        dispatcher: self.dispatcher
-      });
+    config.canvas.images.forEach(function(image) {
+      var imageResources = ImageResourceFactory(image, self);
+      if(imageResources) {
+        self.images = self.images.concat(imageResources);
+      }
     });
   }
+
+  this._floatImagesToBottom();
+  this.thumbnail = ThumbnailFactory(config.canvas, self);
 };
 
 CanvasObject.prototype = {
-  openTileSource: function(imageIndex) {
+  openMainTileSource: function(imageIndex) {
+    if(this.images.length === 0) {
+      return; // there are no images to open
+    }
+
     this.dispatcher.emit('detail-tile-source-opened', { 'detail': this.id });
+
+    var image = this.getMainImage();
     var self = this;
-    var image = this.images[imageIndex];
 
     var onTileDrawn = function(event) {
       if(event.detail.tileSource === image.tileSource) {
@@ -69,8 +57,8 @@ CanvasObject.prototype = {
         image.fade(1);
 
         if(self.thumbnail){
+          self.thumbnail.removeFromCanvas();
           self.thumbnail.destroy();
-          self.images.splice(self.images.indexOf(self.thumbnail), 1);
           delete self.thumbnail;
         }
       }
@@ -80,28 +68,14 @@ CanvasObject.prototype = {
     image.openTileSource();
   },
 
-  openMainTileSource: function() {
-    this.openTileSource(0);
-  },
-
   openThumbnail: function() {
-    if(!this.thumbUrl && this.images.length === 0) {
-      // It may be the case that we have no images and no thumbnail in our canvas.
-      return;
+    if(this.thumbnail) {
+      this.thumbnail.openTileSource();
+      this.images.push(this.thumbnail);
+      this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
+    } else { // sometimes there isn't a thumbnail
+      this.openMainTileSource();
     }
-    this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
-
-    this.thumbnail = new ImageResource({
-      tileSource: {
-        type: 'image',
-        url: this.thumbUrl || this._getThumbService(this.bounds.width)
-      },
-      parent: this,
-      dispatcher: this.dispatcher
-    });
-
-    this.thumbnail.openTileSource();
-    this.images.push(this.thumbnail);
   },
 
   //Assumes that the point parameter is already in viewport coordinates.
@@ -122,6 +96,14 @@ CanvasObject.prototype = {
 
   getAlternateImages: function() {
     return this.images.filter(function(image) { return image.imageType === "alternate" });
+  },
+
+  getMainImage: function() {
+    return this.images.filter(function(image) {return image.imageType === "main" })[0];
+  },
+
+  getImageById: function(id) {
+    return this.images.filter(function(image) {return image.id === id})[0];
   },
 
   setBounds: function(x, y, width, height) {
@@ -153,12 +135,70 @@ CanvasObject.prototype = {
   setOpacity: function(opacity) {
     this.opacity = opacity;
     this.images.forEach(function(image) {
-      if(image.visible) {
-        image.updateOpacity();
-      }
+      image.updateOpacity();
     });
-  }
+  },
 
+  _floatImagesToBottom: function() {
+    var i = 0;
+    for(i; i < this.images; i++) {
+      this.images[i].zIndex = i;
+      this.images[i].updateItemIndex();
+    }
+  },
+
+  moveToIndex: function(image, index) {
+    this._floatImagesToBottom();
+    var oldIndex = this.images.indexOf(image);
+
+    if (index === oldIndex || oldIndex === -1 ) {
+        return;
+    }
+    if ( index >= this.images.length ) {
+        throw new Error( "Index bigger than number of images." );
+    }
+
+    image.zIndex = index;
+    this.images.splice( oldIndex, 1 );
+    this.images.splice( index, 0, image );
+    image.updateItemIndex();
+  },
+
+  moveToBottom: function(image) {
+    this.moveToIndex(image, 0);
+  },
+
+  moveToTop: function(image) {
+    this.moveToIndex(image, this.images.length - 1);
+  },
+
+  insertAboveIndex: function(image, index) {
+    if(index !== 0) {
+      this.moveToIndex(image, index - 1);
+    }
+  },
+
+  insertBelowIndex: function(image, index) {
+    if(index < this.images.length - 1) {
+      this.moveToIndex(image, index + 1);
+    }
+  },
+
+  insertAboveResource: function(image, resource) {
+    this.insertAboveIndex(image, this.images.indexOf(resource));
+  },
+
+  insertBelowResource: function(image, resource) {
+    this.insertBelowIndex(image, this.images.indexOf(resource));
+  },
+
+  moveUpOne: function(image) {
+    this.insertAboveResource(image, image);
+  },
+
+  moveDownOne: function(image) {
+    this.insertBelowResource(image, image);
+  },
 };
 
 module.exports = CanvasObject;

@@ -540,6 +540,12 @@ var manifestor = function(options) {
     state.selectedCanvas = item;
     state.perspective = 'detail';
     viewerState(state);
+    _dispatcher.emit('canvas-selected', { detail: _canvasObjects[item] });
+  }
+
+  function getSelectedCanvas() {
+    var state = viewerState();
+    return _canvasObjects[state.selectedCanvas];
   }
 
   function selectPerspective(perspective) {
@@ -710,20 +716,33 @@ var manifestor = function(options) {
       viewer.destroy();
     }
 
+    overlays.remove();
+    scrollContainer.remove();
+    osdContainer.remove();
+    container.off('click', canvasClickHandler);
+
+    _viewerState = null
+    _canvasObjects = null;
+    _inZoomConstraints = null;
+
     _destroyed = true; // cancels the timer
   }
 
-  container.on('click', '.' + canvasClass, function(event) {
+  function canvasClickHandler(event) {
     selectCanvas($(this).data('id'));
-  });
-  scrollContainer.on('scroll', function(event) {
+  }
+
+  function scrollHandler(event) {
     if (viewerState().perspective === 'overview' && _zooming === false) {
       var width = viewerState().width;
       var height = viewerState().height;
       _lastScrollPosition = $(this).scrollTop();
       synchronisePan(_lastScrollPosition, width, height);
     }
-  });
+  };
+
+  container.on('click', '.' + canvasClass, canvasClickHandler);
+  scrollContainer.on('scroll', scrollHandler);
 
   return {
     destroy: destroy,
@@ -740,7 +759,8 @@ var manifestor = function(options) {
     getState: viewerState,
     setState: viewerState,
     osd: viewer,
-    on: on
+    on: on,
+    getSelectedCanvas: getSelectedCanvas
   };
 };
 

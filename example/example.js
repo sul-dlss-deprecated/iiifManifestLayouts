@@ -6,6 +6,9 @@ var App = {
     this.currentMode = 'individuals';
 
     this.$manifestPicker = $('#manifestPicker');
+    this.$images = $('#images-list');
+
+    this.$images.empty();
 
     $('<option>')
       .val('http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json')
@@ -93,6 +96,7 @@ var App = {
     var self = this;
 
     var manifestUrl = this.$manifestPicker.val();
+    this.$images.empty();
 
     $.get(manifestUrl, function(manifest) {
       /* http://iiif.io/api/presentation/2.0/example/fixtures/24/manifest.json */
@@ -128,8 +132,82 @@ var App = {
         // console.log('detail tile source requested', e.detail);
       });
 
-      self.viewer.on('detail-tile-source-opened', function(e) {
-        // console.log('detail tile source opened', e.detail);
+      self.$images.sortable({
+        stop: function(event, ui) {
+          var inputs = event.target.querySelectorAll('input');
+          var i = 0;
+          for(i; i < inputs.length; i++) {
+
+            // zIndex is backwards from this UI; 0 is on the bottom for zIndex, but 0 is the top
+            // of this sortable UI element array.
+            var image = self.selectedCanvas.getImageById(inputs[i].id);
+            self.selectedCanvas.moveToIndex(image, inputs.length - (i + 1));
+          }
+        }
+      });
+
+      var _setCheckbox = function(id, value) {
+        var checkbox = $('#' + id);
+        checkbox.prop('checked', value);
+      };
+
+      self.viewer.on('image-hide', function(e) {
+        _setCheckbox(e.detail, false);
+      });
+
+      self.viewer.on('image-show', function(e) {
+        _setCheckbox(e.detail, true);
+      });
+
+      self.viewer.on('image-resource-tile-source-opened', function(e) {
+        _setCheckbox(e.detail.id, e.detail.visible);
+      });
+
+      var _setImagesForCanvas = function(canvas) {
+        self.selectedCanvas = canvas;
+        self.$images.empty();
+
+        self.selectedCanvas.images.forEach(function(image) {
+          var text = image.label;
+          if(image.imageType === 'main') {
+            text += " (default)";
+          }
+          if(image.imageType === 'detail') {
+            text +=" (detail)";
+          }
+          if(image.imageType !== 'thumbnail') {
+            var listItem = $('<li>');
+            var label = $('<label>').text(text);
+
+            var checkbox = $('<input type=checkbox>');
+            checkbox.prop('id', image.id);
+            checkbox.prop('checked', image.visible);
+
+            checkbox.change(image, function(event) {
+              if(event.target.checked) {
+                if(image.status === 'shown') {
+                  image.show();
+                } else {
+                  image.openTileSource();
+                }
+              } else {
+                image.hide();
+              }
+            });
+            label.append(checkbox);
+            listItem.append(label);
+            listItem.prependTo(self.$images);
+          }
+        });
+      };
+
+      var selectedCanvas = self.viewer.getSelectedCanvas();
+      if(selectedCanvas) {
+        _setImagesForCanvas(selectedCanvas);
+      }
+
+      self.viewer.on('canvas-selected', function(event) {
+        _setImagesForCanvas(event.detail);
       });
     });
   },

@@ -21,6 +21,9 @@
             <h2>Choose Manifest</h2>
             <select id="manifestPicker" name="manifestPicker">
             </select>
+            <h2>Images</h2>
+            <p>Drag the images up and down to change their z-order. Check the box to display them.</p>
+            <ul id="images-list"></ul>
             <h2>Layout Parameters</h2>
             <label for=scale>Thumb Size</label>
             <input id="scale" name="scale" type="range" min=50 max=200 value=100 step=1/>
@@ -66,6 +69,7 @@
 
         <!-- CONTENT END -->
         <script type="text/javascript" src="../node_modules/jquery/dist/jquery.min.js"></script>
+        <script type="text/javascript" src="jquery-ui/jquery-ui.min.js"></script>
         <script type="text/javascript" src="../stage/manifestor.js"></script>
         <script type="text/javascript" src="../node_modules/keymaster/keymaster.js"></script>
         <script type="text/javascript" src="example.js"></script>
