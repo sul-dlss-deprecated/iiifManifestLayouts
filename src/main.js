@@ -53,7 +53,8 @@ var manifestor = function(options) {
     _dispatcher.on(event, handler);
   }
 
-  _dispatcher.setMaxListeners(canvases.length + 1);
+  // Each canvas will listen when it opens tile sources, and clients consuming this code may attach some as well.
+  _dispatcher.setMaxListeners(canvases.length + 30);
 
   var overlays = $('<div class="overlaysContainer">').css(
     {'width': '100%',
