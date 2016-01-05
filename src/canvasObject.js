@@ -63,7 +63,6 @@ CanvasObject.prototype = {
         }
       }
     };
-
     this.dispatcher.on('image-resource-tile-source-opened', onTileDrawn);
     image.openTileSource();
   },

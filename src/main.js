@@ -53,6 +53,8 @@ var manifestor = function(options) {
     _dispatcher.on(event, handler);
   }
 
+  _dispatcher.setMaxListeners(canvases.length + 1);
+
   var overlays = $('<div class="overlaysContainer">').css(
     {'width': '100%',
      'height': '100%',
