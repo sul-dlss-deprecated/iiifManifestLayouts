@@ -16,10 +16,10 @@ var _makeThumbnailConfig = function(url, parent) {
   return {
     tileSource: {
       type: 'image',
-      url: url
+      url: url,
+      buildPyramid: 'false',
     },
     parent: parent,
-    buildPyramid: 'false',
     imageType: 'thumbnail',
     dynammic: false
   };
