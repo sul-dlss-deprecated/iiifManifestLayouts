@@ -4,7 +4,7 @@ var ImageResource = require('./ImageResource');
 
 var _getThumbUrl = function(resource, width) {
   if(resource.service) {
-    return resource.service['@id'] + '/full/' + Math.ceil(width / 4) + ',/0/default.jpg';
+    return resource.service['@id'] + '/full/' + Math.ceil(width) + ',/0/default.jpg';
   } else if(resource.default) {
     return _getThumbUrl(resource.default, width);
   } else {
@@ -12,12 +12,23 @@ var _getThumbUrl = function(resource, width) {
   }
 };
 
-var _makeThumbnailConfig = function(url, parent) {
+var _getThumbLevel = function(canvas, divisor) {
+  return {
+    url: _getThumbUrl(canvas.images[0].resource, canvas.width / divisor),
+    height: canvas.height / divisor,
+    width: canvas.width / divisor,
+  }
+};
+
+var _makeThumbnailConfig = function(canvas, parent) {
   return {
     tileSource: {
-      type: 'image',
-      url: url,
-      buildPyramid: 'false',
+      type: 'legacy-image-pyramid',
+      levels: [
+        _getThumbLevel(canvas, 4),
+        _getThumbLevel(canvas, 8),
+        _getThumbLevel(canvas, 16)
+      ]
     },
     parent: parent,
     imageType: 'thumbnail',
@@ -36,8 +47,12 @@ var ThumbnailFactory = function(canvas, parent) {
   // If there is no thumbnail and only one image in this canvas, there's no reason to make a thumbnail for it-
   // the canvasobject will fall back to opening the main tilesource in the absence of a thumbnail.
   if(canvas.images && canvas.images.length > 1) {
-    var config = _makeThumbnailConfig(_getThumbUrl(canvas.images[0].resource, canvas.width), parent);
+    var config = _makeThumbnailConfig(canvas, parent);
     return new ImageResource(config);
+  }
+
+  if(canvas.images.length == 1) {
+    console.log("Only one image");
   }
 };
 
