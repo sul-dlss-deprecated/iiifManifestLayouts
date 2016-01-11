@@ -65,7 +65,10 @@ CanvasObject.prototype = {
     };
 
     this.dispatcher.on('image-resource-tile-source-opened', onTileDrawn);
-    image.openTileSource();
+    var thumbnailStatus = (this.thumbnail ? this.thumbnail.getStatus() : '');
+    image.openTileSource({
+      waitForFirstTile: thumbnailStatus === 'shown'
+    });
   },
 
   openThumbnail: function() {
@@ -91,19 +94,19 @@ CanvasObject.prototype = {
   },
 
   getDetailImages: function() {
-    return this.images.filter(function(image) { return image.imageType === "detail" });
+    return this.images.filter(function(image) { return image.imageType === "detail"; });
   },
 
   getAlternateImages: function() {
-    return this.images.filter(function(image) { return image.imageType === "alternate" });
+    return this.images.filter(function(image) { return image.imageType === "alternate"; });
   },
 
   getMainImage: function() {
-    return this.images.filter(function(image) {return image.imageType === "main" })[0];
+    return this.images.filter(function(image) { return image.imageType === "main"; })[0];
   },
 
   getImageById: function(id) {
-    return this.images.filter(function(image) {return image.id === id})[0];
+    return this.images.filter(function(image) { return image.id === id; })[0];
   },
 
   setBounds: function(x, y, width, height) {
