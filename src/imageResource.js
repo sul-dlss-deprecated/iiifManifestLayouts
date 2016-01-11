@@ -14,7 +14,7 @@ var ImageResource = function(config) {
   this.tileSource = config.tileSource;
   this.dynamic = config.dynamic || false;
   this.imageType = config.imageType || "main"; // can be 'main', 'alternate', 'detail' or 'thumbnail'
-  this.status = 'initialized'; // can be 'requested', 'received', 'pending','shown', or 'failed'
+  this.status = 'initialized'; // can be 'requested', 'pending','shown', or 'failed'
   this.parent = config.parent;
   this.dispatcher = config.parent.dispatcher;
   this.viewer = config.parent.viewer;
@@ -52,8 +52,10 @@ ImageResource.prototype = {
     return this.opacity;
   },
 
-  openTileSource: function() {
+  openTileSource: function(options) {
     var self = this;
+
+    options = options || {};
 
     // We've already loaded this tilesource
     if(this.status === 'shown') {
@@ -76,22 +78,31 @@ ImageResource.prototype = {
 
       success: function(event) {
         var main = event.item;
-        self.status = 'pending';
 
-        var tileDrawnHandler = function(event) {
-          if (event.tiledImage === main) {
-            self.tiledImage = main;
-            self.updateForParentChange();
-            self.updateOpacity();
-            self.updateItemIndex();
-            self.show();
-            self.status = 'shown';
-
-            self.viewer.removeHandler('tile-drawn', tileDrawnHandler);
-            self.dispatcher.emit('image-resource-tile-source-opened', { 'detail': self });
-          }
+        var finish = function() {
+          self.tiledImage = main;
+          self.updateForParentChange(true);
+          self.updateOpacity();
+          self.updateItemIndex();
+          self.show();
+          self.status = 'shown';
+          self.dispatcher.emit('image-resource-tile-source-opened', { detail: self });
         };
-        self.parent.viewer.addHandler('tile-drawn', tileDrawnHandler);
+
+        if (options.waitForFirstTile) {
+          self.status = 'pending';
+
+          var tileDrawnHandler = function(event) {
+            if (event.tiledImage === main) {
+              finish();
+              self.viewer.removeHandler('tile-drawn', tileDrawnHandler);
+            }
+          };
+
+          self.parent.viewer.addHandler('tile-drawn', tileDrawnHandler);
+        } else {
+          finish();
+        }
       },
 
       error: function(event) {
