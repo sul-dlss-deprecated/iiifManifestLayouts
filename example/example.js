@@ -11,7 +11,7 @@ var App = {
     this.$images.empty();
 
     $('<option>')
-      .val('http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json')
+      .val('http://manifests.ydc2.yale.edu/manifest/Osbornfa1v2.json')
       .text('Default')
       .appendTo(this.$manifestPicker);
 
