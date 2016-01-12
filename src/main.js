@@ -33,7 +33,8 @@ var manifestor = function(options) {
       _destroyed = false,
       _overviewLeft = 0,
       _overviewTop = 0,
-      _previousState = {};
+      _previousState = {},
+      _transitionZoomLevel = 0.01;
 
   function getViewingDirection() {
     if (sequence && sequence.viewingDirection) {
@@ -419,6 +420,14 @@ var manifestor = function(options) {
     viewer.addHandler('zoom', function(event) {
       if (viewerState().perspective === 'detail') {
         applyConstraints(_constraintBounds);
+      }
+      // Open the main tile source when we reach the specified zoom level on it
+      if(event.zoom >= _transitionZoomLevel && event.refPoint) {
+        for(var key in _canvasObjects) {
+          if(_canvasObjects[key].containsPoint(event.refPoint)) {
+            _canvasObjects[key].openMainTileSource();
+          }
+        }
       }
     });
 
