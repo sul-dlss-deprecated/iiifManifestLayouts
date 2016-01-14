@@ -413,6 +413,17 @@ var manifestor = function(options) {
       preserveViewport: true
     });
 
+    // Open the main tile source when we reach the specified zoom level on it
+    var _semanticZoom = function(zoom, center) {
+      if(zoom >= _transitionZoomLevel) {
+        for(var key in _canvasObjects) {
+          if(_canvasObjects[key].containsPoint(center)) {
+            _canvasObjects[key].openMainTileSource();
+          }
+        }
+      }
+    };
+
     viewer.addHandler('animation', function(event) {
         synchroniseZoom();
     });
@@ -421,20 +432,16 @@ var manifestor = function(options) {
       if (viewerState().perspective === 'detail') {
         applyConstraints(_constraintBounds);
       }
-      // Open the main tile source when we reach the specified zoom level on it
-      if(event.zoom >= _transitionZoomLevel && event.refPoint) {
-        for(var key in _canvasObjects) {
-          if(_canvasObjects[key].containsPoint(event.refPoint)) {
-            _canvasObjects[key].openMainTileSource();
-          }
-        }
-      }
+      var center = viewer.viewport.getBounds().getCenter();
+      _semanticZoom(event.zoom, center);
     });
 
     viewer.addHandler('pan', function(event) {
       if (viewerState().perspective === 'detail') {
         applyConstraints(_constraintBounds);
       }
+      var zoom = viewer.viewport.getZoom();
+      _semanticZoom(zoom, event.center);
     });
 
     viewer.addHandler('canvas-click', function(event) {
