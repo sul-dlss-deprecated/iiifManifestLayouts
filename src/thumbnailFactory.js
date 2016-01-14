@@ -20,16 +20,19 @@ var _getResourceFormat = function(mimeType) {
   }
 };
 
-var _getThumbUrl = function(resource, width) {
-  if(resource.default) {
-    return resource.default.id;
-  } else {
-    var id = resource['@id'];
-    if(!id.toLowerCase().match(/^.*\.(png|jpg|jpeg|gif)$/)) { // it is still a service URL
-      var format = _getResourceFormat(resource.format);
-      return resource.service['@id'] + '/full/' + Math.ceil(resource.width / 4) + ',/0/default.' + format;
-    }
-    return id;
+var _getThumbUrl = function(resource) {
+
+  var _buildResourceSize = function() {
+    return "/full/" + Math.ceil(resource.width / 4) + ",/";
+  }
+
+  var id = resource['@id'];
+  if(!id.toLowerCase().match(/^.*\.(png|jpg|jpeg|gif)$/)) { // it is still a service URL
+    var format = _getResourceFormat(resource.format);
+    return resource.service['@id'] + _buildResourceSize() + '0/default.' + format;
+  }
+  else { // we still don't want the full size
+    return id.replace("/full/full/", _buildResourceSize());
   }
 };
 
