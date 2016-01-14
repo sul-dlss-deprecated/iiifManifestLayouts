@@ -195,6 +195,7 @@ var App = {
                 if(image.status === 'shown') {
                   image.show();
                 } else {
+                  self.selectedCanvas.removeThumbnail();
                   image.openTileSource();
                 }
               } else {
