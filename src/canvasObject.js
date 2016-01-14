@@ -41,6 +41,14 @@ var CanvasObject = function(config) {
 };
 
 CanvasObject.prototype = {
+  removeThumbnail: function() {
+    if(this.thumbnail){
+      this.thumbnail.removeFromCanvas();
+      this.thumbnail.destroy();
+      delete this.thumbnail;
+    }
+  },
+
   openMainTileSource: function(imageIndex) {
     if(this.images.length === 0) {
       return; // there are no images to open
@@ -55,12 +63,7 @@ CanvasObject.prototype = {
       if(event.detail.tileSource === image.tileSource) {
         self.dispatcher.removeListener('image-resource-tile-source-opened', onTileDrawn);
         image.fade(1);
-
-        if(self.thumbnail){
-          self.thumbnail.removeFromCanvas();
-          self.thumbnail.destroy();
-          delete self.thumbnail;
-        }
+        self.removeThumbnail();
       }
     };
     this.dispatcher.on('image-resource-tile-source-opened', onTileDrawn);
