@@ -10,10 +10,17 @@ var App = {
 
     this.$images.empty();
 
+    // Some choice fixture objects with real content.
+   [
+   {url: 'http://demos.biblissima-condorcet.fr/iiif/metadata/BVMM/chateauroux/manifest.json', label: 'BNF Detail Images Demo (Chateauroux)'},
+   {url:'http://manifests.ydc2.yale.edu/manifest/Osbornfa1v2.json', label: "Yale Osborn with choice (see 53r)"},
+   {url: 'http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', label: 'Stanford DMS Manuscript (example of typical object)'}
+   ].forEach(function(fixture) {
     $('<option>')
-      .val('http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json')
-      .text('Default')
-      .appendTo(this.$manifestPicker);
+      .val(fixture.url)
+      .text(fixture.label)
+      .appendTo(App.$manifestPicker);
+   });
 
     this.openSelectedManifest();
 
