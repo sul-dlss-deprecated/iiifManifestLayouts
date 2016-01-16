@@ -116,7 +116,7 @@ var App = {
       self.viewer = manifestor({
         manifest: manifest,
         container: $('#example-container'),
-        perspective:  'detail',
+        perspective:  'overview',
         canvasClass: 'canvas', //default set to 'canvas'
         frameClass: 'frame', //default set to 'frame'
         labelClass: 'label', //default set to 'label'
@@ -210,7 +210,7 @@ var App = {
       };
 
       var selectedCanvas = self.viewer.getSelectedCanvas();
-      if(selectedCanvas) {
+      if(selectedCanvas && self.viewer.getState().perspective == 'detail') {
         _setImagesForCanvas(selectedCanvas);
       }
 

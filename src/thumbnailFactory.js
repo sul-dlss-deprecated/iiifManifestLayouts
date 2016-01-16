@@ -58,7 +58,8 @@ var _makeThumbnailConfig = function(resource, parent) {
     },
     parent: parent,
     imageType: 'thumbnail',
-    dynammic: false
+    dynammic: false,
+    zIndex: 9999
   };
 };
 

@@ -43,6 +43,7 @@ var CanvasObject = function(config) {
 CanvasObject.prototype = {
   removeThumbnail: function() {
     if(this.thumbnail){
+      this.thumbnail.fade(0);
       this.thumbnail.removeFromCanvas();
       this.thumbnail.destroy();
       delete this.thumbnail;
@@ -62,7 +63,6 @@ CanvasObject.prototype = {
     var onTileDrawn = function(event) {
       if(event.detail.tileSource === image.tileSource) {
         self.dispatcher.removeListener('image-resource-tile-source-opened', onTileDrawn);
-        image.fade(1);
         self.removeThumbnail();
       }
     };
