@@ -58,20 +58,6 @@ var App = {
       }
     });
 
-    key('shift+j', function() {
-      if (self.viewer) {
-        self.viewer.selectPerspective('detail');
-      }
-      console.log('shifting to detail perspective');
-    });
-
-    key('shift+k', function() {
-      if (self.viewer) {
-        self.viewer.selectPerspective('overview');
-      }
-      console.log('shifting to overview perspective');
-    });
-
     key('m', function() {
       self.cycleViewingModes();
     });
@@ -216,6 +202,25 @@ var App = {
 
       self.viewer.on('canvas-selected', function(event) {
         _setImagesForCanvas(event.detail);
+      });
+
+      key('shift+j', function() {
+        if (self.viewer) {
+          self.viewer.selectPerspective('detail');
+          var selectedCanvas = self.viewer.getSelectedCanvas();
+          if(selectedCanvas) {
+            _setImagesForCanvas(selectedCanvas);
+          }
+        }
+        console.log('shifting to detail perspective');
+      });
+
+      key('shift+k', function() {
+        if (self.viewer) {
+          self.viewer.selectPerspective('overview');
+          self.$images.empty();
+        }
+        console.log('shifting to overview perspective');
       });
     });
   },
