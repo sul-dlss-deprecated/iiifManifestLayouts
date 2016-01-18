@@ -248,28 +248,6 @@ var manifestor = function(options) {
     }
   }
 
-  // Add semantic zoom events after the first render to open
-  // the main tile source when we reach the specified zoom level on it.
-  function _semanticZoom(zoom, center) {
-    if(zoom >= _transitionZoomLevel) {
-      for(var key in _canvasObjects) {
-        if(_canvasObjects[key].containsPoint(center)) {
-          _canvasObjects[key].openMainTileSource();
-        }
-      }
-    }
-  };
-
-  viewer.addHandler('zoom', function(event) {
-    var center = viewer.viewport.getBounds().getCenter();
-    _semanticZoom(event.zoom, center);
-  });
-
-  viewer.addHandler('pan', function(event) {
-    var zoom = viewer.viewport.getZoom();
-    _semanticZoom(zoom, event.center);
-  });
-
   function setCanvasObjects(state) {
     _canvasObjects = state;
   }
