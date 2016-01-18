@@ -25,6 +25,7 @@ var CanvasObject = function(config) {
 
   this.dispatcher = config.dispatcher;
   this.viewer = config.viewer;
+  this.canvas = config.canvas;
   this.images = [];
 
   if(config.canvas.images) {
@@ -35,9 +36,7 @@ var CanvasObject = function(config) {
       }
     });
   }
-
   this._floatImagesToBottom();
-  this.thumbnail = ThumbnailFactory(config.canvas, self);
 };
 
 CanvasObject.prototype = {
@@ -74,6 +73,8 @@ CanvasObject.prototype = {
   },
 
   openThumbnail: function() {
+    var self = this;
+    this.thumbnail = ThumbnailFactory(this.canvas, self);
     if(this.thumbnail) {
       this.thumbnail.openTileSource();
       this.images.push(this.thumbnail);
