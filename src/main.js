@@ -33,7 +33,8 @@ var manifestor = function(options) {
       _destroyed = false,
       _overviewLeft = 0,
       _overviewTop = 0,
-      _previousState = {};
+      _previousState = {},
+      _transitionZoomLevel = 0.01;
 
   function getViewingDirection() {
     if (sequence && sequence.viewingDirection) {
@@ -412,6 +413,17 @@ var manifestor = function(options) {
       preserveViewport: true
     });
 
+    // Open the main tile source when we reach the specified zoom level on it
+    var _semanticZoom = function(zoom, center) {
+      if(zoom >= _transitionZoomLevel) {
+        for(var key in _canvasObjects) {
+          if(_canvasObjects[key].containsPoint(center)) {
+            _canvasObjects[key].openMainTileSource();
+          }
+        }
+      }
+    };
+
     viewer.addHandler('animation', function(event) {
         synchroniseZoom();
     });
@@ -420,12 +432,16 @@ var manifestor = function(options) {
       if (viewerState().perspective === 'detail') {
         applyConstraints(_constraintBounds);
       }
+      var center = viewer.viewport.getBounds().getCenter();
+      _semanticZoom(event.zoom, center);
     });
 
     viewer.addHandler('pan', function(event) {
       if (viewerState().perspective === 'detail') {
         applyConstraints(_constraintBounds);
       }
+      var zoom = viewer.viewport.getZoom();
+      _semanticZoom(zoom, event.center);
     });
 
     viewer.addHandler('canvas-click', function(event) {
@@ -541,6 +557,7 @@ var manifestor = function(options) {
   function selectCanvas(item) {
     var state = viewerState();
     state.selectedCanvas = item;
+    _canvasObjects[item].openMainTileSource();
     state.perspective = 'detail';
     viewerState(state);
     _dispatcher.emit('canvas-selected', { detail: _canvasObjects[item] });
