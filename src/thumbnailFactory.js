@@ -20,10 +20,10 @@ var _getResourceFormat = function(mimeType) {
   }
 };
 
-var _getThumbUrl = function(resource) {
+var _getThumbUrl = function(resource, width) {
 
   var _buildResourceSize = function() {
-    return "/full/" + Math.ceil(resource.width / 4) + ",/";
+    return "/full/" + width + ",/";
   }
 
   var id = resource['@id'];
@@ -36,24 +36,29 @@ var _getThumbUrl = function(resource) {
   }
 };
 
-var _getThumbLevel = function(resource) {
+var _getThumbLevel = function(resource, width, height) {
   if(resource.default) {
-    return _getThumbLevel(resource.default);
+    return _getThumbLevel(resource.default, width, height);
   }
 
   return {
-    url: _getThumbUrl(resource),
-    height: resource.height,
-    width: resource.width,
+    url: _getThumbUrl(resource, width),
+    height: height,
+    width: width,
   }
 };
 
 var _makeThumbnailConfig = function(resource, parent) {
+  var bounds = parent.getBounds();
+  var doubleCeiling = function(size) {
+    return Math.ceil(size * 2);
+  }
+
   return {
     tileSource: {
       type: 'legacy-image-pyramid',
       levels: [
-        _getThumbLevel(resource),
+        _getThumbLevel(resource, doubleCeiling(bounds.width), doubleCeiling(bounds.height)),
       ]
     },
     parent: parent,
