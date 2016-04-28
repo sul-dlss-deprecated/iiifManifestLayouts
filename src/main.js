@@ -30,8 +30,6 @@ var manifestor = function(options) {
       _canvasObjects,
       _dispatcher = new events.EventEmitter(),
       _destroyed = false,
-      _overviewLeft = 0, // for render state
-      _overviewTop = 0, // for render state
       _transitionZoomLevel = 0.01;
 
   function getViewingDirection() {
@@ -97,7 +95,9 @@ var manifestor = function(options) {
     zooming: false,
     constraintBounds: {x:0, y:0, width:container.width(), height:container.height()},
     inZoomConstraints: false,
-    lastScrollPosition: $(this).scrollTop()
+    lastScrollPosition: $(this).scrollTop(),
+    overviewLeft: 0,
+    overviewTop: 0
   })
   buildCanvasStates(canvases, viewer);
 
@@ -196,12 +196,15 @@ var manifestor = function(options) {
       viewer.viewport.fitBounds(osdBounds, !animateViewport);
       enableZoomAndPan();
     } else {
-      _overviewLeft = frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100);
-      _overviewTop = frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100);
+      renderState.setState({
+        overviewLeft: frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100),
+        overviewTop: frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100)
+      });
 
-      var state = viewerState.getState();
-      viewBounds = new OpenSeadragon.Rect(_overviewLeft, _overviewTop + renderState.getState().lastScrollPosition,
-        state.width, state.height);
+      var vState = viewerState.getState();
+      var rState = renderState.getState();
+      viewBounds = new OpenSeadragon.Rect(rState.overviewLeft, rState.overviewTop + rState.lastScrollPosition,
+        vState.width, vState.height);
 
       renderState.setState({zooming: true});
       disableZoomAndPan();
@@ -445,7 +448,8 @@ var manifestor = function(options) {
   }
 
   function synchronisePan(width, height) {
-    var viewBounds = new OpenSeadragon.Rect(_overviewLeft, _overviewTop + renderState.getState().lastScrollPosition, width, height);
+    var rState = renderState.getState();
+    var viewBounds = new OpenSeadragon.Rect(rState.overviewLeft, rState.overviewTop + rState.lastScrollPosition, width, height);
     viewer.viewport.fitBounds(viewBounds, true);
   }
 

@@ -3,7 +3,9 @@ var renderState = function(config) {
     zooming: config.zooming,
     constraintBounds: config.constraintBounds,
     inZoomConstraints: config.inZoomConstraints,
-    lastScrollPosition: config.lastScrollPosition
+    lastScrollPosition: config.lastScrollPosition,
+    overviewLeft: config.overviewLeft,
+    overviewTop: config.overviewTop
   };
 };
 
