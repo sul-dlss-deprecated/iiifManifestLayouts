@@ -4,6 +4,7 @@ var d3 = require('./lib/d3-slim-dist');
 var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
 var CanvasObject = require('./canvasObject');
+var ViewerState = require('./viewerState');
 var iiif = require('./iiifUtils');
 var events = require('events');
 require('openseadragon');
@@ -23,9 +24,9 @@ var manifestor = function(options) {
       labelClass = options.labelClass ? options.labelClass : 'label',
       viewportPadding = options.viewportPadding,
       stateUpdateCallback = options.stateUpdateCallback,
-      _viewerState,
+      viewerState,
       _canvasObjects,
-      _zooming = false,
+      _zooming = false, // todo: store this in viewerState
       _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()},
       _inZoomConstraints,
       _lastScrollPosition = 0,
@@ -86,17 +87,16 @@ var manifestor = function(options) {
   container.append(scrollContainer);
   scrollContainer.append(overlays);
   initOSD();
-  buildCanvasStates(canvases, viewer);
-
-  // set the initial state, which triggers the first rendering.
-  viewerState({
+  viewerState = viewerState || new ViewerState({
+    updateCallback: render,
     selectedCanvas: selectedCanvas, // @id of the canvas:
     perspective: initialPerspective, // can be 'overview' or 'detail'
     viewingMode: initialViewingMode, // manifest derived or user specified (iiif viewingHint)
     viewingDirection: initialViewingDirection, // manifest derived or user specified (iiif viewingHint)
     width: container.width(),
     height: container.height()
-  }, true); // "initial" is true here; don't fire the state callback.
+  });
+  buildCanvasStates(canvases, viewer);
 
   d3.timer(function() {
     if (_destroyed) {
@@ -106,23 +106,17 @@ var manifestor = function(options) {
     viewer.forceRedraw();
   });
 
-  function viewerState(state, initial) {
-    if (!arguments.length) return _viewerState;
-    _viewerState = state;
+  function getState() {
+    return viewerState.getState();
+  };
 
-    if (stateUpdateCallback && !initial) {
-      // should we pass in the state here?
-      // I don't really want to encourage reading
-      // the state from the event.
-      stateUpdateCallback();
-    }
-    render();
-
-    return _viewerState;
+  // Do we really want to expose this?
+  function setState(state) {
+    viewerState.setState(state);
   }
 
   function render() {
-    var userState = viewerState();
+    var userState = viewerState.getState();
 
     // Figure out what's changed
     var differences = [];
@@ -224,8 +218,9 @@ var manifestor = function(options) {
       _overviewLeft = frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100);
       _overviewTop = frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100);
 
+      var state = viewerState.getState();
       viewBounds = new OpenSeadragon.Rect(_overviewLeft, _overviewTop + _lastScrollPosition,
-        viewerState().width, viewerState().height);
+        state.width, state.height);
 
       _zooming = true;
       disableZoomAndPan();
@@ -255,7 +250,8 @@ var manifestor = function(options) {
   function setScrollElementEvents() {
     var animationTiming = 1200;
     var interactionOverlay = d3.select(overlays[0]);
-    if (viewerState().perspective === 'detail') {
+    var state = viewerState.getState();
+    if (state.perspective === 'detail') {
       interactionOverlay
         .style('opacity', 0)
         .style('pointer-events', 'none');
@@ -429,7 +425,8 @@ var manifestor = function(options) {
     });
 
     viewer.addHandler('zoom', function(event) {
-      if (viewerState().perspective === 'detail') {
+      var state = viewerState.getState();
+      if (state.perspective === 'detail') {
         applyConstraints(_constraintBounds);
       }
       var center = viewer.viewport.getBounds().getCenter();
@@ -437,7 +434,8 @@ var manifestor = function(options) {
     });
 
     viewer.addHandler('pan', function(event) {
-      if (viewerState().perspective === 'detail') {
+      var state = viewerState.getState();
+      if (state.perspective === 'detail') {
         applyConstraints(_constraintBounds);
       }
       var zoom = viewer.viewport.getZoom();
@@ -555,44 +553,35 @@ var manifestor = function(options) {
   }
 
   function selectCanvas(item) {
-    var state = viewerState();
-    state.selectedCanvas = item;
     _canvasObjects[item].openMainTileSource();
-    state.perspective = 'detail';
-    viewerState(state);
+    viewerState.setState({
+      selectedCanvas: item,
+      perspective: 'detail'
+    });
     _dispatcher.emit('canvas-selected', { detail: _canvasObjects[item] });
   }
 
   function getSelectedCanvas() {
-    var state = viewerState();
+    var state = viewerState.getState();
     return _canvasObjects[state.selectedCanvas];
   }
 
   function selectPerspective(perspective) {
-    var state = viewerState();
-    state.perspective = perspective;
-    viewerState(state);
+    viewerState.setState({
+      perspective: perspective
+    });
   }
 
   function selectViewingMode(viewingMode) {
-    var state = viewerState();
-    state.viewingMode = viewingMode;
-    viewerState(state);
+    viewerState.setState({
+      viewingMode: viewingMode
+    });
   }
 
   function selectViewingDirection(viewingDirection) {
-    var state = viewerState();
-    state.viewingDirection = viewingDirection;
-    viewerState(state);
-  }
-
-  function refreshState(newState) {
-    var state = viewerState();
-
-    // for blah in blah overwrite blah
-    // rather than just setting a specific
-    // property.
-    viewerState(state);
+    viewerState.setState({
+      viewingDirection: viewingDirection
+    });
   }
 
   function addImageCluster(id) {
@@ -618,25 +607,19 @@ var manifestor = function(options) {
   }
 
   function resize() {
-    var state = viewerState();
-
-    state.width = container.width();
-    state.height = container.height();
-
-    viewerState(state);
+    viewerState.setState({
+      width: container.width(),
+      height: container.height()
+    });
   }
 
   function updateThumbSize(scaleFactor) {
-    var state = viewerState();
-
-    state.scaleFactor = scaleFactor;
-
-    viewerState(state);
+    viewerState.setState({
+      scaleFactor: scaleFactor
+    });
   }
 
   function updateConstraintBounds(bounds) {
-    var state = viewerState();
-
     // This should probably be integrated into
     // some other type of store, such as
     // one that handles state that is
@@ -645,6 +628,8 @@ var manifestor = function(options) {
     // this).
 
     // state.constraintBounds = bounds;
+
+    // todo: store this in viewerState
     _constraintBounds = bounds;
 
     // viewerState(state);
@@ -711,7 +696,7 @@ var manifestor = function(options) {
   }
 
   function _navigate(forward) {
-    var state = viewerState();
+    var state = viewerState.getState();
     var currentCanvasIndex = _canvasObjects[state.selectedCanvas].index;
     var incrementValue = forward ? 1 : -1;
 
@@ -741,7 +726,7 @@ var manifestor = function(options) {
     osdContainer.remove();
     container.off('click', canvasClickHandler);
 
-    _viewerState = null
+    viewerState = null
     _canvasObjects = null;
     _inZoomConstraints = null;
 
@@ -753,9 +738,10 @@ var manifestor = function(options) {
   }
 
   function scrollHandler(event) {
-    if (viewerState().perspective === 'overview' && _zooming === false) {
-      var width = viewerState().width;
-      var height = viewerState().height;
+    var currentState = viewerState.getState();
+    if (currentState.perspective === 'overview' && _zooming === false) {
+      var width = currentState.width;
+      var height = currentState.height;
       _lastScrollPosition = $(this).scrollTop();
       synchronisePan(_lastScrollPosition, width, height);
     }
@@ -775,9 +761,8 @@ var manifestor = function(options) {
     selectViewingMode: selectViewingMode,
     selectViewingDirection: selectViewingDirection,
     updateThumbSize: updateThumbSize,
-    refreshState: refreshState,
-    getState: viewerState,
-    setState: viewerState,
+    getState: getState,
+    setState: setState,
     osd: viewer,
     on: on,
     getSelectedCanvas: getSelectedCanvas
