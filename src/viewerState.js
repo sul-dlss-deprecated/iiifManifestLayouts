@@ -18,7 +18,9 @@ viewerState.prototype = {
 
   setState: function(newState) {
     for(var key in newState) {
-      this.state[key] = newState[key];
+      if(newState.hasOwnProperty(key)) {
+        this.state[key] = newState[key];
+      }
     }
     if(this.updateCallback) {
       this.updateCallback();
