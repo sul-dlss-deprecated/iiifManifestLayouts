@@ -26,7 +26,7 @@ var manifestor = function(options) {
       stateUpdateCallback = options.stateUpdateCallback,
       viewerState,
       _canvasObjects,
-      _zooming = false, // todo: store this in viewerState?
+      _zooming = false, // todo: store this in some kind of render state
       _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()},
       _inZoomConstraints,
       _lastScrollPosition = 0,
@@ -597,10 +597,11 @@ var manifestor = function(options) {
 
     // state.constraintBounds = bounds;
 
-    // todo: store this in viewerState
+    // DO NOT store this in viewerState, as updating viewerState causes render() to be called,
+    // and this function is only called from deep within render(). Havoc is caused.
+    // Put it in whatever state object _zooming goes in.
     _constraintBounds = bounds;
 
-    // viewerState(state);
   }
 
   function _isValidCanvasIndex(index) {
