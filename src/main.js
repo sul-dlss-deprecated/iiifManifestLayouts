@@ -28,7 +28,6 @@ var manifestor = function(options) {
       viewerState,
       renderState,
       _canvasObjects,
-      _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()}, // for render state
       _inZoomConstraints, // for render state
       _lastScrollPosition = 0, // for render state
       _dispatcher = new events.EventEmitter(),
@@ -98,6 +97,7 @@ var manifestor = function(options) {
   });
   renderState = renderState || new RenderState({
     zooming: false,
+    constraintBounds: {x:0, y:0, width:container.width(), height:container.height()}
   })
   buildCanvasStates(canvases, viewer);
 
@@ -190,7 +190,7 @@ var manifestor = function(options) {
         return frame.canvas.selected;
       })[0].vantage;
 
-      updateConstraintBounds(viewBounds);
+      renderState.setState({constraintBounds: viewBounds});
       var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
       setScrollElementEvents();
       viewer.viewport.fitBounds(osdBounds, !animateViewport);
@@ -397,18 +397,16 @@ var manifestor = function(options) {
     });
 
     viewer.addHandler('zoom', function(event) {
-      var state = viewerState.getState();
-      if (state.perspective === 'detail') {
-        applyConstraints(_constraintBounds);
+      if (viewerState.getState().perspective === 'detail') {
+        applyConstraints();
       }
       var center = viewer.viewport.getBounds().getCenter();
       _semanticZoom(event.zoom, center);
     });
 
     viewer.addHandler('pan', function(event) {
-      var state = viewerState.getState();
-      if (state.perspective === 'detail') {
-        applyConstraints(_constraintBounds);
+      if (viewerState.getState().perspective === 'detail') {
+        applyConstraints();
       }
       var zoom = viewer.viewport.getZoom();
       _semanticZoom(zoom, event.center);
@@ -451,12 +449,13 @@ var manifestor = function(options) {
     viewer.viewport.fitBounds(viewBounds, true);
   }
 
-  function applyConstraints(constraintBounds) {
-    constraintBounds = new OpenSeadragon.Rect(
-      constraintBounds.x,
-      constraintBounds.y,
-      constraintBounds.width,
-      constraintBounds.height
+  function applyConstraints() {
+    var bounds = renderState.getState().constraintBounds;
+    var constraintBounds = new OpenSeadragon.Rect(
+      bounds.x,
+      bounds.y,
+      bounds.width,
+      bounds.height
     );
 
     if (constraintBounds && !_inZoomConstraints) {
@@ -589,23 +588,6 @@ var manifestor = function(options) {
     viewerState.setState({
       scaleFactor: scaleFactor
     });
-  }
-
-  function updateConstraintBounds(bounds) {
-    // This should probably be integrated into
-    // some other type of store, such as
-    // one that handles state that is
-    // updated in real time (zoom level,
-    // current bounds, "_zooming", and
-    // this).
-
-    // state.constraintBounds = bounds;
-
-    // DO NOT store this in viewerState, as updating viewerState causes render() to be called,
-    // and this function is only called from deep within render(). Havoc is caused.
-    // Put it in whatever state object _zooming goes in.
-    _constraintBounds = bounds;
-
   }
 
   function _isValidCanvasIndex(index) {
