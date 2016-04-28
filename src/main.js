@@ -27,7 +27,6 @@ var manifestor = function(options) {
       stateUpdateCallback = options.stateUpdateCallback,
       viewerState,
       renderState,
-      _canvasObjects,
       _dispatcher = new events.EventEmitter(),
       _destroyed = false,
       _transitionZoomLevel = 0.01;
@@ -84,6 +83,7 @@ var manifestor = function(options) {
   initOSD();
   viewerState = viewerState || new ViewerState({
     updateCallbacks: [render, stateUpdateCallback],
+    canvasObjects: buildCanvasStates(canvases, viewer),
     selectedCanvas: selectedCanvas, // @id of the canvas:
     perspective: initialPerspective, // can be 'overview' or 'detail'
     viewingMode: initialViewingMode, // manifest derived or user specified (iiif viewingHint)
@@ -98,8 +98,7 @@ var manifestor = function(options) {
     lastScrollPosition: $(this).scrollTop(),
     overviewLeft: 0,
     overviewTop: 0
-  })
-  buildCanvasStates(canvases, viewer);
+  });
 
   d3.timer(function() {
     if (_destroyed) {
@@ -150,7 +149,7 @@ var manifestor = function(options) {
     });
 
     var getFrames = function (mode) {
-      var canvas = _canvasObjects[userState.selectedCanvas];
+      var canvas = viewerState.selectedCanvasObject();
       var anchor = canvas.getBounds().getTopLeft();
       var frames = layout[mode](anchor);
       return frames;
@@ -211,10 +210,6 @@ var manifestor = function(options) {
         setScrollElementEvents();
       }, 1200);
     }
-  }
-
-  function setCanvasObjects(state) {
-    _canvasObjects = state;
   }
 
   function setScrollElementEvents() {
@@ -345,7 +340,7 @@ var manifestor = function(options) {
   }
 
   function translateTilesources(d, i) {
-    var canvas = _canvasObjects[d.canvas.id];
+    var canvas = viewerState.getState().canvasObjects[d.canvas.id];
     var currentBounds = canvas.getBounds();
 
     var xi = d3.interpolate(currentBounds.x, d.canvas.x);
@@ -358,12 +353,12 @@ var manifestor = function(options) {
 
   function updateImages(d) {
     var canvasData = d.canvas,
-        canvasImageState = _canvasObjects[canvasData.id];
+        canvasImageState = viewerState.getState().canvasObjects[canvasData.id];
   }
 
   function enterImages(d) {
     var canvasData = d.canvas,
-        canvasImageState = _canvasObjects[canvasData.id];
+        canvasImageState = viewerState.getState().canvasObjects[canvasData.id];
 
     canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
     canvasImageState.openThumbnail();
@@ -381,10 +376,11 @@ var manifestor = function(options) {
 
     // Open the main tile source when we reach the specified zoom level on it
     var _semanticZoom = function(zoom, center) {
+      var state = viewerState.getState();
       if(zoom >= _transitionZoomLevel) {
-        for(var key in _canvasObjects) {
-          if(_canvasObjects[key].containsPoint(center)) {
-            _canvasObjects[key].openMainTileSource();
+        for(var key in state.canvasObjects) {
+          if(state.canvasObjects[key].containsPoint(center)) {
+            state.canvasObjects[key].openMainTileSource();
           }
         }
       }
@@ -413,9 +409,10 @@ var manifestor = function(options) {
     viewer.addHandler('canvas-click', function(event) {
       var hitCanvases = [];
       var clickPosition = viewer.viewport.pointFromPixel(event.position);
-      for(var key in _canvasObjects) {
-        if(_canvasObjects[key].containsPoint(clickPosition)){
-          hitCanvases.push(_canvasObjects[key]);
+      var state = viewerState.getState();
+      for(var key in state.canvasObjects) {
+        if(state.canvasObjects[key].containsPoint(clickPosition)){
+          hitCanvases.push(state.canvasObjects[key]);
         }
       }
       if(event.quick && hitCanvases[0]) {
@@ -524,17 +521,17 @@ var manifestor = function(options) {
   }
 
   function selectCanvas(item) {
-    _canvasObjects[item].openMainTileSource();
+    var item = viewerState.getState().canvasObjects[item];
+    item.openMainTileSource();
     viewerState.setState({
-      selectedCanvas: item,
+      selectedCanvas: item.id,
       perspective: 'detail'
     });
-    _dispatcher.emit('canvas-selected', { detail: _canvasObjects[item] });
+    _dispatcher.emit('canvas-selected', { detail: item });
   }
 
   function getSelectedCanvas() {
-    var state = viewerState.getState();
-    return _canvasObjects[state.selectedCanvas];
+    return viewerState.selectedCanvasObject();
   }
 
   function selectPerspective(perspective) {
@@ -556,7 +553,7 @@ var manifestor = function(options) {
   }
 
   function addImageCluster(id) {
-    var canvases = _canvasObjects;
+    var canvases = viewerState.getState().canvasObjects;
 
     canvases[id] = {
     };
@@ -574,7 +571,7 @@ var manifestor = function(options) {
      });
     });
 
-    setCanvasObjects(canvasObjects);
+    return canvasObjects;
   }
 
   function resize() {
@@ -596,7 +593,7 @@ var manifestor = function(options) {
 
   function _loadTileSourceForIndex(index) {
     var canvasId = canvases[index]['@id'];
-    _canvasObjects[canvasId].openMainTileSource();
+    viewerState.getState().canvasObjects[canvasId].openMainTileSource();
   }
 
   function _selectCanvasForIndex(index) {
@@ -606,7 +603,7 @@ var manifestor = function(options) {
 
   var getCanvasByIndex = function(index) {
     var canvasId = canvases[index]['@id'];
-    return _canvasObjects[canvasId];
+    return viewerState.getState().canvasObjects[canvasId];
   };
 
   function _navigatePaged(currentIndex, incrementValue) {
@@ -652,7 +649,7 @@ var manifestor = function(options) {
 
   function _navigate(forward) {
     var state = viewerState.getState();
-    var currentCanvasIndex = _canvasObjects[state.selectedCanvas].index;
+    var currentCanvasIndex = viewerState.selectedCanvasObject().index;
     var incrementValue = forward ? 1 : -1;
 
     if(state.viewingMode === 'paged') {
@@ -683,7 +680,6 @@ var manifestor = function(options) {
 
     viewerState = null;
     renderState = null;
-    _canvasObjects = null;
 
     _destroyed = true; // cancels the timer
   }

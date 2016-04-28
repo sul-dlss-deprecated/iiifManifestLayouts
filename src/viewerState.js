@@ -2,6 +2,7 @@ var viewerState = function(config) {
   this.updateCallbacks = config.updateCallbacks;
 
   this.state = {
+    canvasObjects: config.canvasObjects,
     selectedCanvas: config.selectedCanvas, // @id of the canvas:
     perspective: config.perspective, // can be 'overview' or 'detail'
     viewingMode: config.viewingMode, // manifest derived or user specified (iiif viewingHint)
@@ -33,6 +34,10 @@ viewerState.prototype = {
         }
       });
     }
+  },
+
+  selectedCanvasObject: function() {
+    return this.state.canvasObjects[this.state.selectedCanvas];
   }
 };
 
