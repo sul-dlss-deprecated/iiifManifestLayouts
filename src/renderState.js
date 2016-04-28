@@ -2,7 +2,8 @@ var renderState = function(config) {
   this.state = {
     zooming: config.zooming,
     constraintBounds: config.constraintBounds,
-    inZoomConstraints: config.inZoomConstraints
+    inZoomConstraints: config.inZoomConstraints,
+    lastScrollPosition: config.lastScrollPosition
   };
 };
 

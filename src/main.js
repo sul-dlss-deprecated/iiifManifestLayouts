@@ -28,7 +28,6 @@ var manifestor = function(options) {
       viewerState,
       renderState,
       _canvasObjects,
-      _lastScrollPosition = 0, // for render state
       _dispatcher = new events.EventEmitter(),
       _destroyed = false,
       _overviewLeft = 0, // for render state
@@ -97,7 +96,8 @@ var manifestor = function(options) {
   renderState = renderState || new RenderState({
     zooming: false,
     constraintBounds: {x:0, y:0, width:container.width(), height:container.height()},
-    inZoomConstraints: false
+    inZoomConstraints: false,
+    lastScrollPosition: $(this).scrollTop()
   })
   buildCanvasStates(canvases, viewer);
 
@@ -200,7 +200,7 @@ var manifestor = function(options) {
       _overviewTop = frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100);
 
       var state = viewerState.getState();
-      viewBounds = new OpenSeadragon.Rect(_overviewLeft, _overviewTop + _lastScrollPosition,
+      viewBounds = new OpenSeadragon.Rect(_overviewLeft, _overviewTop + renderState.getState().lastScrollPosition,
         state.width, state.height);
 
       renderState.setState({zooming: true});
@@ -433,7 +433,7 @@ var manifestor = function(options) {
     var viewerHeight = viewer.container.clientHeight;
     var center = viewer.viewport.getCenter(true);
     var p = center.minus(new OpenSeadragon.Point(viewerWidth / 2, viewerHeight / 2))
-          .minus(new OpenSeadragon.Point(0, _lastScrollPosition));
+          .minus(new OpenSeadragon.Point(0, renderState.getState().lastScrollPosition));
     var zoom = viewer.viewport.getZoom(true);
     var scale = viewerWidth * zoom;
 
@@ -444,8 +444,8 @@ var manifestor = function(options) {
       .style('-webkit-transform', transform);
   }
 
-  function synchronisePan(panTop, width, height) {
-    var viewBounds = new OpenSeadragon.Rect(_overviewLeft, _overviewTop + _lastScrollPosition, width, height);
+  function synchronisePan(width, height) {
+    var viewBounds = new OpenSeadragon.Rect(_overviewLeft, _overviewTop + renderState.getState().lastScrollPosition, width, height);
     viewer.viewport.fitBounds(viewBounds, true);
   }
 
@@ -697,8 +697,8 @@ var manifestor = function(options) {
     if (currentState.perspective === 'overview' && renderState.getState().zooming === false) {
       var width = currentState.width;
       var height = currentState.height;
-      _lastScrollPosition = $(this).scrollTop();
-      synchronisePan(_lastScrollPosition, width, height);
+      renderState.setState({ lastScrollPosition: $(this).scrollTop() });
+      synchronisePan(width, height);
     }
   };
 
