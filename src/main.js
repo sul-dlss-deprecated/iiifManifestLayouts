@@ -447,10 +447,11 @@ var manifestor = function(options) {
       .style('-webkit-transform', transform);
   }
 
-  function synchronisePan(width, height) {
+  function setViewerBoundsFromState(animate) {
     var rState = renderState.getState();
-    var viewBounds = new OpenSeadragon.Rect(rState.overviewLeft, rState.overviewTop + rState.lastScrollPosition, width, height);
-    viewer.viewport.fitBounds(viewBounds, true);
+    var vState = viewerState.getState();
+    var viewBounds = new OpenSeadragon.Rect(rState.overviewLeft, rState.overviewTop + rState.lastScrollPosition, vState.width, vState.height);
+    viewer.viewport.fitBounds(viewBounds, animate);
   }
 
   function applyConstraints() {
@@ -697,12 +698,9 @@ var manifestor = function(options) {
   }
 
   function scrollHandler(event) {
-    var currentState = viewerState.getState();
-    if (currentState.perspective === 'overview' && renderState.getState().zooming === false) {
-      var width = currentState.width;
-      var height = currentState.height;
+    if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
       renderState.setState({ lastScrollPosition: $(this).scrollTop() });
-      synchronisePan(width, height);
+      setViewerBoundsFromState(true);
     }
   };
 
