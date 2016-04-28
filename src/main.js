@@ -198,18 +198,13 @@ var manifestor = function(options) {
     } else {
       renderState.setState({
         overviewLeft: frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100),
-        overviewTop: frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100)
+        overviewTop: frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100),
+        zooming: true
       });
 
-      var vState = viewerState.getState();
-      var rState = renderState.getState();
-      viewBounds = new OpenSeadragon.Rect(rState.overviewLeft, rState.overviewTop + rState.lastScrollPosition,
-        vState.width, vState.height);
-
-      renderState.setState({zooming: true});
       disableZoomAndPan();
       setScrollElementEvents();
-      viewer.viewport.fitBounds(viewBounds, !animateViewport);
+      setViewerBoundsFromState(!animateViewport);
 
       setTimeout(function(){
         renderState.setState({zooming: false});
