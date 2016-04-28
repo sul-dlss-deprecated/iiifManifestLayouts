@@ -27,13 +27,13 @@ var manifestor = function(options) {
       viewerState,
       _canvasObjects,
       _zooming = false, // todo: store this in some kind of render state
-      _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()},
-      _inZoomConstraints,
-      _lastScrollPosition = 0,
+      _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()}, // for render state
+      _inZoomConstraints, // for render state
+      _lastScrollPosition = 0, // for render state
       _dispatcher = new events.EventEmitter(),
       _destroyed = false,
-      _overviewLeft = 0,
-      _overviewTop = 0,
+      _overviewLeft = 0, // for render state
+      _overviewTop = 0, // for render state
       _transitionZoomLevel = 0.01;
 
   function getViewingDirection() {
