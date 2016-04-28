@@ -28,7 +28,6 @@ var manifestor = function(options) {
       viewerState,
       renderState,
       _canvasObjects,
-      _inZoomConstraints, // for render state
       _lastScrollPosition = 0, // for render state
       _dispatcher = new events.EventEmitter(),
       _destroyed = false,
@@ -97,7 +96,8 @@ var manifestor = function(options) {
   });
   renderState = renderState || new RenderState({
     zooming: false,
-    constraintBounds: {x:0, y:0, width:container.width(), height:container.height()}
+    constraintBounds: {x:0, y:0, width:container.width(), height:container.height()},
+    inZoomConstraints: false
   })
   buildCanvasStates(canvases, viewer);
 
@@ -450,15 +450,15 @@ var manifestor = function(options) {
   }
 
   function applyConstraints() {
-    var bounds = renderState.getState().constraintBounds;
+    var state = renderState.getState();
     var constraintBounds = new OpenSeadragon.Rect(
-      bounds.x,
-      bounds.y,
-      bounds.width,
-      bounds.height
+      state.constraintBounds.x,
+      state.constraintBounds.y,
+      state.constraintBounds.width,
+      state.constraintBounds.height
     );
 
-    if (constraintBounds && !_inZoomConstraints) {
+    if (constraintBounds && !state.inZoomConstraints) {
       var changed = false;
       var currentBounds = viewer.viewport.getBounds();
 
@@ -493,9 +493,9 @@ var manifestor = function(options) {
       }
 
       if (changed) {
-        _inZoomConstraints = true;
+        renderState.setState({ inZoomConstraints: true });
         viewer.viewport.fitBounds(currentBounds);
-        _inZoomConstraints = false;
+        renderState.setState({ inZoomConstraints: false });
       }
     }
 
@@ -681,9 +681,9 @@ var manifestor = function(options) {
     osdContainer.remove();
     container.off('click', canvasClickHandler);
 
-    viewerState = null
+    viewerState = null;
+    renderState = null;
     _canvasObjects = null;
-    _inZoomConstraints = null;
 
     _destroyed = true; // cancels the timer
   }

@@ -2,6 +2,7 @@ var renderState = function(config) {
   this.state = {
     zooming: config.zooming,
     constraintBounds: config.constraintBounds,
+    inZoomConstraints: config.inZoomConstraints
   };
 };
 
