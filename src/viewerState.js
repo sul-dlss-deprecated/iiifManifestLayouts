@@ -17,13 +17,17 @@ viewerState.prototype = {
   },
 
   setState: function(newState) {
+    var differences = {};
     for(var key in newState) {
       if(newState.hasOwnProperty(key)) {
-        this.state[key] = newState[key];
+        if(this.state[key] !== newState[key]) {
+          differences[key] = this.state[key];
+          this.state[key] = newState[key];
+        }
       }
     }
     if(this.updateCallback) {
-      this.updateCallback();
+      this.updateCallback(differences);
     }
   }
 };

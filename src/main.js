@@ -26,7 +26,7 @@ var manifestor = function(options) {
       stateUpdateCallback = options.stateUpdateCallback,
       viewerState,
       _canvasObjects,
-      _zooming = false, // todo: store this in viewerState
+      _zooming = false, // todo: store this in viewerState?
       _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()},
       _inZoomConstraints,
       _lastScrollPosition = 0,
@@ -34,7 +34,6 @@ var manifestor = function(options) {
       _destroyed = false,
       _overviewLeft = 0,
       _overviewTop = 0,
-      _previousState = {},
       _transitionZoomLevel = 0.01;
 
   function getViewingDirection() {
@@ -115,29 +114,9 @@ var manifestor = function(options) {
     viewerState.setState(state);
   }
 
-  function render() {
+  function render(differences) {
     var userState = viewerState.getState();
-
-    // Figure out what's changed
-    var differences = [];
-    var key;
-    for (key in _previousState) {
-      if (_previousState.hasOwnProperty(key) && (!userState.hasOwnProperty(key) ||
-          _previousState[key] !== userState[key])) {
-        differences.push(key);
-      }
-    }
-
-    for (key in userState) {
-      if (userState.hasOwnProperty(key) && !_previousState.hasOwnProperty(key)) {
-        differences.push(key);
-      }
-    }
-
-    var previousPerspective = '';
-    if (userState.perspective !== _previousState.perspective) {
-      previousPerspective = _previousState.perspective;
-    }
+    var previousPerspective = differences.perspective || userState.perspective;
 
     // console.log('[render] state differences', differences);
 
@@ -195,13 +174,11 @@ var manifestor = function(options) {
         doRender('overview', true);
       });
     } else {
-      var animateRender = (userState.selectedCanvas !== _previousState.selectedCanvas ||
-        userState.viewingMode !== _previousState.viewingMode);
-
+      var animateRender = ('selectedCanvas' in differences || 'viewingMode' in differences);
       frames = doRender(userState.perspective, animateRender);
     }
 
-    var animateViewport = previousPerspective || userState.selectedCanvas !== _previousState.selectedCanvas;
+    var animateViewport = ('perspective' in differences || 'selectedCanvas' in differences);
 
     var viewBounds;
     if (userState.perspective === 'detail') {
@@ -231,15 +208,6 @@ var manifestor = function(options) {
         _zooming = false;
         setScrollElementEvents();
       }, 1200);
-    }
-
-    // Copy state
-    _previousState = {};
-
-    for (key in userState) {
-      if (userState.hasOwnProperty(key)) {
-        _previousState[key] = userState[key];
-      }
     }
   }
 
