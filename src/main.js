@@ -83,7 +83,7 @@ var manifestor = function(options) {
   scrollContainer.append(overlays);
   initOSD();
   viewerState = viewerState || new ViewerState({
-    updateCallback: render,
+    updateCallbacks: [render, stateUpdateCallback],
     selectedCanvas: selectedCanvas, // @id of the canvas:
     perspective: initialPerspective, // can be 'overview' or 'detail'
     viewingMode: initialViewingMode, // manifest derived or user specified (iiif viewingHint)

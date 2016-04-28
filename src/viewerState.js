@@ -1,5 +1,5 @@
 var viewerState = function(config) {
-  this.updateCallback = config.updateCallback;
+  this.updateCallbacks = config.updateCallbacks;
 
   this.state = {
     selectedCanvas: config.selectedCanvas, // @id of the canvas:
@@ -26,8 +26,12 @@ viewerState.prototype = {
         }
       }
     }
-    if(this.updateCallback) {
-      this.updateCallback(differences);
+    if(this.updateCallbacks) {
+      this.updateCallbacks.forEach(function(callback) {
+        if(callback) {
+          callback(differences);
+        }
+      });
     }
   }
 };
