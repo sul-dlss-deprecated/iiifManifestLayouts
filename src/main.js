@@ -5,6 +5,7 @@ var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
 var CanvasObject = require('./canvasObject');
 var ViewerState = require('./viewerState');
+var RenderState = require('./renderState');
 var iiif = require('./iiifUtils');
 var events = require('events');
 require('openseadragon');
@@ -25,8 +26,8 @@ var manifestor = function(options) {
       viewportPadding = options.viewportPadding,
       stateUpdateCallback = options.stateUpdateCallback,
       viewerState,
+      renderState,
       _canvasObjects,
-      _zooming = false, // todo: store this in some kind of render state
       _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()}, // for render state
       _inZoomConstraints, // for render state
       _lastScrollPosition = 0, // for render state
@@ -95,6 +96,9 @@ var manifestor = function(options) {
     width: container.width(),
     height: container.height()
   });
+  renderState = renderState || new RenderState({
+    zooming: false,
+  })
   buildCanvasStates(canvases, viewer);
 
   d3.timer(function() {
@@ -199,13 +203,13 @@ var manifestor = function(options) {
       viewBounds = new OpenSeadragon.Rect(_overviewLeft, _overviewTop + _lastScrollPosition,
         state.width, state.height);
 
-      _zooming = true;
+      renderState.setState({zooming: true});
       disableZoomAndPan();
       setScrollElementEvents();
       viewer.viewport.fitBounds(viewBounds, !animateViewport);
 
       setTimeout(function(){
-        _zooming = false;
+        renderState.setState({zooming: false});
         setScrollElementEvents();
       }, 1200);
     }
@@ -228,7 +232,7 @@ var manifestor = function(options) {
         .style('pointer-events', 'none')
         .style('overflow-y', 'hidden');
 
-    } else if(!_zooming) {
+    } else if(! renderState.getState().zooming) {
       interactionOverlay
         .style('pointer-events', 'all')
         .transition()
@@ -708,7 +712,7 @@ var manifestor = function(options) {
 
   function scrollHandler(event) {
     var currentState = viewerState.getState();
-    if (currentState.perspective === 'overview' && _zooming === false) {
+    if (currentState.perspective === 'overview' && renderState.getState().zooming === false) {
       var width = currentState.width;
       var height = currentState.height;
       _lastScrollPosition = $(this).scrollTop();
