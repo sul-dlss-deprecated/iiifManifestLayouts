@@ -1,3 +1,5 @@
+'use strict';
+
 var viewerState = function(config) {
   this.updateCallbacks = config.updateCallbacks;
 
