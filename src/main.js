@@ -4,9 +4,11 @@ var d3 = require('./lib/d3-slim-dist');
 var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
 var CanvasObject = require('./canvasObject');
+var ViewerState = require('./viewerState');
+var RenderState = require('./renderState');
+var OSDUtils = require('./osdUtils');
 var iiif = require('./iiifUtils');
 var events = require('events');
-require('openseadragon');
 
 var manifestor = function(options) {
   var manifest = options.manifest,
@@ -17,24 +19,17 @@ var manifestor = function(options) {
       initialViewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
       initialPerspective = options.perspective ? options.perspective : 'overview',
       selectedCanvas = options.selectedCanvas || iiif.getFirst(canvases),
+      osd,
       viewer,
       canvasClass = options.canvasClass ? options.canvasClass : 'canvas',
       frameClass = options.frameClass ? options.frameClass : 'frame',
       labelClass = options.labelClass ? options.labelClass : 'label',
       viewportPadding = options.viewportPadding,
       stateUpdateCallback = options.stateUpdateCallback,
-      _viewerState,
-      _canvasObjects,
-      _zooming = false,
-      _constraintBounds = {x:0, y:0, width:container.width(), height:container.height()},
-      _inZoomConstraints,
-      _lastScrollPosition = 0,
+      viewerState,
+      renderState,
       _dispatcher = new events.EventEmitter(),
-      _destroyed = false,
-      _overviewLeft = 0,
-      _overviewTop = 0,
-      _previousState = {},
-      _transitionZoomLevel = 0.01;
+      _destroyed = false;
 
   function getViewingDirection() {
     if (sequence && sequence.viewingDirection) {
@@ -85,18 +80,33 @@ var manifestor = function(options) {
   container.append(osdContainer);
   container.append(scrollContainer);
   scrollContainer.append(overlays);
-  initOSD();
-  buildCanvasStates(canvases, viewer);
 
-  // set the initial state, which triggers the first rendering.
-  viewerState({
+  osd = new OSDUtils();
+  viewer = osd.initOSD(osdContainer);
+
+  viewerState = viewerState || new ViewerState({
+    updateCallbacks: [render, stateUpdateCallback],
+    canvasObjects: buildCanvasStates(canvases, viewer),
     selectedCanvas: selectedCanvas, // @id of the canvas:
     perspective: initialPerspective, // can be 'overview' or 'detail'
     viewingMode: initialViewingMode, // manifest derived or user specified (iiif viewingHint)
     viewingDirection: initialViewingDirection, // manifest derived or user specified (iiif viewingHint)
     width: container.width(),
     height: container.height()
-  }, true); // "initial" is true here; don't fire the state callback.
+  });
+  renderState = renderState || new RenderState({
+    zooming: false,
+    constraintBounds: {x:0, y:0, width:container.width(), height:container.height()},
+    inZoomConstraints: false,
+    lastScrollPosition: $(this).scrollTop(),
+    overviewLeft: 0,
+    overviewTop: 0
+  });
+
+  osd.addOSDHandlers(viewerState, renderState);
+  viewer.addHandler('animation', function(event) {
+    synchroniseZoom();
+  });
 
   d3.timer(function() {
     if (_destroyed) {
@@ -106,44 +116,18 @@ var manifestor = function(options) {
     viewer.forceRedraw();
   });
 
-  function viewerState(state, initial) {
-    if (!arguments.length) return _viewerState;
-    _viewerState = state;
+  function getState() {
+    return viewerState.getState();
+  };
 
-    if (stateUpdateCallback && !initial) {
-      // should we pass in the state here?
-      // I don't really want to encourage reading
-      // the state from the event.
-      stateUpdateCallback();
-    }
-    render();
-
-    return _viewerState;
+  // Do we really want to expose this?
+  function setState(state) {
+    viewerState.setState(state);
   }
 
-  function render() {
-    var userState = viewerState();
-
-    // Figure out what's changed
-    var differences = [];
-    var key;
-    for (key in _previousState) {
-      if (_previousState.hasOwnProperty(key) && (!userState.hasOwnProperty(key) ||
-          _previousState[key] !== userState[key])) {
-        differences.push(key);
-      }
-    }
-
-    for (key in userState) {
-      if (userState.hasOwnProperty(key) && !_previousState.hasOwnProperty(key)) {
-        differences.push(key);
-      }
-    }
-
-    var previousPerspective = '';
-    if (userState.perspective !== _previousState.perspective) {
-      previousPerspective = _previousState.perspective;
-    }
+  function render(differences) {
+    var userState = viewerState.getState();
+    var previousPerspective = differences.perspective || userState.perspective;
 
     // console.log('[render] state differences', differences);
 
@@ -173,7 +157,7 @@ var manifestor = function(options) {
     });
 
     var getFrames = function (mode) {
-      var canvas = _canvasObjects[userState.selectedCanvas];
+      var canvas = viewerState.selectedCanvasObject();
       var anchor = canvas.getBounds().getTopLeft();
       var frames = layout[mode](anchor);
       return frames;
@@ -201,13 +185,11 @@ var manifestor = function(options) {
         doRender('overview', true);
       });
     } else {
-      var animateRender = (userState.selectedCanvas !== _previousState.selectedCanvas ||
-        userState.viewingMode !== _previousState.viewingMode);
-
+      var animateRender = ('selectedCanvas' in differences || 'viewingMode' in differences);
       frames = doRender(userState.perspective, animateRender);
     }
 
-    var animateViewport = previousPerspective || userState.selectedCanvas !== _previousState.selectedCanvas;
+    var animateViewport = ('perspective' in differences || 'selectedCanvas' in differences);
 
     var viewBounds;
     if (userState.perspective === 'detail') {
@@ -215,47 +197,34 @@ var manifestor = function(options) {
         return frame.canvas.selected;
       })[0].vantage;
 
-      updateConstraintBounds(viewBounds);
+      renderState.setState({constraintBounds: viewBounds});
       var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
       setScrollElementEvents();
       viewer.viewport.fitBounds(osdBounds, !animateViewport);
       enableZoomAndPan();
     } else {
-      _overviewLeft = frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100);
-      _overviewTop = frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100);
+      renderState.setState({
+        overviewLeft: frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100),
+        overviewTop: frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100),
+        zooming: true
+      });
 
-      viewBounds = new OpenSeadragon.Rect(_overviewLeft, _overviewTop + _lastScrollPosition,
-        viewerState().width, viewerState().height);
-
-      _zooming = true;
       disableZoomAndPan();
       setScrollElementEvents();
-      viewer.viewport.fitBounds(viewBounds, !animateViewport);
+      setViewerBoundsFromState(!animateViewport);
 
-      setTimeout(function(){
-        _zooming = false;
+      setTimeout(function(){ // Do we want this to happen based on an event instead?
+        renderState.setState({zooming: false});
         setScrollElementEvents();
       }, 1200);
     }
-
-    // Copy state
-    _previousState = {};
-
-    for (key in userState) {
-      if (userState.hasOwnProperty(key)) {
-        _previousState[key] = userState[key];
-      }
-    }
-  }
-
-  function setCanvasObjects(state) {
-    _canvasObjects = state;
   }
 
   function setScrollElementEvents() {
     var animationTiming = 1200;
     var interactionOverlay = d3.select(overlays[0]);
-    if (viewerState().perspective === 'detail') {
+    var state = viewerState.getState();
+    if (state.perspective === 'detail') {
       interactionOverlay
         .style('opacity', 0)
         .style('pointer-events', 'none');
@@ -264,7 +233,7 @@ var manifestor = function(options) {
         .style('pointer-events', 'none')
         .style('overflow-y', 'hidden');
 
-    } else if(!_zooming) {
+    } else if(! renderState.getState().zooming) {
       interactionOverlay
         .style('pointer-events', 'all')
         .transition()
@@ -379,7 +348,7 @@ var manifestor = function(options) {
   }
 
   function translateTilesources(d, i) {
-    var canvas = _canvasObjects[d.canvas.id];
+    var canvas = viewerState.getState().canvasObjects[d.canvas.id];
     var currentBounds = canvas.getBounds();
 
     var xi = d3.interpolate(currentBounds.x, d.canvas.x);
@@ -392,12 +361,12 @@ var manifestor = function(options) {
 
   function updateImages(d) {
     var canvasData = d.canvas,
-        canvasImageState = _canvasObjects[canvasData.id];
+        canvasImageState = viewerState.getState().canvasObjects[canvasData.id];
   }
 
   function enterImages(d) {
     var canvasData = d.canvas,
-        canvasImageState = _canvasObjects[canvasData.id];
+        canvasImageState = viewerState.getState().canvasObjects[canvasData.id];
 
     canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
     canvasImageState.openThumbnail();
@@ -406,66 +375,12 @@ var manifestor = function(options) {
   function removeImages(d) {
   }
 
-  function initOSD() {
-    viewer = OpenSeadragon({
-      element: osdContainer[0],
-      showNavigationControl: false,
-      preserveViewport: true
-    });
-
-    // Open the main tile source when we reach the specified zoom level on it
-    var _semanticZoom = function(zoom, center) {
-      if(zoom >= _transitionZoomLevel) {
-        for(var key in _canvasObjects) {
-          if(_canvasObjects[key].containsPoint(center)) {
-            _canvasObjects[key].openMainTileSource();
-          }
-        }
-      }
-    };
-
-    viewer.addHandler('animation', function(event) {
-        synchroniseZoom();
-    });
-
-    viewer.addHandler('zoom', function(event) {
-      if (viewerState().perspective === 'detail') {
-        applyConstraints(_constraintBounds);
-      }
-      var center = viewer.viewport.getBounds().getCenter();
-      _semanticZoom(event.zoom, center);
-    });
-
-    viewer.addHandler('pan', function(event) {
-      if (viewerState().perspective === 'detail') {
-        applyConstraints(_constraintBounds);
-      }
-      var zoom = viewer.viewport.getZoom();
-      _semanticZoom(zoom, event.center);
-    });
-
-    viewer.addHandler('canvas-click', function(event) {
-      var hitCanvases = [];
-      var clickPosition = viewer.viewport.pointFromPixel(event.position);
-      for(var key in _canvasObjects) {
-        if(_canvasObjects[key].containsPoint(clickPosition)){
-          hitCanvases.push(_canvasObjects[key]);
-        }
-      }
-      if(event.quick && hitCanvases[0]) {
-        var bounds = hitCanvases[0].getBounds();
-        viewer.viewport.fitBounds(bounds);
-        hitCanvases[0].openMainTileSource();
-      }
-    });
-  }
-
   function synchroniseZoom() {
     var viewerWidth = viewer.container.clientWidth;
     var viewerHeight = viewer.container.clientHeight;
     var center = viewer.viewport.getCenter(true);
     var p = center.minus(new OpenSeadragon.Point(viewerWidth / 2, viewerHeight / 2))
-          .minus(new OpenSeadragon.Point(0, _lastScrollPosition));
+          .minus(new OpenSeadragon.Point(0, renderState.getState().lastScrollPosition));
     var zoom = viewer.viewport.getZoom(true);
     var scale = viewerWidth * zoom;
 
@@ -476,127 +391,47 @@ var manifestor = function(options) {
       .style('-webkit-transform', transform);
   }
 
-  function synchronisePan(panTop, width, height) {
-    var viewBounds = new OpenSeadragon.Rect(_overviewLeft, _overviewTop + _lastScrollPosition, width, height);
-    viewer.viewport.fitBounds(viewBounds, true);
-  }
-
-  function applyConstraints(constraintBounds) {
-    constraintBounds = new OpenSeadragon.Rect(
-      constraintBounds.x,
-      constraintBounds.y,
-      constraintBounds.width,
-      constraintBounds.height
-    );
-
-    if (constraintBounds && !_inZoomConstraints) {
-      var changed = false;
-      var currentBounds = viewer.viewport.getBounds();
-
-      if (currentBounds.x < constraintBounds.x - 0.00001) {
-        currentBounds.x = constraintBounds.x;
-        changed = true;
-      }
-
-      if (currentBounds.y < constraintBounds.y - 0.00001) {
-        currentBounds.y = constraintBounds.y;
-        changed = true;
-      }
-
-      if (currentBounds.width > constraintBounds.width + 0.00001) {
-        currentBounds.width = constraintBounds.width;
-        changed = true;
-      }
-
-      if (currentBounds.height > constraintBounds.height + 0.00001) {
-        currentBounds.height = constraintBounds.height;
-        changed = true;
-      }
-
-      if (currentBounds.x + currentBounds.width > constraintBounds.x + constraintBounds.width + 0.00001) {
-        currentBounds.x = (constraintBounds.x + constraintBounds.width) - currentBounds.width;
-        changed = true;
-      }
-
-      if (currentBounds.y + currentBounds.height > constraintBounds.y + constraintBounds.height + 0.00001) {
-        currentBounds.y = (constraintBounds.y + constraintBounds.height) - currentBounds.height;
-        changed = true;
-      }
-
-      if (changed) {
-        _inZoomConstraints = true;
-        viewer.viewport.fitBounds(currentBounds);
-        _inZoomConstraints = false;
-      }
-    }
-
-    // var zoom = viewer.viewport.getZoom();
-    // var maxZoom = 2;
-
-    // var zoomPoint = viewer.viewport.zoomPoint || viewer.viewport.getCenter();
-    // var info = this.hitTest(zoomPoint);
-    // if (info) {
-      // var page = this.pages[info.index];
-      // var tiledImage = page.hitTest(zoomPoint);
-      // if (tiledImage) {
-      //   maxZoom = this.viewer.maxZoomLevel;
-      //   if (!maxZoom) {
-      //     var imageWidth = tiledImage.getContentSize().x;
-      //     var viewerWidth = this.$el.width();
-      //     maxZoom = imageWidth * this.viewer.maxZoomPixelRatio / viewerWidth;
-      //     maxZoom /= tiledImage.getBounds().width;
-      //   }
-      // }
-    // }
-
-    // if (zoom > maxZoom) {
-    //   this.viewer.viewport.zoomSpring.target.value = maxZoom;
-    // }
+  function setViewerBoundsFromState(animate) {
+    var rState = renderState.getState();
+    var vState = viewerState.getState();
+    var viewBounds = new OpenSeadragon.Rect(rState.overviewLeft, rState.overviewTop + rState.lastScrollPosition, vState.width, vState.height);
+    viewer.viewport.fitBounds(viewBounds, animate);
   }
 
   function selectCanvas(item) {
-    var state = viewerState();
-    state.selectedCanvas = item;
-    _canvasObjects[item].openMainTileSource();
-    state.perspective = 'detail';
-    viewerState(state);
-    _dispatcher.emit('canvas-selected', { detail: _canvasObjects[item] });
+    var item = viewerState.getState().canvasObjects[item];
+    item.openMainTileSource();
+    viewerState.setState({
+      selectedCanvas: item.id,
+      perspective: 'detail'
+    });
+    _dispatcher.emit('canvas-selected', { detail: item });
   }
 
   function getSelectedCanvas() {
-    var state = viewerState();
-    return _canvasObjects[state.selectedCanvas];
+    return viewerState.selectedCanvasObject();
   }
 
   function selectPerspective(perspective) {
-    var state = viewerState();
-    state.perspective = perspective;
-    viewerState(state);
+    viewerState.setState({
+      perspective: perspective
+    });
   }
 
   function selectViewingMode(viewingMode) {
-    var state = viewerState();
-    state.viewingMode = viewingMode;
-    viewerState(state);
+    viewerState.setState({
+      viewingMode: viewingMode
+    });
   }
 
   function selectViewingDirection(viewingDirection) {
-    var state = viewerState();
-    state.viewingDirection = viewingDirection;
-    viewerState(state);
-  }
-
-  function refreshState(newState) {
-    var state = viewerState();
-
-    // for blah in blah overwrite blah
-    // rather than just setting a specific
-    // property.
-    viewerState(state);
+    viewerState.setState({
+      viewingDirection: viewingDirection
+    });
   }
 
   function addImageCluster(id) {
-    var canvases = _canvasObjects;
+    var canvases = viewerState.getState().canvasObjects;
 
     canvases[id] = {
     };
@@ -614,40 +449,20 @@ var manifestor = function(options) {
      });
     });
 
-    setCanvasObjects(canvasObjects);
+    return canvasObjects;
   }
 
   function resize() {
-    var state = viewerState();
-
-    state.width = container.width();
-    state.height = container.height();
-
-    viewerState(state);
+    viewerState.setState({
+      width: container.width(),
+      height: container.height()
+    });
   }
 
   function updateThumbSize(scaleFactor) {
-    var state = viewerState();
-
-    state.scaleFactor = scaleFactor;
-
-    viewerState(state);
-  }
-
-  function updateConstraintBounds(bounds) {
-    var state = viewerState();
-
-    // This should probably be integrated into
-    // some other type of store, such as
-    // one that handles state that is
-    // updated in real time (zoom level,
-    // current bounds, "_zooming", and
-    // this).
-
-    // state.constraintBounds = bounds;
-    _constraintBounds = bounds;
-
-    // viewerState(state);
+    viewerState.setState({
+      scaleFactor: scaleFactor
+    });
   }
 
   function _isValidCanvasIndex(index) {
@@ -656,7 +471,7 @@ var manifestor = function(options) {
 
   function _loadTileSourceForIndex(index) {
     var canvasId = canvases[index]['@id'];
-    _canvasObjects[canvasId].openMainTileSource();
+    viewerState.getState().canvasObjects[canvasId].openMainTileSource();
   }
 
   function _selectCanvasForIndex(index) {
@@ -666,7 +481,7 @@ var manifestor = function(options) {
 
   var getCanvasByIndex = function(index) {
     var canvasId = canvases[index]['@id'];
-    return _canvasObjects[canvasId];
+    return viewerState.getState().canvasObjects[canvasId];
   };
 
   function _navigatePaged(currentIndex, incrementValue) {
@@ -711,8 +526,8 @@ var manifestor = function(options) {
   }
 
   function _navigate(forward) {
-    var state = viewerState();
-    var currentCanvasIndex = _canvasObjects[state.selectedCanvas].index;
+    var state = viewerState.getState();
+    var currentCanvasIndex = viewerState.selectedCanvasObject().index;
     var incrementValue = forward ? 1 : -1;
 
     if(state.viewingMode === 'paged') {
@@ -741,9 +556,8 @@ var manifestor = function(options) {
     osdContainer.remove();
     container.off('click', canvasClickHandler);
 
-    _viewerState = null
-    _canvasObjects = null;
-    _inZoomConstraints = null;
+    viewerState = null;
+    renderState = null;
 
     _destroyed = true; // cancels the timer
   }
@@ -753,11 +567,9 @@ var manifestor = function(options) {
   }
 
   function scrollHandler(event) {
-    if (viewerState().perspective === 'overview' && _zooming === false) {
-      var width = viewerState().width;
-      var height = viewerState().height;
-      _lastScrollPosition = $(this).scrollTop();
-      synchronisePan(_lastScrollPosition, width, height);
+    if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
+      renderState.setState({ lastScrollPosition: $(this).scrollTop() });
+      setViewerBoundsFromState(true);
     }
   };
 
@@ -775,9 +587,8 @@ var manifestor = function(options) {
     selectViewingMode: selectViewingMode,
     selectViewingDirection: selectViewingDirection,
     updateThumbSize: updateThumbSize,
-    refreshState: refreshState,
-    getState: viewerState,
-    setState: viewerState,
+    getState: getState,
+    setState: setState,
     osd: viewer,
     on: on,
     getSelectedCanvas: getSelectedCanvas
