@@ -6,9 +6,9 @@ var canvasLayout = require('./canvasLayout');
 var CanvasObject = require('./canvasObject');
 var ViewerState = require('./viewerState');
 var RenderState = require('./renderState');
+var OSDUtils = require('./osdUtils');
 var iiif = require('./iiifUtils');
 var events = require('events');
-require('openseadragon');
 
 var manifestor = function(options) {
   var manifest = options.manifest,
@@ -19,6 +19,7 @@ var manifestor = function(options) {
       initialViewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
       initialPerspective = options.perspective ? options.perspective : 'overview',
       selectedCanvas = options.selectedCanvas || iiif.getFirst(canvases),
+      osd,
       viewer,
       canvasClass = options.canvasClass ? options.canvasClass : 'canvas',
       frameClass = options.frameClass ? options.frameClass : 'frame',
@@ -28,8 +29,7 @@ var manifestor = function(options) {
       viewerState,
       renderState,
       _dispatcher = new events.EventEmitter(),
-      _destroyed = false,
-      _transitionZoomLevel = 0.01;
+      _destroyed = false;
 
   function getViewingDirection() {
     if (sequence && sequence.viewingDirection) {
@@ -80,7 +80,10 @@ var manifestor = function(options) {
   container.append(osdContainer);
   container.append(scrollContainer);
   scrollContainer.append(overlays);
-  initOSD();
+
+  osd = new OSDUtils();
+  viewer = osd.initOSD(osdContainer);
+
   viewerState = viewerState || new ViewerState({
     updateCallbacks: [render, stateUpdateCallback],
     canvasObjects: buildCanvasStates(canvases, viewer),
@@ -98,6 +101,11 @@ var manifestor = function(options) {
     lastScrollPosition: $(this).scrollTop(),
     overviewLeft: 0,
     overviewTop: 0
+  });
+
+  osd.addOSDHandlers(viewerState, renderState);
+  viewer.addHandler('animation', function(event) {
+    synchroniseZoom();
   });
 
   d3.timer(function() {
@@ -205,7 +213,7 @@ var manifestor = function(options) {
       setScrollElementEvents();
       setViewerBoundsFromState(!animateViewport);
 
-      setTimeout(function(){
+      setTimeout(function(){ // Do we want this to happen based on an event instead?
         renderState.setState({zooming: false});
         setScrollElementEvents();
       }, 1200);
@@ -367,62 +375,6 @@ var manifestor = function(options) {
   function removeImages(d) {
   }
 
-  function initOSD() {
-    viewer = OpenSeadragon({
-      element: osdContainer[0],
-      showNavigationControl: false,
-      preserveViewport: true
-    });
-
-    // Open the main tile source when we reach the specified zoom level on it
-    var _semanticZoom = function(zoom, center) {
-      var state = viewerState.getState();
-      if(zoom >= _transitionZoomLevel) {
-        for(var key in state.canvasObjects) {
-          if(state.canvasObjects[key].containsPoint(center)) {
-            state.canvasObjects[key].openMainTileSource();
-          }
-        }
-      }
-    };
-
-    viewer.addHandler('animation', function(event) {
-        synchroniseZoom();
-    });
-
-    viewer.addHandler('zoom', function(event) {
-      if (viewerState.getState().perspective === 'detail') {
-        applyConstraints();
-      }
-      var center = viewer.viewport.getBounds().getCenter();
-      _semanticZoom(event.zoom, center);
-    });
-
-    viewer.addHandler('pan', function(event) {
-      if (viewerState.getState().perspective === 'detail') {
-        applyConstraints();
-      }
-      var zoom = viewer.viewport.getZoom();
-      _semanticZoom(zoom, event.center);
-    });
-
-    viewer.addHandler('canvas-click', function(event) {
-      var hitCanvases = [];
-      var clickPosition = viewer.viewport.pointFromPixel(event.position);
-      var state = viewerState.getState();
-      for(var key in state.canvasObjects) {
-        if(state.canvasObjects[key].containsPoint(clickPosition)){
-          hitCanvases.push(state.canvasObjects[key]);
-        }
-      }
-      if(event.quick && hitCanvases[0]) {
-        var bounds = hitCanvases[0].getBounds();
-        viewer.viewport.fitBounds(bounds);
-        hitCanvases[0].openMainTileSource();
-      }
-    });
-  }
-
   function synchroniseZoom() {
     var viewerWidth = viewer.container.clientWidth;
     var viewerHeight = viewer.container.clientHeight;
@@ -444,80 +396,6 @@ var manifestor = function(options) {
     var vState = viewerState.getState();
     var viewBounds = new OpenSeadragon.Rect(rState.overviewLeft, rState.overviewTop + rState.lastScrollPosition, vState.width, vState.height);
     viewer.viewport.fitBounds(viewBounds, animate);
-  }
-
-  function applyConstraints() {
-    var state = renderState.getState();
-    var constraintBounds = new OpenSeadragon.Rect(
-      state.constraintBounds.x,
-      state.constraintBounds.y,
-      state.constraintBounds.width,
-      state.constraintBounds.height
-    );
-
-    if (constraintBounds && !state.inZoomConstraints) {
-      var changed = false;
-      var currentBounds = viewer.viewport.getBounds();
-
-      if (currentBounds.x < constraintBounds.x - 0.00001) {
-        currentBounds.x = constraintBounds.x;
-        changed = true;
-      }
-
-      if (currentBounds.y < constraintBounds.y - 0.00001) {
-        currentBounds.y = constraintBounds.y;
-        changed = true;
-      }
-
-      if (currentBounds.width > constraintBounds.width + 0.00001) {
-        currentBounds.width = constraintBounds.width;
-        changed = true;
-      }
-
-      if (currentBounds.height > constraintBounds.height + 0.00001) {
-        currentBounds.height = constraintBounds.height;
-        changed = true;
-      }
-
-      if (currentBounds.x + currentBounds.width > constraintBounds.x + constraintBounds.width + 0.00001) {
-        currentBounds.x = (constraintBounds.x + constraintBounds.width) - currentBounds.width;
-        changed = true;
-      }
-
-      if (currentBounds.y + currentBounds.height > constraintBounds.y + constraintBounds.height + 0.00001) {
-        currentBounds.y = (constraintBounds.y + constraintBounds.height) - currentBounds.height;
-        changed = true;
-      }
-
-      if (changed) {
-        renderState.setState({ inZoomConstraints: true });
-        viewer.viewport.fitBounds(currentBounds);
-        renderState.setState({ inZoomConstraints: false });
-      }
-    }
-
-    // var zoom = viewer.viewport.getZoom();
-    // var maxZoom = 2;
-
-    // var zoomPoint = viewer.viewport.zoomPoint || viewer.viewport.getCenter();
-    // var info = this.hitTest(zoomPoint);
-    // if (info) {
-      // var page = this.pages[info.index];
-      // var tiledImage = page.hitTest(zoomPoint);
-      // if (tiledImage) {
-      //   maxZoom = this.viewer.maxZoomLevel;
-      //   if (!maxZoom) {
-      //     var imageWidth = tiledImage.getContentSize().x;
-      //     var viewerWidth = this.$el.width();
-      //     maxZoom = imageWidth * this.viewer.maxZoomPixelRatio / viewerWidth;
-      //     maxZoom /= tiledImage.getBounds().width;
-      //   }
-      // }
-    // }
-
-    // if (zoom > maxZoom) {
-    //   this.viewer.viewport.zoomSpring.target.value = maxZoom;
-    // }
   }
 
   function selectCanvas(item) {
