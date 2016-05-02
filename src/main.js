@@ -533,6 +533,7 @@ var manifestor = function(options) {
     if (viewer) {
       viewer.destroy();
     }
+    osd = null;
 
     overlays.remove();
     scrollContainer.remove();
