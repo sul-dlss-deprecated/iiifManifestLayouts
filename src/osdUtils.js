@@ -2,9 +2,7 @@
 
 require('openseadragon');
 
-var OSDUtils = function(config) {
-  this.renderState = config.renderState;
-  this.viewerState = config.viewerState;
+var OSDUtils = function() {
 };
 
 OSDUtils.prototype = {

@@ -7,6 +7,7 @@ var CanvasObject = require('./canvasObject');
 var ViewerState = require('./viewerState');
 var RenderState = require('./renderState');
 var OSDUtils = require('./osdUtils');
+var d3Utils = require('./d3Utils');
 var iiif = require('./iiifUtils');
 var events = require('events');
 
@@ -19,8 +20,6 @@ var manifestor = function(options) {
       initialViewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
       initialPerspective = options.perspective ? options.perspective : 'overview',
       selectedCanvas = options.selectedCanvas || iiif.getFirst(canvases),
-      osd,
-      viewer,
       canvasClass = options.canvasClass ? options.canvasClass : 'canvas',
       frameClass = options.frameClass ? options.frameClass : 'frame',
       labelClass = options.labelClass ? options.labelClass : 'label',
@@ -28,6 +27,9 @@ var manifestor = function(options) {
       stateUpdateCallback = options.stateUpdateCallback,
       viewerState,
       renderState,
+      d, // todo: name this better
+      osd,
+      viewer,
       _dispatcher = new events.EventEmitter(),
       _destroyed = false;
 
@@ -81,10 +83,7 @@ var manifestor = function(options) {
   container.append(scrollContainer);
   scrollContainer.append(overlays);
 
-  osd = new OSDUtils({
-    viewerState: viewerState,
-    renderState: renderState
-  });
+  osd = new OSDUtils();
 
   viewer = osd.initOSD(osdContainer);
 
@@ -105,6 +104,13 @@ var manifestor = function(options) {
     lastScrollPosition: $(this).scrollTop(),
     overviewLeft: 0,
     overviewTop: 0
+  });
+
+  d = new d3Utils({
+    viewerState: viewerState,
+    renderState: renderState,
+    scrollContainer: scrollContainer,
+    overlays: overlays
   });
 
   osd.addOSDHandlers(viewerState, renderState);
@@ -203,7 +209,7 @@ var manifestor = function(options) {
 
       renderState.setState({constraintBounds: viewBounds});
       var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
-      setScrollElementEvents();
+      d.setScrollElementEvents();
       viewer.viewport.fitBounds(osdBounds, !animateViewport);
       osd.enableZoomAndPan();
     } else {
@@ -214,39 +220,13 @@ var manifestor = function(options) {
       });
 
       osd.disableZoomAndPan();
-      setScrollElementEvents();
+      d.setScrollElementEvents();
       osd.setViewerBoundsFromState(!animateViewport);
 
       setTimeout(function(){ // Do we want this to happen based on an event instead?
         renderState.setState({zooming: false});
-        setScrollElementEvents();
+        d.setScrollElementEvents();
       }, 1200);
-    }
-  }
-
-  function setScrollElementEvents() {
-    var animationTiming = 1200;
-    var interactionOverlay = d3.select(overlays[0]);
-    var state = viewerState.getState();
-    if (state.perspective === 'detail') {
-      interactionOverlay
-        .style('opacity', 0)
-        .style('pointer-events', 'none');
-
-      d3.select(scrollContainer[0])
-        .style('pointer-events', 'none')
-        .style('overflow-y', 'hidden');
-
-    } else if(! renderState.getState().zooming) {
-      interactionOverlay
-        .style('pointer-events', 'all')
-        .transition()
-        .duration(animationTiming/2)
-        .style('opacity', 1);
-
-      d3.select(scrollContainer[0])
-        .style('pointer-events', 'all')
-        .style('overflow-y', 'scroll');
     }
   }
 
