@@ -201,7 +201,7 @@ var manifestor = function(options) {
       var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
       setScrollElementEvents();
       viewer.viewport.fitBounds(osdBounds, !animateViewport);
-      enableZoomAndPan();
+      osd.enableZoomAndPan();
     } else {
       renderState.setState({
         overviewLeft: frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100),
@@ -209,7 +209,7 @@ var manifestor = function(options) {
         zooming: true
       });
 
-      disableZoomAndPan();
+      osd.disableZoomAndPan();
       setScrollElementEvents();
       setViewerBoundsFromState(!animateViewport);
 
@@ -244,20 +244,6 @@ var manifestor = function(options) {
         .style('pointer-events', 'all')
         .style('overflow-y', 'scroll');
     }
-  }
-
-  function disableZoomAndPan() {
-    viewer.zoomPerClick = 1;
-    viewer.zoomPerScroll = 1;
-    viewer.panHorizontal = false;
-    viewer.panVertical = false;
-  }
-
-  function enableZoomAndPan() {
-    viewer.zoomPerClick = 2;
-    viewer.zoomPerScroll = 1.2;
-    viewer.panHorizontal = true;
-    viewer.panVertical = true;
   }
 
   function renderLayout(layoutData, animate, callback) {

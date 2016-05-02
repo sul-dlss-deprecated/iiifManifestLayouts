@@ -16,6 +16,20 @@ OSDUtils.prototype = {
     return this.viewer;
   },
 
+  disableZoomAndPan: function() {
+    this.viewer.zoomPerClick = 1;
+    this.viewer.zoomPerScroll = 1;
+    this.viewer.panHorizontal = false;
+    this.viewer.panVertical = false;
+  },
+
+  enableZoomAndPan: function() {
+    this.viewer.zoomPerClick = 2;
+    this.viewer.zoomPerScroll = 1.2;
+    this.viewer.panHorizontal = true;
+    this.viewer.panVertical = true;
+  },
+
   addOSDHandlers: function(viewerState, renderState) {
     this.viewerState = viewerState;
     this.renderState = renderState;
@@ -108,7 +122,6 @@ OSDUtils.prototype = {
       //   this.viewer.viewport.zoomSpring.target.value = maxZoom;
       // }
     }
-    console.log(this.viewerState);
     this.viewer.addHandler('zoom', function(event) {
       if (self.viewerState.getState().perspective === 'detail') {
         _applyConstraints();
