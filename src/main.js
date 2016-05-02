@@ -81,7 +81,11 @@ var manifestor = function(options) {
   container.append(scrollContainer);
   scrollContainer.append(overlays);
 
-  osd = new OSDUtils();
+  osd = new OSDUtils({
+    viewerState: viewerState,
+    renderState: renderState
+  });
+
   viewer = osd.initOSD(osdContainer);
 
   viewerState = viewerState || new ViewerState({
@@ -211,7 +215,7 @@ var manifestor = function(options) {
 
       osd.disableZoomAndPan();
       setScrollElementEvents();
-      setViewerBoundsFromState(!animateViewport);
+      osd.setViewerBoundsFromState(!animateViewport);
 
       setTimeout(function(){ // Do we want this to happen based on an event instead?
         renderState.setState({zooming: false});
@@ -375,13 +379,6 @@ var manifestor = function(options) {
     d3.select(overlays[0])
       .style('transform', transform)
       .style('-webkit-transform', transform);
-  }
-
-  function setViewerBoundsFromState(animate) {
-    var rState = renderState.getState();
-    var vState = viewerState.getState();
-    var viewBounds = new OpenSeadragon.Rect(rState.overviewLeft, rState.overviewTop + rState.lastScrollPosition, vState.width, vState.height);
-    viewer.viewport.fitBounds(viewBounds, animate);
   }
 
   function selectCanvas(item) {
@@ -555,7 +552,7 @@ var manifestor = function(options) {
   function scrollHandler(event) {
     if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
       renderState.setState({ lastScrollPosition: $(this).scrollTop() });
-      setViewerBoundsFromState(true);
+      osd.setViewerBoundsFromState(true);
     }
   };
 

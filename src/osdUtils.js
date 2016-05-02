@@ -2,7 +2,9 @@
 
 require('openseadragon');
 
-var OSDUtils = function() {
+var OSDUtils = function(config) {
+  this.renderState = config.renderState;
+  this.viewerState = config.viewerState;
 }
 
 OSDUtils.prototype = {
@@ -28,6 +30,16 @@ OSDUtils.prototype = {
     this.viewer.zoomPerScroll = 1.2;
     this.viewer.panHorizontal = true;
     this.viewer.panVertical = true;
+  },
+
+  setViewerBoundsFromState: function(animate) {
+    if(!this.viewer) {
+      return;
+    }
+    var rState = this.renderState.getState();
+    var vState = this.viewerState.getState();
+    var viewBounds = new OpenSeadragon.Rect(rState.overviewLeft, rState.overviewTop + rState.lastScrollPosition, vState.width, vState.height);
+    this.viewer.viewport.fitBounds(viewBounds, animate);
   },
 
   addOSDHandlers: function(viewerState, renderState) {
