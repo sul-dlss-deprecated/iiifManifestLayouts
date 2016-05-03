@@ -54,37 +54,27 @@ var manifestor = function(options) {
   // Each canvas will listen when it opens tile sources, and clients consuming this code may attach some as well.
   _dispatcher.setMaxListeners(canvases.length + 30);
 
-  var overlays = $('<div class="overlaysContainer">').css(
-    {'width': '100%',
-     'height': '100%',
-     'position': 'absolute',
-     'top': 0,
-     'left': 0
-    });
-  var osdContainer = $('<div class="osd-container">').css(
-    {'width': '100%',
-     'height': '100%',
-     'position': 'absolute',
-     'top': 0,
-     'left': 0
-    });
-  var scrollContainer = $('<div class="scroll-container">').css(
-    {'width': '100%',
-     'height': '100%',
-     'position': 'absolute',
-     'top': 0,
-     'left': 0,
-     'overflow': 'hidden',
-     'overflow-x': 'hidden'
-     // 'overflow-y': 'scroll'
-    });
+  var fullSizeStyle = {
+    'width': '100%',
+    'height': '100%',
+    'position': 'absolute',
+    'top': 0,
+    'left': 0
+  };
+
+  var overlays = $('<div class="overlaysContainer">').css(fullSizeStyle);
+  var osdContainer = $('<div class="osd-container">').css(fullSizeStyle);
+
+  fullSizeStyle['overflow'] = 'hidden';
+  fullSizeStyle['overflow-x'] = 'hidden';
+
+  var scrollContainer = $('<div class="scroll-container">').css(fullSizeStyle);
 
   container.append(osdContainer);
   container.append(scrollContainer);
   scrollContainer.append(overlays);
 
   osd = new OSDUtils();
-
   viewer = osd.initOSD(osdContainer);
 
   viewerState = viewerState || new ViewerState({
