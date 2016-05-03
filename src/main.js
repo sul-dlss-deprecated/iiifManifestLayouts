@@ -118,7 +118,8 @@ var manifestor = function(options) {
 
   osd.addOSDHandlers(viewerState, renderState);
   viewer.addHandler('animation', function(event) {
-    synchroniseZoom();
+    // Synchronise d3 canvases with OSD zoom events.
+    d.scaleForZoom(osd.getViewerScale(), osd.getZoomTranslation());
   });
 
   d3.timer(function() {
@@ -141,8 +142,6 @@ var manifestor = function(options) {
   function render(differences) {
     var userState = viewerState.getState();
     var previousPerspective = differences.perspective || userState.perspective;
-
-    // console.log('[render] state differences', differences);
 
     // Layout is configured from current user state. The
     // layout algorithm, viewing hints, animations (such as
@@ -231,18 +230,6 @@ var manifestor = function(options) {
         d.setScrollElementEvents();
       }, 1200);
     }
-  }
-
-  function synchroniseZoom() {
-    var viewerWidth = viewer.container.clientWidth;
-    var viewerHeight = viewer.container.clientHeight;
-    var center = viewer.viewport.getCenter(true);
-    var p = center.minus(new OpenSeadragon.Point(viewerWidth / 2, viewerHeight / 2))
-          .minus(new OpenSeadragon.Point(0, renderState.getState().lastScrollPosition));
-    var zoom = viewer.viewport.getZoom(true);
-    var scale = viewerWidth * zoom;
-
-    d.scaleForZoom(scale, p);
   }
 
   function selectCanvas(item) {

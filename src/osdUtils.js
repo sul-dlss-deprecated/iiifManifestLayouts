@@ -40,6 +40,23 @@ OSDUtils.prototype = {
     this.viewer.viewport.fitBounds(viewBounds, animate);
   },
 
+  getViewerScale: function() {
+    var zoom = this.viewer.viewport.getZoom(true);
+    var width = this.viewer.container.clientWidth;
+
+    return width * zoom;
+  },
+
+  getZoomTranslation: function() {
+    var viewerWidth = this.viewer.container.clientWidth;
+    var viewerHeight = this.viewer.container.clientHeight;
+    var center = this.viewer.viewport.getCenter(true);
+    var p = center.minus(new OpenSeadragon.Point(viewerWidth / 2, viewerHeight / 2))
+          .minus(new OpenSeadragon.Point(0, this.renderState.getState().lastScrollPosition));
+
+    return p;
+  },
+
   addOSDHandlers: function(viewerState, renderState) {
     this.viewerState = viewerState;
     this.renderState = renderState;
