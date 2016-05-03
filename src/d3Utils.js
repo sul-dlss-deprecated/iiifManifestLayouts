@@ -53,14 +53,40 @@ d3Utils.prototype = {
     var animationTiming = animate ? 1000 : 0;
     var frame = interactionOverlay.selectAll('.' + this.frameClass).data(layoutData);
 
-    var getWidthInPx = function(d) { return d.width + 'px'; };
-    var getHeightInPx = function(d) { return d.height + 'px'; };
+    var getWidthInPx = function(d) {
+      return d.width + 'px';
+    };
+    var getHeightInPx = function(d) {
+      return d.height + 'px';
+    };
 
-    var getCanvasWidthInPx = function(d) { return d.canvas.width + 'px'; };
-    var getCanvasHeightInPx = function(d) { return d.canvas.height + 'px'; };
+    var getCanvasWidthInPx = function(d) {
+      return d.canvas.width + 'px';
+    };
+    var getCanvasHeightInPx = function(d) {
+      return d.canvas.height + 'px';
+    };
 
     var getTransformStyle = function(d) {
-      return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
+      return d3.interpolateString(
+        this.style.transform,
+        'translate(' + d.x +'px,' + d.y + 'px)'
+      );
+    };
+
+    var getSelectTransformStyle = function(d) {
+      return d3.interpolateString(
+        this.style.transform,
+        'translate(' + d.canvas.localX +'px,' + d.canvas.localY + 'px)'
+      );
+    };
+
+    var getEnterTransformStyle = function(d) {
+      return 'translate(' + d.x + 'px,' + d.y + 'px)';
+    };
+
+    var getEnterTranslate = function(d) {
+      return 'translateX(' + d.canvas.localX + 'px) translateY(' + d.canvas.localY + 'px)';
     };
 
     var getClass = function(d) {
@@ -102,37 +128,27 @@ d3Utils.prototype = {
       .transition()
       .duration(animationTiming)
       .ease('cubic-out')
-      .styleTween('transform', function(d) {
-        return d3.interpolateString(
-          this.style.transform,
-          'translate(' + d.canvas.localX +'px,' + d.canvas.localY + 'px)'
-        );
-      })
-      .styleTween('-webkit-transform', function(d) {
-        return d3.interpolateString(
-          this.style.transform,
-          'translate(' + d.canvas.localX +'px,' + d.canvas.localY + 'px)'
-        );
-      });
+      .styleTween('transform', getSelectTransformStyle)
+      .styleTween('-webkit-transform', getSelectTransformStyle);
 
-    var frameEnter = frame
-          .enter().append('div')
-          .attr('class', this.frameClass)
-          .style('width', getWidthInPx)
-          .style('height', getHeightInPx)
-          .style('transform', function(d) { return 'translate(' + d.x + 'px,' + d.y + 'px)'; })
-          .style('-webkit-transform', function(d) { return 'translate(' + d.x + 'px,' + d.y + 'px)'; });
-
-    frameEnter
+    var frameEnter = frame.enter()
       .append('div')
+      .attr('class', this.frameClass)
+      .style('width', getWidthInPx)
+      .style('height', getHeightInPx)
+      .style('transform', getEnterTransformStyle)
+      .style('-webkit-transform', getEnterTransformStyle);
+
+
+    frameEnter.append('div')
       .attr('class', getClass)
       .attr('data-id', function(d) {
         return d.canvas.id;
       })
       .style('width', getCanvasWidthInPx)
       .style('height', getCanvasHeightInPx)
-      .style('transform', function(d) { return 'translateX(' + d.canvas.localX + 'px) translateY(' + d.canvas.localY + 'px)'; })
-      .style('-webkit-transform', function(d) { return 'translateX(' + d.canvas.localX + 'px) translateY(' + d.canvas.localY + 'px)'; })
+      .style('transform', getEnterTranslate)
+      .style('-webkit-transform', getEnterTranslate)
       .each(function(d) {
         var canvasData = d.canvas,
             canvasImageState = self.viewerState.getState().canvasObjects[canvasData.id];
@@ -143,8 +159,7 @@ d3Utils.prototype = {
     // .append('img')
     // .attr('src', function(d) { return d.canvas.iiifService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
 
-    frameEnter
-      .append('div')
+    frameEnter.append('div')
       .attr('class', this.labelClass)
       .text(function(d) { return d.canvas.label; });
   },
