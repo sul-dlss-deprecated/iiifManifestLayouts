@@ -233,14 +233,6 @@ var manifestor = function(options) {
     }
   }
 
-  function updateImages(d) {
-    var canvasData = d.canvas,
-        canvasImageState = viewerState.getState().canvasObjects[canvasData.id];
-  }
-
-  function removeImages(d) {
-  }
-
   function synchroniseZoom() {
     var viewerWidth = viewer.container.clientWidth;
     var viewerHeight = viewer.container.clientHeight;
@@ -418,6 +410,8 @@ var manifestor = function(options) {
 
     viewerState = null;
     renderState = null;
+
+    d = null;
 
     _destroyed = true; // cancels the timer
   }
