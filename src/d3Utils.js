@@ -42,6 +42,14 @@ d3Utils.prototype = {
     }
   },
 
+  scaleForZoom: function(scale, point) {
+    var transform = 'scale(' + scale + ') translate(' + -point.x + 'px,' + -point.y + 'px)';
+
+    d3.select(this.overlays[0])
+      .style('transform', transform)
+      .style('-webkit-transform', transform);
+  },
+
   renderLayout: function(layoutData, animate, callback) {
     // To understand this render function,
     // you need a general understanding of d3 selections,

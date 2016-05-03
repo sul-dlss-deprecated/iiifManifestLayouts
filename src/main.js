@@ -242,11 +242,7 @@ var manifestor = function(options) {
     var zoom = viewer.viewport.getZoom(true);
     var scale = viewerWidth * zoom;
 
-    var transform = 'scale(' + scale + ') translate(' + -p.x + 'px,' + -p.y + 'px)';
-
-    d3.select(overlays[0])
-      .style('transform', transform)
-      .style('-webkit-transform', transform);
+    d.scaleForZoom(scale, p);
   }
 
   function selectCanvas(item) {
