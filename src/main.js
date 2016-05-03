@@ -20,9 +20,9 @@ var manifestor = function(options) {
       initialViewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
       initialPerspective = options.perspective ? options.perspective : 'overview',
       selectedCanvas = options.selectedCanvas || iiif.getFirst(canvases),
-      canvasClass = options.canvasClass ? options.canvasClass : 'canvas',
-      frameClass = options.frameClass ? options.frameClass : 'frame',
-      labelClass = options.labelClass ? options.labelClass : 'label',
+      canvasClass = options.canvasClass || 'canvas',
+      frameClass = options.frameClass || 'frame',
+      labelClass = options.labelClass || 'label',
       viewportPadding = options.viewportPadding,
       stateUpdateCallback = options.stateUpdateCallback,
       viewerState,
@@ -110,7 +110,10 @@ var manifestor = function(options) {
     viewerState: viewerState,
     renderState: renderState,
     scrollContainer: scrollContainer,
-    overlays: overlays
+    overlays: overlays,
+    canvasClass: canvasClass,
+    frameClass: frameClass,
+    labelClass: labelClass
   });
 
   osd.addOSDHandlers(viewerState, renderState);
@@ -179,7 +182,7 @@ var manifestor = function(options) {
       }
 
       var frames = getFrames(mode);
-      renderLayout(frames, animate, callback);
+      d.renderLayout(frames, animate, callback);
       return frames;
     };
 
@@ -230,116 +233,9 @@ var manifestor = function(options) {
     }
   }
 
-  function renderLayout(layoutData, animate, callback) {
-    // To understand this render function,
-    // you need a general understanding of d3 selections,
-    // and you will want to read about nested
-    // selections in particular: http://bost.ocks.org/mike/nest/
-
-    var interactionOverlay = d3.select(overlays[0]),
-        animationTiming = animate ? 1000 : 0;
-
-    var frame = interactionOverlay.selectAll('.' + frameClass)
-          .data(layoutData);
-
-    var frameUpdated = frame
-          .style('width', function(d) { return d.width + 'px'; })
-          .style('height', function(d) { return d.height + 'px'; })
-          .transition()
-          .duration(animationTiming)
-          .ease('cubic-out')
-          .styleTween('transform', function(d) {
-            return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
-          })
-          .styleTween('-webkit-transform', function(d) {
-            return d3.interpolateString(this.style.transform, 'translate(' + d.x +'px,' + d.y + 'px)');
-          })
-          .tween('translateTilesources', translateTilesources)
-          .call(endall, function() {
-            if (callback) { callback();}
-          });
-
-    frame.select('.' + canvasClass)
-      .style('width', function(d) { return d.canvas.width + 'px'; })
-      .style('height', function(d) { return d.canvas.height + 'px'; })
-      .attr('class', function(d) {
-        var selected = d.canvas.selected;
-        return selected ? canvasClass + ' selected' : canvasClass;
-      })
-      .transition()
-      .duration(animationTiming)
-      .ease('cubic-out')
-      .styleTween('transform', function(d) {
-        return d3.interpolateString(this.style.transform, 'translate(' + d.canvas.localX +'px,' + d.canvas.localY + 'px)');
-      })
-      .styleTween('-webkit-transform', function(d) {
-        return d3.interpolateString(this.style.transform, 'translate(' + d.canvas.localX +'px,' + d.canvas.localY + 'px)');
-      });
-
-    var frameEnter = frame
-          .enter().append('div')
-          .attr('class', frameClass)
-          .style('width', function(d) { return d.width + 'px'; })
-          .style('height', function(d) { return d.height + 'px'; })
-          .style('transform', function(d) { return 'translate(' + d.x + 'px,' + d.y + 'px)'; })
-          .style('-webkit-transform', function(d) { return 'translate(' + d.x + 'px,' + d.y + 'px)'; });
-
-    frameEnter
-      .append('div')
-      .attr('class', function(d) {
-        var selected = d.canvas.selected;
-        return selected ? canvasClass + ' selected' : canvasClass;
-      })
-      .attr('data-id', function(d) {
-        return d.canvas.id;
-      })
-      .style('width', function(d) { return d.canvas.width + 'px'; })
-      .style('height', function(d) { return d.canvas.height + 'px'; })
-      .style('transform', function(d) { return 'translateX(' + d.canvas.localX + 'px) translateY(' + d.canvas.localY + 'px)'; })
-      .style('-webkit-transform', function(d) { return 'translateX(' + d.canvas.localX + 'px) translateY(' + d.canvas.localY + 'px)'; })
-      .each(enterImages);
-    // .append('img')
-    // .attr('src', function(d) { return d.canvas.iiifService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
-
-    frameEnter
-      .append('div')
-      .attr('class', labelClass)
-      .text(function(d) { return d.canvas.label; });
-
-  }
-
-  function endall(transition, callback) {
-    var n = 0;
-    if (transition.empty()) {callback();} else {
-      transition
-        .each(function() { ++n; })
-        .each("end", function() { if (!--n) callback.apply(this, arguments); });
-    }
-  }
-
-  function translateTilesources(d, i) {
-    var canvas = viewerState.getState().canvasObjects[d.canvas.id];
-    var currentBounds = canvas.getBounds();
-
-    var xi = d3.interpolate(currentBounds.x, d.canvas.x);
-    var yi = d3.interpolate(currentBounds.y, d.canvas.y);
-
-    return function(t) {
-      canvas.setBounds(xi(t), yi(t), d.canvas.width, d.canvas.height);
-    };
-  }
-
   function updateImages(d) {
     var canvasData = d.canvas,
         canvasImageState = viewerState.getState().canvasObjects[canvasData.id];
-  }
-
-  function enterImages(d) {
-    var canvasData = d.canvas,
-        canvasImageState = viewerState.getState().canvasObjects[canvasData.id];
-
-    canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
-    canvasImageState.openThumbnail();
   }
 
   function removeImages(d) {
