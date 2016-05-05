@@ -119,6 +119,20 @@ var manifestor = function(options) {
     d.scaleForZoom(osd.getViewerScale(), osd.getZoomTranslation());
   });
 
+  function canvasClickHandler(event) {
+    selectCanvas($(this).data('id'));
+  }
+
+  function scrollHandler(event) {
+    if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
+      renderState.setState({ lastScrollPosition: $(this).scrollTop() });
+      osd.setViewerBoundsFromState(true);
+    }
+  };
+
+  container.on('click', '.' + canvasClass, canvasClickHandler);
+  scrollContainer.on('scroll', scrollHandler);
+
   d3.timer(function() {
     if (_destroyed) {
       return true;
