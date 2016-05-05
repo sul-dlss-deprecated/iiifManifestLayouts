@@ -4,6 +4,7 @@ var d3 = require('./lib/d3-slim-dist');
 var manifestLayout = require('./manifestLayout');
 var canvasLayout = require('./canvasLayout');
 var CanvasObject = require('./canvasObject');
+var CanvasUtils = require('./canvasUtils');
 var ViewerState = require('./viewerState');
 var RenderState = require('./renderState');
 var OSDUtils = require('./osdUtils');
@@ -28,8 +29,9 @@ var manifestor = function(options) {
       viewerState,
       renderState,
       d, // todo: name this better
-      osd,
+      osd = new OSDUtils(),
       viewer,
+      canvasUtils,
       _dispatcher = new events.EventEmitter(),
       _destroyed = false;
 
@@ -74,12 +76,17 @@ var manifestor = function(options) {
   container.append(scrollContainer);
   scrollContainer.append(overlays);
 
-  osd = new OSDUtils();
   viewer = osd.initOSD(osdContainer);
+  canvasUtils = new CanvasUtils({
+    canvases: canvases,
+    viewer: viewer,
+    dispatcher: _dispatcher
+  });
 
   viewerState = viewerState || new ViewerState({
+    dispatcher: _dispatcher,
     updateCallbacks: [render, stateUpdateCallback],
-    canvasObjects: buildCanvasStates(canvases, viewer),
+    canvasObjects: canvasUtils.canvasObjects,
     selectedCanvas: selectedCanvas, // @id of the canvas:
     perspective: initialPerspective, // can be 'overview' or 'detail'
     viewingMode: initialViewingMode, // manifest derived or user specified (iiif viewingHint)
@@ -223,13 +230,7 @@ var manifestor = function(options) {
   }
 
   function selectCanvas(item) {
-    var item = viewerState.getState().canvasObjects[item];
-    item.openMainTileSource();
-    viewerState.setState({
-      selectedCanvas: item.id,
-      perspective: 'detail'
-    });
-    _dispatcher.emit('canvas-selected', { detail: item });
+    canvasUtils.selectCanvas(item);
   }
 
   function getSelectedCanvas() {
@@ -254,28 +255,6 @@ var manifestor = function(options) {
     });
   }
 
-  function addImageCluster(id) {
-    var canvases = viewerState.getState().canvasObjects;
-
-    canvases[id] = {
-    };
-  }
-
-  function buildCanvasStates(canvases, viewer) {
-    var canvasObjects = {};
-
-    canvases.forEach(function(canvas, index) {
-     canvasObjects[canvas['@id']] = new CanvasObject({
-       canvas: canvas,
-       index: index,
-       dispatcher: _dispatcher,
-       viewer: viewer
-     });
-    });
-
-    return canvasObjects;
-  }
-
   function resize() {
     viewerState.setState({
       width: container.width(),
@@ -289,75 +268,15 @@ var manifestor = function(options) {
     });
   }
 
-  function _isValidCanvasIndex(index) {
-    return(index > 0 && index < canvases.length);
-  }
-
-  function _loadTileSourceForIndex(index) {
-    var canvasId = canvases[index]['@id'];
-    viewerState.getState().canvasObjects[canvasId].openMainTileSource();
-  }
-
-  function _selectCanvasForIndex(index) {
-    var canvasId = canvases[index]['@id'];
-    selectCanvas(canvasId);
-  }
-
-  var getCanvasByIndex = function(index) {
-    var canvasId = canvases[index]['@id'];
-    return viewerState.getState().canvasObjects[canvasId];
-  };
-
-  function _navigatePaged(currentIndex, incrementValue) {
-    var newIndex = currentIndex + incrementValue;
-
-    if (currentIndex % 2 !== 0) {
-      newIndex = currentIndex + (2 * incrementValue);
-    }
-
-    // return if newIndex is out of range
-    if (!_isValidCanvasIndex(newIndex)) {
-      return;
-    }
-
-    // Do not select non-paged canvases in paged mode. Instead, find the next available
-    // canvas that does not have that viewingHint.
-    var newCanvas = getCanvasByIndex(newIndex);
-    while(newCanvas.viewingHint === 'non-paged' && _isValidCanvasIndex(newIndex)) {
-      newIndex += incrementValue;
-      newCanvas = getCanvasByIndex(newIndex);
-    }
-
-    _loadTileSourceForIndex(newIndex);
-
-    // Load tilesource for the non-selected side of the pair, if it exists
-    var facingPageIndex = newIndex + incrementValue;
-    if(_isValidCanvasIndex(facingPageIndex)) {
-      _loadTileSourceForIndex(facingPageIndex);
-    }
-
-    _selectCanvasForIndex(newIndex);
-  }
-
-  function _navigateIndividual(currentIndex, incrementValue) {
-    var newIndex = currentIndex + incrementValue;
-
-    // do nothing if newIndex is out of range
-    if (_isValidCanvasIndex(newIndex)) {
-      _loadTileSourceForIndex(newIndex);
-      _selectCanvasForIndex(newIndex);
-    }
-  }
-
   function _navigate(forward) {
     var state = viewerState.getState();
     var currentCanvasIndex = viewerState.selectedCanvasObject().index;
     var incrementValue = forward ? 1 : -1;
 
     if(state.viewingMode === 'paged') {
-      _navigatePaged(currentCanvasIndex, incrementValue);
+      canvasUtils.navigatePaged(currentCanvasIndex, incrementValue);
     } else {
-      _navigateIndividual(currentCanvasIndex, incrementValue);
+      canvasUtils.navigateIndividual(currentCanvasIndex, incrementValue);
     }
   }
 
@@ -385,23 +304,10 @@ var manifestor = function(options) {
     renderState = null;
 
     d = null;
+    canvasUtils = null;
 
     _destroyed = true; // cancels the timer
   }
-
-  function canvasClickHandler(event) {
-    selectCanvas($(this).data('id'));
-  }
-
-  function scrollHandler(event) {
-    if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
-      renderState.setState({ lastScrollPosition: $(this).scrollTop() });
-      osd.setViewerBoundsFromState(true);
-    }
-  };
-
-  container.on('click', '.' + canvasClass, canvasClickHandler);
-  scrollContainer.on('scroll', scrollHandler);
 
   return {
     destroy: destroy,
