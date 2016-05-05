@@ -127,6 +127,7 @@ d3Utils.prototype = {
       .call(
         this._endall,
         function() { if (callback) { callback(); }}
+        // todo: dispatch an event instead?
       );
 
     frame.select('.' + this.canvasClass)
@@ -174,6 +175,7 @@ d3Utils.prototype = {
 
   _endall: function(transition, callback) {
     var n = 0;
+    // todo: use the dispatcher instead of a callback?
     if (transition.empty()) {callback();} else {
       transition
         .each(function() { ++n; })

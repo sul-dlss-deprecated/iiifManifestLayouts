@@ -39,6 +39,7 @@ viewerState.prototype = {
         }
       }
     }
+    // todo: Send an event with the dispatcher instead?
     if(this.updateCallbacks) {
       this.updateCallbacks.forEach(function(callback) {
         if(callback) {
