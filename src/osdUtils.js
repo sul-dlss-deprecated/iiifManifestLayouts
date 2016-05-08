@@ -3,7 +3,7 @@
 require('openseadragon');
 
 var OSDUtils = function() {
-}
+};
 
 OSDUtils.prototype = {
   initOSD: function(osdContainer) {
@@ -14,6 +14,47 @@ OSDUtils.prototype = {
     });
 
     return this.viewer;
+  },
+
+  disableZoomAndPan: function() {
+    this.viewer.zoomPerClick = 1;
+    this.viewer.zoomPerScroll = 1;
+    this.viewer.panHorizontal = false;
+    this.viewer.panVertical = false;
+  },
+
+  enableZoomAndPan: function() {
+    this.viewer.zoomPerClick = 2;
+    this.viewer.zoomPerScroll = 1.2;
+    this.viewer.panHorizontal = true;
+    this.viewer.panVertical = true;
+  },
+
+  setViewerBoundsFromState: function(animate) {
+    if(!this.viewer) {
+      return;
+    }
+    var rState = this.renderState.getState();
+    var vState = this.viewerState.getState();
+    var viewBounds = new OpenSeadragon.Rect(rState.overviewLeft, rState.overviewTop + rState.lastScrollPosition, vState.width, vState.height);
+    this.viewer.viewport.fitBounds(viewBounds, animate);
+  },
+
+  getViewerScale: function() {
+    var zoom = this.viewer.viewport.getZoom(true);
+    var width = this.viewer.container.clientWidth;
+
+    return width * zoom;
+  },
+
+  getZoomTranslation: function() {
+    var viewerWidth = this.viewer.container.clientWidth;
+    var viewerHeight = this.viewer.container.clientHeight;
+    var center = this.viewer.viewport.getCenter(true);
+    var p = center.minus(new OpenSeadragon.Point(viewerWidth / 2, viewerHeight / 2))
+          .minus(new OpenSeadragon.Point(0, this.renderState.getState().lastScrollPosition));
+
+    return p;
   },
 
   addOSDHandlers: function(viewerState, renderState) {
@@ -108,7 +149,6 @@ OSDUtils.prototype = {
       //   this.viewer.viewport.zoomSpring.target.value = maxZoom;
       // }
     }
-    console.log(this.viewerState);
     this.viewer.addHandler('zoom', function(event) {
       if (self.viewerState.getState().perspective === 'detail') {
         _applyConstraints();
