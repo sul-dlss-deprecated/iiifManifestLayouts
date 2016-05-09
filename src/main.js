@@ -25,7 +25,6 @@ var manifestor = function(options) {
       frameClass = options.frameClass || 'frame',
       labelClass = options.labelClass || 'label',
       viewportPadding = options.viewportPadding,
-      stateUpdateCallback = options.stateUpdateCallback,
       viewerState,
       renderState,
       d, // todo: name this better
@@ -251,7 +250,6 @@ var manifestor = function(options) {
   }
 
   _dispatcher.on('viewer-state-updated', render);
-  _dispatcher.on('viewer-state-updated', stateUpdateCallback);
 
   function selectCanvas(item) {
     canvasUtils.selectCanvas(item);
