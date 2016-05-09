@@ -4,7 +4,6 @@ var canvasUtils = require('./canvasUtils');
 
 var viewerState = function(config) {
   var self = this;
-  this.updateCallbacks = config.updateCallbacks;
   this.dispatcher = config.dispatcher;
   this.dispatcher.on('canvas-selected', function(event) {
     self.setState({
@@ -39,14 +38,7 @@ viewerState.prototype = {
         }
       }
     }
-    // todo: Send an event with the dispatcher instead?
-    if(this.updateCallbacks) {
-      this.updateCallbacks.forEach(function(callback) {
-        if(callback) {
-          callback(differences);
-        }
-      });
-    }
+    this.dispatcher.emit('viewer-state-updated', {detail: differences});
   },
 
   selectedCanvasObject: function() {

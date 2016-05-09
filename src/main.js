@@ -85,7 +85,6 @@ var manifestor = function(options) {
 
   viewerState = viewerState || new ViewerState({
     dispatcher: _dispatcher,
-    updateCallbacks: [render, stateUpdateCallback],
     canvasObjects: canvasUtils.canvasObjects,
     selectedCanvas: selectedCanvas, // @id of the canvas:
     perspective: initialPerspective, // can be 'overview' or 'detail'
@@ -151,7 +150,8 @@ var manifestor = function(options) {
     viewerState.setState(state);
   }
 
-  function render(differences) {
+  function render(event) {
+    var differences = event.detail;
     var userState = viewerState.getState();
     var previousPerspective = differences.perspective || userState.perspective;
 
@@ -249,6 +249,9 @@ var manifestor = function(options) {
       }, 1200);
     }
   }
+
+  _dispatcher.on('viewer-state-updated', render);
+  _dispatcher.on('viewer-state-updated', stateUpdateCallback);
 
   function selectCanvas(item) {
     canvasUtils.selectCanvas(item);
