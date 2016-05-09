@@ -104,6 +104,7 @@ var manifestor = function(options) {
   });
 
   d = new d3Utils({
+    dispatcher: _dispatcher,
     viewerState: viewerState,
     renderState: renderState,
     scrollContainer: scrollContainer,
@@ -186,27 +187,33 @@ var manifestor = function(options) {
       return frames;
     };
 
-    var doRender = function (mode, animate, callback) {
+    var doRender = function (mode, animate) {
       if (differences.length === 1 && differences[0] === 'scaleFactor') {
         animate = false;
       }
 
       var frames = getFrames(mode);
-      d.renderLayout(frames, animate, callback);
+      d.renderLayout(frames, animate);
       return frames;
     };
 
     var frames;
 
     if (userState.perspective === 'detail' && previousPerspective === 'overview') {
-      frames = doRender('intermediate', true, function() {
+      var renderDetail = function() {
+        _dispatcher.removeListener('render-layout-complete', renderDetail);
         doRender('detail', false);
-      });
+      }
+      _dispatcher.on('render-layout-complete', renderDetail);
+      frames = doRender('intermediate', true);
     } else if (userState.perspective === 'overview' && previousPerspective === 'detail') {
       frames = getFrames('overview');
-      doRender('intermediate', false, function() {
+      var renderOverview = function() {
+        _dispatcher.removeListener('render-layout-complete', renderOverview);
         doRender('overview', true);
-      });
+      }
+      _dispatcher.on('render-layout-complete', renderOverview);
+      doRender('intermediate', false);
     } else {
       var animateRender = ('selectedCanvas' in differences || 'viewingMode' in differences);
       frames = doRender(userState.perspective, animateRender);
