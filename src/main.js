@@ -198,21 +198,18 @@ var manifestor = function(options) {
 
     var frames;
 
-    if (userState.perspective === 'detail' && previousPerspective === 'overview') {
-      var renderDetail = function() {
-        _dispatcher.removeListener('render-layout-complete', renderDetail);
-        doRender('detail', false);
-      }
-      _dispatcher.on('render-layout-complete', renderDetail);
-      frames = doRender('intermediate', true);
-    } else if (userState.perspective === 'overview' && previousPerspective === 'detail') {
-      frames = getFrames('overview');
-      var renderOverview = function() {
-        _dispatcher.removeListener('render-layout-complete', renderOverview);
-        doRender('overview', true);
-      }
-      _dispatcher.on('render-layout-complete', renderOverview);
-      doRender('intermediate', false);
+    var renderNewPerspective = function(perspective) {
+      var animate = (perspective === 'detail');
+      var renderComplete = function() {
+        _dispatcher.removeListener('render-layout-complete', renderComplete);
+        doRender(perspective, !animate);
+      };
+      _dispatcher.on('render-layout-complete', renderComplete);
+      frames = doRender('intermediate', animate);
+    }
+
+    if('perspective' in differences) {
+      renderNewPerspective(userState.perspective);
     } else {
       var animateRender = ('selectedCanvas' in differences || 'viewingMode' in differences);
       frames = doRender(userState.perspective, animateRender);
