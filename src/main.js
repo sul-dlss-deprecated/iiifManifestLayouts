@@ -53,7 +53,7 @@ var manifestor = function(options) {
   }
 
   // Each canvas will listen when it opens tile sources, and clients consuming this code may attach some as well.
-  _dispatcher.setMaxListeners(canvases.length + 30);
+  _dispatcher.setMaxListeners(canvases.length * 2);
 
   var fullSizeStyle = {
     'width': '100%',
