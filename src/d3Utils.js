@@ -3,6 +3,7 @@
 var d3 = require('./lib/d3-slim-dist');
 
 var d3Utils = function(config) {
+  this.dispatcher = config.dispatcher;
   this.renderState = config.renderState;
   this.viewerState = config.viewerState;
   this.scrollContainer = config.scrollContainer;
@@ -50,7 +51,7 @@ d3Utils.prototype = {
       .style('-webkit-transform', transform);
   },
 
-  renderLayout: function(layoutData, animate, callback) {
+  renderLayout: function(layoutData, animate) {
     // To understand this render function,
     // you need a general understanding of d3 selections,
     // and you will want to read about nested
@@ -126,8 +127,7 @@ d3Utils.prototype = {
       )
       .call(
         this._endall,
-        function() { if (callback) { callback(); }}
-        // todo: dispatch an event instead?
+        function() { self.dispatcher.emit('render-layout-complete'); }
       );
 
     frame.select('.' + this.canvasClass)
@@ -175,7 +175,6 @@ d3Utils.prototype = {
 
   _endall: function(transition, callback) {
     var n = 0;
-    // todo: use the dispatcher instead of a callback?
     if (transition.empty()) {callback();} else {
       transition
         .each(function() { ++n; })

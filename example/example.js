@@ -113,9 +113,6 @@ var App = {
           right: 10,
           bottom: 10 // units in % of pixel height of viewport
         },
-        stateUpdateCallback: function() {
-          console.log('I have updated!');
-        }
         // selectedCanvas: manifest.sequences[0].canvases[50]['@id']
       });
 
@@ -124,6 +121,9 @@ var App = {
       // Debug/example code: Listen for tile source requests and loads
       self.viewer.on('detail-tile-source-requested', function(e) {
         // console.log('detail tile source requested', e.detail);
+      });
+      self.viewer.on('viewer-state-updated', function() {
+        console.log('I have updated!');
       });
 
       self.$images.sortable({

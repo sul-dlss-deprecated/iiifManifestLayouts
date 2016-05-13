@@ -25,7 +25,6 @@ var manifestor = function(options) {
       frameClass = options.frameClass || 'frame',
       labelClass = options.labelClass || 'label',
       viewportPadding = options.viewportPadding,
-      stateUpdateCallback = options.stateUpdateCallback,
       viewerState,
       renderState,
       d, // todo: name this better
@@ -54,7 +53,7 @@ var manifestor = function(options) {
   }
 
   // Each canvas will listen when it opens tile sources, and clients consuming this code may attach some as well.
-  _dispatcher.setMaxListeners(canvases.length + 30);
+  _dispatcher.setMaxListeners(canvases.length * 2);
 
   var fullSizeStyle = {
     'width': '100%',
@@ -85,7 +84,6 @@ var manifestor = function(options) {
 
   viewerState = viewerState || new ViewerState({
     dispatcher: _dispatcher,
-    updateCallbacks: [render, stateUpdateCallback],
     canvasObjects: canvasUtils.canvasObjects,
     selectedCanvas: selectedCanvas, // @id of the canvas:
     perspective: initialPerspective, // can be 'overview' or 'detail'
@@ -104,6 +102,7 @@ var manifestor = function(options) {
   });
 
   d = new d3Utils({
+    dispatcher: _dispatcher,
     viewerState: viewerState,
     renderState: renderState,
     scrollContainer: scrollContainer,
@@ -150,7 +149,8 @@ var manifestor = function(options) {
     viewerState.setState(state);
   }
 
-  function render(differences) {
+  function render(event) {
+    var differences = event.detail;
     var userState = viewerState.getState();
     var previousPerspective = differences.perspective || userState.perspective;
 
@@ -186,27 +186,30 @@ var manifestor = function(options) {
       return frames;
     };
 
-    var doRender = function (mode, animate, callback) {
+    var doRender = function (mode, animate) {
       if (differences.length === 1 && differences[0] === 'scaleFactor') {
         animate = false;
       }
 
       var frames = getFrames(mode);
-      d.renderLayout(frames, animate, callback);
+      d.renderLayout(frames, animate);
       return frames;
     };
 
     var frames;
 
-    if (userState.perspective === 'detail' && previousPerspective === 'overview') {
-      frames = doRender('intermediate', true, function() {
-        doRender('detail', false);
-      });
-    } else if (userState.perspective === 'overview' && previousPerspective === 'detail') {
-      frames = getFrames('overview');
-      doRender('intermediate', false, function() {
-        doRender('overview', true);
-      });
+    var renderNewPerspective = function(perspective) {
+      var animate = (perspective === 'detail');
+      var renderComplete = function() {
+        _dispatcher.removeListener('render-layout-complete', renderComplete);
+        doRender(perspective, !animate);
+      };
+      _dispatcher.on('render-layout-complete', renderComplete);
+      frames = doRender('intermediate', animate);
+    }
+
+    if('perspective' in differences) {
+      renderNewPerspective(userState.perspective);
     } else {
       var animateRender = ('selectedCanvas' in differences || 'viewingMode' in differences);
       frames = doRender(userState.perspective, animateRender);
@@ -242,6 +245,8 @@ var manifestor = function(options) {
       }, 1200);
     }
   }
+
+  _dispatcher.on('viewer-state-updated', render);
 
   function selectCanvas(item) {
     canvasUtils.selectCanvas(item);

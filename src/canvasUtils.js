@@ -49,6 +49,7 @@ CanvasUtils.prototype = {
   },
 
   navigatePaged: function(currentIndex, incrementValue) {
+    var self = this;
     var newIndex = currentIndex + incrementValue;
 
     if (currentIndex % 2 !== 0) {
@@ -61,8 +62,8 @@ CanvasUtils.prototype = {
     }
 
     var getCanvasByIndex = function(index) {
-      var canvasId = this.canvases[index]['@id'];
-      return this.canvasObjects[canvasId];
+      var canvasId = self.canvases[index]['@id'];
+      return self.canvasObjects[canvasId];
     }
 
     // Do not select non-paged canvases in paged mode. Instead, find the next available
