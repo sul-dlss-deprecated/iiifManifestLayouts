@@ -1,8 +1,8 @@
-'use strict'
 
 var CanvasObject = require('./canvasObject');
 
 var CanvasUtils = function(config) {
+  'use strict';
   function buildCanvasStates(canvases, viewer, dispatcher) {
     var canvasObjects = {};
 
@@ -20,7 +20,7 @@ var CanvasUtils = function(config) {
   this.canvases = config.canvases;
   this.dispatcher = config.dispatcher;
   this.canvasObjects = buildCanvasStates(this.canvases, config.viewer, this.dispatcher);
-}
+};
 
 CanvasUtils.prototype = {
   addImageCluster: function(id) {
@@ -64,7 +64,7 @@ CanvasUtils.prototype = {
     var getCanvasByIndex = function(index) {
       var canvasId = self.canvases[index]['@id'];
       return self.canvasObjects[canvasId];
-    }
+    };
 
     // Do not select non-paged canvases in paged mode. Instead, find the next available
     // canvas that does not have that viewingHint.
@@ -82,7 +82,7 @@ CanvasUtils.prototype = {
       this.loadTileSourceForIndex(facingPageIndex);
     }
 
-    _this.electCanvasForIndex(newIndex);
+    self.electCanvasForIndex(newIndex);
   },
 
   navigateIndividual: function(currentIndex, incrementValue) {
