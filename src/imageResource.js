@@ -1,8 +1,7 @@
-'use strict';
-
 require('openseadragon');
 
 var ImageResource = function(config) {
+  'use strict';
   this.id = config.id;
   this.label = config.label || "No Label";
   this.needed = config.needed || false;
@@ -201,6 +200,6 @@ ImageResource.prototype = {
     var previous = this.parent.images.indexOf(this);
     this.parent.images.splice(previous, 1);
   },
-}
+};
 
 module.exports = ImageResource;

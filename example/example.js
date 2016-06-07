@@ -169,30 +169,39 @@ var App = {
           if(image.imageType === 'detail') {
             text +=" (detail)";
           }
-          if(image.imageType !== 'thumbnail') {
-            var listItem = $('<li>');
-            var label = $('<label>').text(text);
+          var listItem = $('<li>');
+          var label = $('<label>').text(text);
+          var slider = $('<input type="range" min="0" max="100" step="2" value="100">');
 
-            var checkbox = $('<input type=checkbox>');
-            checkbox.prop('id', image.id);
-            checkbox.prop('checked', image.visible);
+          var checkbox = $('<input type=checkbox>');
+          checkbox.prop('id', image.id);
+          checkbox.prop('checked', image.visible);
 
-            checkbox.change(image, function(event) {
-              if(event.target.checked) {
-                if(image.status === 'shown') {
-                  image.show();
-                } else {
-                  self.selectedCanvas.removeThumbnail();
-                  image.openTileSource();
-                }
+          checkbox.change(image, function(event) {
+            if(event.target.checked) {
+              if(image.status === 'shown') {
+                image.show();
               } else {
-                image.hide();
+                self.selectedCanvas.removeThumbnail();
+                image.openTileSource();
               }
-            });
-            label.append(checkbox);
-            listItem.append(label);
-            listItem.prependTo(self.$images);
-          }
+            } else {
+              image.hide();
+            }
+          });
+
+          slider.on('input', function(event) {
+            var opacity = $(this).val();
+
+            console.log('adjusting opacity');
+            console.log(opacity);
+
+            image.setOpacity(opacity/100);
+          });
+          label.append(checkbox);
+          listItem.append(label);
+          label.append(slider);
+          listItem.prependTo(self.$images);
         });
       };
 
