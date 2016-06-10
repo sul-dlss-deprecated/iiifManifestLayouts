@@ -128,14 +128,14 @@ var App = {
 
       self.$images.sortable({
         stop: function(event, ui) {
-          var inputs = event.target.querySelectorAll('input');
+          var images = self.selectedCanvas.images.length;
           var i = 0;
-          for(i; i < inputs.length; i++) {
+          for(i; i < images.length; i++) {
 
             // zIndex is backwards from this UI; 0 is on the bottom for zIndex, but 0 is the top
             // of this sortable UI element array.
-            var image = self.selectedCanvas.getImageById(inputs[i].id);
-            self.selectedCanvas.moveToIndex(image, inputs.length - (i + 1));
+            var image = self.selectedCanvas.getImageById(images[i].id);
+            self.selectedCanvas.moveToIndex(image, images.length - (i + 1));
           }
         }
       });
@@ -169,15 +169,22 @@ var App = {
           if(image.imageType === 'detail') {
             text +=" (detail)";
           }
+
           var listItem = $('<li>');
-          var label = $('<label>').text(text);
-          var slider = $('<input type="range" min="0" max="100" step="2" value="100">');
+          var layerThumb = $('<img class="layerthumb">');
+          var label = $('<h3 class="layerName">').append('<span>'+text+'</span>');
+          var slider = $('<input class="opacitySlider" type="range" min="0" max="100" step="2" value="100">');
+          // var sliderLabel = $('<label>').text('Opacity');
 
           var checkbox = $('<input type=checkbox>');
           checkbox.prop('id', image.id);
           checkbox.prop('checked', image.visible);
 
           checkbox.change(image, function(event) {
+            console.log('checked');
+            console.log(image.status);
+            console.log(event.target.checked);
+            console.log(image.visible);
             if(event.target.checked) {
               if(image.status === 'shown') {
                 image.show();
@@ -193,13 +200,12 @@ var App = {
           slider.on('input', function(event) {
             var opacity = $(this).val();
 
-            console.log('adjusting opacity');
-            console.log(opacity);
-
             image.setOpacity(opacity/100);
           });
-          label.append(checkbox);
           listItem.append(label);
+          listItem.prepend(layerThumb);
+          listItem.prepend(checkbox);
+          // listItem.append(sliderLabel);
           label.append(slider);
           listItem.prependTo(self.$images);
         });

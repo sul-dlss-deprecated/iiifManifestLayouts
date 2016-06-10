@@ -33,6 +33,7 @@ ImageResource.prototype = {
   },
 
   updateOpacity: function() {
+    console.log(this.tiledImage);
     if(this.tiledImage) {
       if(this.visible) {
         this.tiledImage.setOpacity(this.opacity * this.parent.getOpacity());
@@ -127,10 +128,10 @@ ImageResource.prototype = {
   _getBoundsInViewer: function(rect) {
     if(rect) {
       return new OpenSeadragon.Rect(
-          this.parent.bounds.x + (this.parent.bounds.width * rect.x),
-          this.parent.bounds.y + (this.parent.bounds.width * rect.y),
-          this.parent.bounds.width * rect.width,
-          this.parent.bounds.height * rect.height
+        this.parent.bounds.x + (this.parent.bounds.width * rect.x),
+        this.parent.bounds.y + (this.parent.bounds.width * rect.y),
+        this.parent.bounds.width * rect.width,
+        this.parent.bounds.height * rect.height
       );
     }
   },
@@ -167,7 +168,7 @@ ImageResource.prototype = {
     }
   },
 
-   fade: function(targetOpacity, callback) {
+  fade: function(targetOpacity, callback) {
     var self = this;
     var currentOpacity = this.opacity;
     var step = (targetOpacity - currentOpacity) / 30;
@@ -199,7 +200,7 @@ ImageResource.prototype = {
   removeFromCanvas: function() {
     var previous = this.parent.images.indexOf(this);
     this.parent.images.splice(previous, 1);
-  },
+  }
 };
 
 module.exports = ImageResource;

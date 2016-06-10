@@ -1,5 +1,3 @@
-'use strict';
-
 require('openseadragon');
 
 var OSDUtils = function() {
