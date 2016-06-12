@@ -33,13 +33,13 @@ ImageResource.prototype = {
   },
 
   updateOpacity: function() {
-    console.log(this.tiledImage);
     if(this.tiledImage) {
       if(this.visible) {
         this.tiledImage.setOpacity(this.opacity * this.parent.getOpacity());
       } else {
         this.tiledImage.setOpacity(0);
       }
+      console.log(this.tiledImage);
     }
   },
 
@@ -194,7 +194,7 @@ ImageResource.prototype = {
   updateItemIndex: function() {
     if(this.tiledImage && this.viewer.world.getItemCount() > this.zIndex) {
       this.viewer.world.setItemIndex(this.tiledImage, this.zIndex);
-    }
+   }
   },
 
   removeFromCanvas: function() {

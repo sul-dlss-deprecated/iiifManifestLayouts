@@ -5,18 +5,14 @@ var imageFormatError = "Unsupported image format for LegacyTileSource.";
 
 var _getResourceFormat = function(mimeType) {
   switch(mimeType) {
-    case('image/jpeg'):
-      return 'jpg';
-      break;
-    case('image/png'):
-      return 'png';
-      break;
-    case('image/gif'):
-      return 'gif';
-      break;
-    default:
-      throw(imageFormatError)
-      break;
+  case('image/jpeg'):
+    return 'jpg';
+  case('image/png'):
+    return 'png';
+  case('image/gif'):
+    return 'gif';
+  default:
+    throw(imageFormatError);
   }
 };
 
@@ -24,7 +20,9 @@ var _getThumbUrl = function(resource, width) {
 
   var _buildResourceSize = function() {
     return "/full/" + width + ",/";
-  }
+  };
+
+  console.log(resource);
 
   var id = resource['@id'];
   if(!id.toLowerCase().match(/^.*\.(png|jpg|jpeg|gif)$/)) { // it is still a service URL
@@ -44,15 +42,15 @@ var _getThumbLevel = function(resource, width, height) {
   return {
     url: _getThumbUrl(resource, width),
     height: height,
-    width: width,
-  }
+    width: width
+  };
 };
 
 var _makeThumbnailConfig = function(resource, parent) {
   var bounds = parent.getBounds();
   var doubleCeiling = function(size) {
     return Math.ceil(size * 2);
-  }
+  };
 
   return {
     tileSource: {
@@ -71,6 +69,7 @@ var _makeThumbnailConfig = function(resource, parent) {
 var ThumbnailFactory = function(canvas, parent) {
   // The canvas has a thumbnail object.
   if(canvas.thumbnail) {
+    console.log('There is a canvas thumbnail');
     return new ImageResource(_makeThumbnailConfig(canvas.thumbnail, parent));
   }
 

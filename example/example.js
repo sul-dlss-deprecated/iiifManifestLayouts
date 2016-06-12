@@ -126,6 +126,10 @@ var App = {
         console.log('I have updated!');
       });
 
+      $('#example-container').on('click', '.canvas', function (event) {
+        self.viewer.selectCanvas($(this).data('id'));
+      });
+
       self.$images.sortable({
         stop: function(event, ui) {
           var images = self.selectedCanvas.images.length;
@@ -161,7 +165,11 @@ var App = {
         self.selectedCanvas = canvas;
         self.$images.empty();
 
+        console.log(selectedCanvas);
+        window.selectedCanvas = selectedCanvas;
+
         self.selectedCanvas.images.forEach(function(image) {
+          console.log(image);
           var text = image.label;
           if(image.imageType === 'main') {
             text += " (default)";
@@ -193,6 +201,8 @@ var App = {
                 image.openTileSource();
               }
             } else {
+              console.log('nothing to hide apparently');
+              console.log(image);
               image.hide();
             }
           });
@@ -212,12 +222,13 @@ var App = {
       };
 
       var selectedCanvas = self.viewer.getSelectedCanvas();
+
       if(selectedCanvas && self.viewer.getState().perspective == 'detail') {
         _setImagesForCanvas(selectedCanvas);
       }
 
       self.viewer.on('canvas-selected', function(event) {
-        _setImagesForCanvas(event.detail);
+        _setImagesForCanvas(self.viewer.getSelectedCanvas());
       });
 
       key('shift+j', function() {

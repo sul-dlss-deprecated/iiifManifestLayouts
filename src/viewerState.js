@@ -5,12 +5,6 @@ var canvasUtils = require('./canvasUtils');
 var viewerState = function(config) {
   var self = this;
   this.dispatcher = config.dispatcher;
-  this.dispatcher.on('canvas-selected', function(event) {
-    self.setState({
-      selectedCanvas: event.detail.id,
-      perspective: 'detail'
-    });
-  });
 
   this.state = {
     canvasObjects: config.canvasObjects,
@@ -41,8 +35,17 @@ viewerState.prototype = {
     this.dispatcher.emit('viewer-state-updated', {detail: differences});
   },
 
-  selectedCanvasObject: function() {
-    return this.state.canvasObjects[this.state.selectedCanvas];
+  selectedCanvasObject: function(newCanvas) {
+    if (!arguments.length) {
+      return this.state.canvasObjects[this.state.selectedCanvas];
+    } else  {
+      this.setState({
+        selectedCanvas: newCanvas,
+        perspective: 'detail'
+      });
+      this.dispatcher.emit('canvas-selected', { detail: newCanvas });
+      return this.state.canvasObjects[this.state.selectedCanvas];
+    }
   }
 };
 

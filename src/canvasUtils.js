@@ -1,8 +1,10 @@
-
 var CanvasObject = require('./canvasObject');
 
 var CanvasUtils = function(config) {
   'use strict';
+
+  var self = this;
+
   function buildCanvasStates(canvases, viewer, dispatcher) {
     var canvasObjects = {};
 
@@ -16,10 +18,14 @@ var CanvasUtils = function(config) {
     });
 
     return canvasObjects;
-  };
+  }
   this.canvases = config.canvases;
   this.dispatcher = config.dispatcher;
   this.canvasObjects = buildCanvasStates(this.canvases, config.viewer, this.dispatcher);
+
+  this.dispatcher.on('canvas-selected', function(actionDetails) {
+    self.selectCanvas(actionDetails.detail);
+  });
 };
 
 CanvasUtils.prototype = {
@@ -29,9 +35,8 @@ CanvasUtils.prototype = {
   },
 
   selectCanvas: function(item) {
-    var item = this.canvasObjects[item];
+    item = this.canvasObjects[item];
     item.openMainTileSource();
-    this.dispatcher.emit('canvas-selected', { detail: item });
   },
 
   isValidCanvasIndex: function(index) {
@@ -40,6 +45,7 @@ CanvasUtils.prototype = {
 
   loadTileSourceForIndex: function(index) {
     var canvasId = this.canvases[index]['@id'];
+    console.log(canvasId);
     this.canvasObjects[canvasId].openMainTileSource();
   },
 
