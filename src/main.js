@@ -313,7 +313,6 @@ var manifestor = function(options) {
     overlays.remove();
     scrollContainer.remove();
     osdContainer.remove();
-    container.off('click', canvasClickHandler);
 
     viewerState = null;
     renderState = null;

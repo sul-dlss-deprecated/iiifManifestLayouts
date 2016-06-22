@@ -111,7 +111,7 @@ var App = {
           top: 0,
           left: 10,
           right: 10,
-          bottom: 10 // units in % of pixel height of viewport
+          bottom: 20 // units in % of pixel height of viewport
         },
         // selectedCanvas: manifest.sequences[0].canvases[50]['@id']
       });
