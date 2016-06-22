@@ -1,4 +1,3 @@
-require('openseadragon');
 var ImageResource = require('./ImageResource');
 
 var _getRectFromStringArray = function(arr) {
@@ -6,7 +5,12 @@ var _getRectFromStringArray = function(arr) {
     return parseInt(number, 10);
   });
 
-  return new OpenSeadragon.Rect(rectArray[0] , rectArray[1], rectArray[2], rectArray[3]);
+  return {
+    x: rectArray[0],
+    y: rectArray[1],
+    width: rectArray[2],
+    height: rectArray[3]
+  };
 };
 
 var _getSegmentFromUrl = function(url) {
@@ -96,12 +100,12 @@ var ImageResourceFactory = function(image, parent) {
 
   var _makeCoordinatesPercentages = function(bounds) {
     // We want to deal with these in terms of percentages relative to the canvas.
-    return new OpenSeadragon.Rect(
-      bounds.x / parent.bounds.width,
-      bounds.y / parent.bounds.width,
-      bounds.width / parent.bounds.width,
-      bounds.height / parent.bounds.height
-    );
+    return {
+      x: bounds.x / parent.bounds.width,
+      y: bounds.y / parent.bounds.width,
+      width: bounds.width / parent.bounds.width,
+      height: bounds.height / parent.bounds.height
+    };
   };
 
   var _makeImageFromConfig = function(config) {

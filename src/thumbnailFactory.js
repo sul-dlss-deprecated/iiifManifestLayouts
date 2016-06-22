@@ -22,8 +22,6 @@ var _getThumbUrl = function(resource, width) {
     return "/full/" + width + ",/";
   };
 
-  console.log(resource);
-
   var id = resource['@id'];
   if(!id.toLowerCase().match(/^.*\.(png|jpg|jpeg|gif)$/)) { // it is still a service URL
     var format = _getResourceFormat(resource.format);
@@ -69,7 +67,6 @@ var _makeThumbnailConfig = function(resource, parent) {
 var ThumbnailFactory = function(canvas, parent) {
   // The canvas has a thumbnail object.
   if(canvas.thumbnail) {
-    console.log('There is a canvas thumbnail');
     return new ImageResource(_makeThumbnailConfig(canvas.thumbnail, parent));
   }
 
