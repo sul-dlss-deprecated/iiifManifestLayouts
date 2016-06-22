@@ -1,5 +1,3 @@
-
-require('openseadragon');
 var ImageResource = require('./ImageResource');
 var ImageResourceFactory = require('./ImageResourceFactory');
 var ThumbnailFactory = require('./ThumbnailFactory');
@@ -124,10 +122,20 @@ CanvasObject.prototype = {
     });
   },
 
-  // Returns an OpenSeadragon Rect object - some OpenSeadragon consumers of this function want one,
-  // and others can get x, y, width and height out easily.
   getBounds: function() {
-    return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+    var self = this;
+    return {
+      x: this.bounds.x,
+      y: this.bounds.y,
+      width: this.bounds.width,
+      height: this.bounds.height,
+      getTopLeft: function() {
+        return {
+          x: self.bounds.x,
+          y: self.bounds.y
+        };
+      }
+    };
   },
 
   getAspectRatio: function() {
@@ -160,6 +168,8 @@ CanvasObject.prototype = {
     console.log("old index: " + oldIndex);
     console.log("index: " + index);
     if (index === oldIndex || oldIndex === -1 ) {
+      // Index either is invalid or is the same
+      // as the previous index, requiring no change.
         return;
     }
     if ( index >= this.images.length ) {

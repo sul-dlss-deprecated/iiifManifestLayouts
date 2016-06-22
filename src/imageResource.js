@@ -2,13 +2,15 @@ require('openseadragon');
 
 var ImageResource = function(config) {
   'use strict';
+
+  console.log(config.bounds);
   this.id = config.id;
   this.label = config.label || "No Label";
   this.needed = config.needed || false;
   this.visible = config.visible || false;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
-  this.bounds = config.bounds || new OpenSeadragon.Rect(0, 0, 1, 1);
+  this.bounds = config.bounds || {x:0, y:0, width:1,height:1};
   this.zIndex = config.zIndex;
   this.tileSource = config.tileSource;
   this.dynamic = config.dynamic || false;
@@ -39,13 +41,22 @@ ImageResource.prototype = {
       } else {
         this.tiledImage.setOpacity(0);
       }
-      console.log(this.tiledImage);
     }
+  },
+
+  setNeeded: function(needed) {
+    this.needed = needed;
+    this.dispatcher.emit('image-needed-updated', {detail: this.id});
+  },
+
+  getNeeded: function() {
+    return this.needed;
   },
 
   setOpacity: function(opacity) {
     this.opacity = opacity;
     this.updateOpacity();
+    this.dispatcher.emit('image-opacity-updated', {detail: this.id});
   },
 
   getOpacity: function() {
@@ -65,7 +76,7 @@ ImageResource.prototype = {
     // otherwise, continue loading the tileSource.
     this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': self });
     this.status = 'requested';
-    var bounds = this._getBoundsInViewer(this.bounds);
+    var bounds = this.getGlobalBounds();
 
     this.viewer.addTiledImage({
       x: bounds.x,
@@ -121,32 +132,35 @@ ImageResource.prototype = {
     return this.imageType;
   },
 
-  getBounds: function() {
-    return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+  getLocalBounds: function() {
+    // Eexpressed as 0-1 factor of parent.
+    //
+    // For example: { x: 0.2, y: 0.8, width: 0.34, height: 0.12 }
+    // These are intended to be multiplied by the parent canvas
+    // dimensions to obtain global coordinates.
+    return this.bounds;
   },
 
-  _getBoundsInViewer: function(rect) {
-    if(rect) {
-      return new OpenSeadragon.Rect(
-        this.parent.bounds.x + (this.parent.bounds.width * rect.x),
-        this.parent.bounds.y + (this.parent.bounds.width * rect.y),
-        this.parent.bounds.width * rect.width,
-        this.parent.bounds.height * rect.height
-      );
-    }
+  getGlobalBounds: function() {
+    var self = this;
+    return {
+      x: this.parent.bounds.x + (this.parent.bounds.width * self.bounds.x),
+      y: this.parent.bounds.y + (this.parent.bounds.width * self.bounds.y),
+      width: this.parent.bounds.width * self.bounds.width,
+      height: this.parent.bounds.height * self.bounds.height
+    };
   },
 
   updateForParentChange: function(immediately) {
     if(this.tiledImage) {
-      var bounds = this._getBoundsInViewer(this.bounds);
-      this.tiledImage.setPosition(bounds.getTopLeft(), immediately);
+      var bounds = this.getGlobalBounds();
+      this.tiledImage.setPosition({x: bounds.x, y: bounds.y}, immediately);
       this.tiledImage.setWidth(bounds.width, immediately);
     }
   },
 
-  //Assumes that the point parameter is already in viewport coordinates.
-  containsViewerPoint: function(point) {
-    var bounds = this._getBoundsInViewer(this.bounds);
+  containsGlobalPoint: function(point) {
+    var bounds = this.getGlobalBounds();
 
     var width = this.parent.bounds.width * this.width;
     var height = this.parent.bounds.height * this.height;
@@ -155,6 +169,10 @@ ImageResource.prototype = {
     var rectBottom = bounds.y + bounds.height;
 
     return (bounds.x <= point.x && rectRight >= point.x && bounds.y <= point.y && rectBottom >= point.y);
+  },
+
+  setStatus: function(status) {
+    this.status = status;
   },
 
   getStatus: function() {
