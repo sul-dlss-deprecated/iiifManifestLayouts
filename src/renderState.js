@@ -1,5 +1,3 @@
-'use strict';
-
 var renderState = function(config) {
   this.state = {
     zooming: config.zooming,

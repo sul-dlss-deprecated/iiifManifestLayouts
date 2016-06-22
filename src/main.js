@@ -52,8 +52,7 @@ var manifestor = function(options) {
     _dispatcher.on(event, handler);
   }
 
-  // Each canvas will listen when it opens tile sources, and clients consuming this code may attach some as well.
-  _dispatcher.setMaxListeners(canvases.length * 2);
+  _dispatcher.setMaxListeners(0);
 
   var fullSizeStyle = {
     'width': '100%',
@@ -118,9 +117,6 @@ var manifestor = function(options) {
     d.scaleForZoom(osd.getViewerScale(), osd.getZoomTranslation());
   });
 
-  function canvasClickHandler(event) {
-    selectCanvas($(this).data('id'));
-  }
 
   function scrollHandler(event) {
     if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
@@ -129,7 +125,6 @@ var manifestor = function(options) {
     }
   }
 
-  container.on('click', '.' + canvasClass, canvasClickHandler);
   scrollContainer.on('scroll', scrollHandler);
 
   d3.timer(function() {
@@ -250,7 +245,7 @@ var manifestor = function(options) {
   _dispatcher.on('viewer-state-updated', render);
 
   function selectCanvas(item) {
-    canvasUtils.selectCanvas(item);
+    viewerState.selectedCanvasObject(item);
   }
 
   function getSelectedCanvas() {
@@ -318,7 +313,6 @@ var manifestor = function(options) {
     overlays.remove();
     scrollContainer.remove();
     osdContainer.remove();
-    container.off('click', canvasClickHandler);
 
     viewerState = null;
     renderState = null;
@@ -339,6 +333,7 @@ var manifestor = function(options) {
     selectPerspective: selectPerspective,
     selectViewingMode: selectViewingMode,
     selectViewingDirection: selectViewingDirection,
+    // selectLayoutStrategy: selectLayoutStrategy,
     updateThumbSize: updateThumbSize,
     getState: getState,
     setState: setState,

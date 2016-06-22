@@ -111,7 +111,7 @@ var App = {
           top: 0,
           left: 10,
           right: 10,
-          bottom: 10 // units in % of pixel height of viewport
+          bottom: 20 // units in % of pixel height of viewport
         },
         // selectedCanvas: manifest.sequences[0].canvases[50]['@id']
       });
@@ -126,16 +126,20 @@ var App = {
         console.log('I have updated!');
       });
 
+      $('#example-container').on('click', '.canvas', function (event) {
+        self.viewer.selectCanvas($(this).data('id'));
+      });
+
       self.$images.sortable({
         stop: function(event, ui) {
-          var inputs = event.target.querySelectorAll('input');
+          var images = self.selectedCanvas.images.length;
           var i = 0;
-          for(i; i < inputs.length; i++) {
+          for(i; i < images.length; i++) {
 
             // zIndex is backwards from this UI; 0 is on the bottom for zIndex, but 0 is the top
             // of this sortable UI element array.
-            var image = self.selectedCanvas.getImageById(inputs[i].id);
-            self.selectedCanvas.moveToIndex(image, inputs.length - (i + 1));
+            var image = self.selectedCanvas.getImageById(images[i].id);
+            self.selectedCanvas.moveToIndex(image, images.length - (i + 1));
           }
         }
       });
@@ -161,7 +165,11 @@ var App = {
         self.selectedCanvas = canvas;
         self.$images.empty();
 
+        console.log(selectedCanvas);
+        window.selectedCanvas = selectedCanvas;
+
         self.selectedCanvas.images.forEach(function(image) {
+          console.log(image);
           var text = image.label;
           if(image.imageType === 'main') {
             text += " (default)";
@@ -169,40 +177,58 @@ var App = {
           if(image.imageType === 'detail') {
             text +=" (detail)";
           }
-          if(image.imageType !== 'thumbnail') {
-            var listItem = $('<li>');
-            var label = $('<label>').text(text);
 
-            var checkbox = $('<input type=checkbox>');
-            checkbox.prop('id', image.id);
-            checkbox.prop('checked', image.visible);
+          var listItem = $('<li>');
+          var layerThumb = $('<img class="layerthumb">');
+          var label = $('<h3 class="layerName">').append('<span>'+text+'</span>');
+          var slider = $('<input class="opacitySlider" type="range" min="0" max="100" step="2" value="100">');
+          // var sliderLabel = $('<label>').text('Opacity');
 
-            checkbox.change(image, function(event) {
-              if(event.target.checked) {
-                if(image.status === 'shown') {
-                  image.show();
-                } else {
-                  self.selectedCanvas.removeThumbnail();
-                  image.openTileSource();
-                }
+          var checkbox = $('<input type=checkbox>');
+          checkbox.prop('id', image.id);
+          checkbox.prop('checked', image.visible);
+
+          checkbox.change(image, function(event) {
+            console.log('checked');
+            console.log(image.status);
+            console.log(event.target.checked);
+            console.log(image.visible);
+            if(event.target.checked) {
+              if(image.status === 'shown') {
+                image.show();
               } else {
-                image.hide();
+                self.selectedCanvas.removeThumbnail();
+                image.openTileSource();
               }
-            });
-            label.append(checkbox);
-            listItem.append(label);
-            listItem.prependTo(self.$images);
-          }
+            } else {
+              console.log('nothing to hide apparently');
+              console.log(image);
+              image.hide();
+            }
+          });
+
+          slider.on('input', function(event) {
+            var opacity = $(this).val();
+
+            image.setOpacity(opacity/100);
+          });
+          listItem.append(label);
+          listItem.prepend(layerThumb);
+          listItem.prepend(checkbox);
+          // listItem.append(sliderLabel);
+          label.append(slider);
+          listItem.prependTo(self.$images);
         });
       };
 
       var selectedCanvas = self.viewer.getSelectedCanvas();
+
       if(selectedCanvas && self.viewer.getState().perspective == 'detail') {
         _setImagesForCanvas(selectedCanvas);
       }
 
       self.viewer.on('canvas-selected', function(event) {
-        _setImagesForCanvas(event.detail);
+        _setImagesForCanvas(self.viewer.getSelectedCanvas());
       });
 
       key('shift+j', function() {

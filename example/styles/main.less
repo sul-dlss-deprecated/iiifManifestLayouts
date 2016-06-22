@@ -108,6 +108,61 @@ select {
 input {
     color: black;
 }
+
 input[type=range]::-moz-range-track {
     background-color: white;
+}
+
+.clearfix() {
+  &:before,
+  &:after {
+    content: " "; // 1
+    display: table; // 2
+  }
+  &:after {
+    clear: both;
+  }
+}
+
+#images-list {
+  list-style: none;
+  padding:0;
+  li {
+    cursor: move;
+    padding: 0 10px;
+    border: 2px solid gray;
+    border-bottom: none;
+    position:relative;
+    overflow:hidden;
+    &:hover {
+      border-color: deepskyblue;
+      border-bottom: 2px solid deepskyblue;
+    }
+    .layerthumb {
+      margin-top: 10px;
+      height:100%;
+      width: 25px;
+      height: 25px;
+      border: 1px solid gray;
+      float:left;
+    }
+    input[type=checkbox] {
+      margin-top:10px;
+      background:red;
+      height: 25px;
+      width: 25px;
+      text-align:center;
+      vertical-align: middle;
+      float:left;
+    }
+    .layerName {
+      margin-top:10px;
+      margin-left: 60px;
+      margin-bottom: 5px;
+      span {
+        display:inline-block;
+        height:100%;
+      }
+    }
+  }
 }

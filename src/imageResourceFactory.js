@@ -1,5 +1,3 @@
-'use strict';
-
 require('openseadragon');
 var ImageResource = require('./ImageResource');
 
@@ -77,7 +75,7 @@ var _buildChoiceConfigs = function(resource) {
       config.imageType = type;
     }
     return config;
-  }
+  };
   var configs = [];
   var choice = _buildImageChoice(resource.default, 'main');
   if(choice) {
@@ -122,23 +120,20 @@ var ImageResourceFactory = function(image, parent) {
     case 'dctypes:Image':
       var config = _buildImageConfig(image.resource);
       return _makeImageFromConfig(config);
-      break;
     case 'oa:Choice':
       var configs = _buildChoiceConfigs(image.resource);
       return configs.map(function(config) {
         return _makeImageFromConfig(config);
       });
-      break;
     case 'oa:SpecificResource':
       var resource = image.resource;
-      var config = _buildImageConfig(resource);
+      config = _buildImageConfig(resource);
 
       if(config && resource.selector && resource.selector.region) {
         var clipArray = resource.selector.region.split(',');
         config.clipRegion = _getRectFromStringArray(clipArray);
       }
       return _makeImageFromConfig(config);
-      break;
     default:
       throw new Error("Cannot create an image from type " + resourceType);
   }
