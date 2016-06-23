@@ -29,14 +29,10 @@ var CanvasUtils = function(config) {
 };
 
 CanvasUtils.prototype = {
-  addImageCluster: function(id) {
-    this.canvasObjects[id] = {
-    };
-  },
-
   selectCanvas: function(item) {
     item = this.canvasObjects[item];
-    item.openMainTileSource();
+    // item.openMainTileSource();
+    // propagate this from the canvas somehow.
   },
 
   isValidCanvasIndex: function(index) {
@@ -45,8 +41,8 @@ CanvasUtils.prototype = {
 
   loadTileSourceForIndex: function(index) {
     var canvasId = this.canvases[index]['@id'];
-    console.log(canvasId);
-    this.canvasObjects[canvasId].openMainTileSource();
+    // this.canvasObjects[canvasId].openMainTileSource();
+    // send this as an event, let some renderer handle it.
   },
 
   selectCanvasForIndex: function(index) {
@@ -55,6 +51,7 @@ CanvasUtils.prototype = {
   },
 
   navigatePaged: function(currentIndex, incrementValue) {
+    // Simply set which ones are "needed", let osd do the rest.
     var self = this;
     var newIndex = currentIndex + incrementValue;
 

@@ -48,6 +48,7 @@ CanvasObject.prototype = {
   },
 
   openMainTileSource: function(imageIndex) {
+    console.log('I am being called by index: ' + imageIndex);
     if(this.images.length === 0) {
       return; // there are no images to open
     }

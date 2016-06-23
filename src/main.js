@@ -1,11 +1,10 @@
 var d3 = require('./lib/d3-slim-dist'),
     manifestLayout = require('./manifestLayout'),
-    canvasLayout = require('./canvasLayout'),
     CanvasObject = require('./canvasObject'),
     CanvasUtils = require('./canvasUtils'),
     ViewerState = require('./viewerState'),
     RenderState = require('./renderState'),
-    OSDUtils = require('./osdUtils'),
+    OsdRenderer = require('./osdRenderer'),
     d3Utils = require('./d3Utils'),
     iiif = require('./iiifUtils'),
     events = require('events');
@@ -28,10 +27,14 @@ var manifestor = function(options) {
       viewerState,
       renderState,
       d, // todo: name this better
-      osd = new OSDUtils(),
       viewer,
       canvasUtils,
-      _dispatcher = new events.EventEmitter(),
+      dispatcher = new events.EventEmitter(),
+      osd = new OsdRenderer({
+        dispatcher: dispatcher,
+        renderState: renderState,
+        viewerState: viewerState
+      }),
       _destroyed = false;
 
   function getViewingDirection() {
@@ -48,11 +51,8 @@ var manifestor = function(options) {
     return manifest.viewingHint ? manifest.viewingHint : 'individuals';
   }
 
-  function on(event, handler) {
-    _dispatcher.on(event, handler);
-  }
 
-  _dispatcher.setMaxListeners(0);
+  dispatcher.setMaxListeners(0);
 
   var fullSizeStyle = {
     'width': '100%',
@@ -78,11 +78,11 @@ var manifestor = function(options) {
   canvasUtils = new CanvasUtils({
     canvases: canvases,
     viewer: viewer,
-    dispatcher: _dispatcher
+    dispatcher: dispatcher
   });
 
   viewerState = viewerState || new ViewerState({
-    dispatcher: _dispatcher,
+    dispatcher: dispatcher,
     canvasObjects: canvasUtils.canvasObjects,
     selectedCanvas: selectedCanvas, // @id of the canvas:
     perspective: initialPerspective, // can be 'overview' or 'detail'
@@ -101,7 +101,7 @@ var manifestor = function(options) {
   });
 
   d = new d3Utils({
-    dispatcher: _dispatcher,
+    dispatcher: dispatcher,
     viewerState: viewerState,
     renderState: renderState,
     scrollContainer: scrollContainer,
@@ -197,10 +197,10 @@ var manifestor = function(options) {
     var renderNewPerspective = function(perspective) {
       var animate = (perspective === 'detail');
       var renderComplete = function() {
-        _dispatcher.removeListener('render-layout-complete', renderComplete);
+        dispatcher.removeListener('render-layout-complete', renderComplete);
         doRender(perspective, !animate);
       };
-      _dispatcher.on('render-layout-complete', renderComplete);
+      dispatcher.on('render-layout-complete', renderComplete);
       frames = doRender('intermediate', animate);
     };
 
@@ -242,7 +242,7 @@ var manifestor = function(options) {
     }
   }
 
-  _dispatcher.on('viewer-state-updated', render);
+  dispatcher.on('viewer-state-updated', render);
 
   function selectCanvas(item) {
     viewerState.selectedCanvasObject(item);
@@ -338,7 +338,7 @@ var manifestor = function(options) {
     getState: getState,
     setState: setState,
     osd: viewer,
-    on: on,
+    on: dispatcher.on, // takes an event name and a callback
     getSelectedCanvas: getSelectedCanvas
   };
 };

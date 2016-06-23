@@ -13,7 +13,7 @@ module.exports = function(grunt) {
         exampleDir: 'example',
         distName:'manifestor.js',
         // add any additional js/less/html files to build here:
-        lessToBuild: ['example/styles/main.less'],
+        lessToBuild: ['example/styles/main.less']
     };
 
     grunt.initConfig({

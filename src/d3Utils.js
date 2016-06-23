@@ -163,7 +163,7 @@ d3Utils.prototype = {
             canvasImageState = self.viewerState.getState().canvasObjects[canvasData.id];
 
         canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
-        canvasImageState.openThumbnail();
+        // canvasImageState.openThumbnail();
       });
     // .append('img')
     // .attr('src', function(d) { return d.canvas.iiifService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
@@ -180,7 +180,7 @@ d3Utils.prototype = {
         .each(function() { ++n; })
         .each("end", function() { if (!--n) callback.apply(this, arguments); });
     }
-  },
+  }
 };
 
 module.exports = d3Utils;

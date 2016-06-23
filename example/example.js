@@ -189,20 +189,9 @@ var App = {
           checkbox.prop('checked', image.visible);
 
           checkbox.change(image, function(event) {
-            console.log('checked');
-            console.log(image.status);
-            console.log(event.target.checked);
-            console.log(image.visible);
             if(event.target.checked) {
-              if(image.status === 'shown') {
-                image.show();
-              } else {
-                self.selectedCanvas.removeThumbnail();
-                image.openTileSource();
-              }
+              image.show();
             } else {
-              console.log('nothing to hide apparently');
-              console.log(image);
               image.hide();
             }
           });

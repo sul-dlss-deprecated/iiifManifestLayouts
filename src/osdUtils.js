@@ -1,9 +1,13 @@
 require('openseadragon');
 
-var OSDUtils = function() {
+var OsdRenderer = function(config) {
+  this.dispatcher = config.dispatcher;
+  this.renderState = config.renderState;
+  this.viewerState = config.viewerState;
+  // this.scrollContainer = config.scrollContainer;
 };
 
-OSDUtils.prototype = {
+OsdRenderer.prototype = {
   initOSD: function(osdContainer) {
     this.viewer = OpenSeadragon({
       element: osdContainer[0],
@@ -146,13 +150,17 @@ OSDUtils.prototype = {
       // if (zoom > maxZoom) {
       //   this.viewer.viewport.zoomSpring.target.value = maxZoom;
       // }
-    }
+    };
+
     this.viewer.addHandler('zoom', function(event) {
       if (self.viewerState.getState().perspective === 'detail') {
         _applyConstraints();
       }
+      // getting the center won't work if there isn't a tilesource
+      // already opened, because openseadragon doesn't have a concept
+      // of a rectangle without an image ("frame").
       var center = self.viewer.viewport.getBounds().getCenter();
-      _semanticZoom(event.zoom, center);
+      // _semanticZoom(event.zoom, center);
     });
 
     this.viewer.addHandler('pan', function(event) {
@@ -160,25 +168,25 @@ OSDUtils.prototype = {
         _applyConstraints();
       }
       var zoom = self.viewer.viewport.getZoom();
-      _semanticZoom(zoom, event.center);
+      // _semanticZoom(zoom, event.center);
     });
 
-    this.viewer.addHandler('canvas-click', function(event) {
-      var hitCanvases = [];
-      var clickPosition = self.viewer.viewport.pointFromPixel(event.position);
-      var state = viewerState.getState();
-      for(var key in state.canvasObjects) {
-        if(state.canvasObjects[key].containsPoint(clickPosition)){
-          hitCanvases.push(state.canvasObjects[key]);
-        }
-      }
-      if(event.quick && hitCanvases[0]) {
-        var bounds = hitCanvases[0].getBounds();
-        self.viewer.viewport.fitBounds(bounds);
-        hitCanvases[0].openMainTileSource();
-      }
-    });
+    // this.viewer.addHandler('canvas-click', function(event) {
+    //   var hitCanvases = [];
+    //   var clickPosition = self.viewer.viewport.pointFromPixel(event.position);
+    //   var state = viewerState.getState();
+    //   for(var key in state.canvasObjects) {
+    //     if(state.canvasObjects[key].containsPoint(clickPosition)){
+    //       hitCanvases.push(state.canvasObjects[key]);
+    //     }
+    //   }
+    //   if(event.quick && hitCanvases[0]) {
+    //     var bounds = hitCanvases[0].getBounds();
+    //     self.viewer.viewport.fitBounds(bounds);
+    //     hitCanvases[0].openMainTileSource();
+    //   }
+    // });
   }
 };
 
-module.exports = OSDUtils;
+module.exports = OsdRenderer;
