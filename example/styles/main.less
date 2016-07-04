@@ -132,6 +132,7 @@ input[type=range]::-moz-range-track {
     padding: 0 10px;
     border: 2px solid gray;
     border-bottom: none;
+    background:black;
     position:relative;
     overflow:hidden;
     &:hover {
@@ -140,11 +141,14 @@ input[type=range]::-moz-range-track {
     }
     .layerthumb {
       margin-top: 10px;
+      margin-bottom: 10px;
       height:100%;
       width: 25px;
       height: 25px;
       border: 1px solid gray;
       float:left;
+      background: gray;
+      box-shadow: 0 0 5px gray
     }
     input[type=checkbox] {
       margin-top:10px;
@@ -163,6 +167,9 @@ input[type=range]::-moz-range-track {
         display:inline-block;
         height:100%;
       }
+    }
+    &:last-child {
+      border: 2px solid gray;
     }
   }
 }

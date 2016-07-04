@@ -5,15 +5,14 @@ var CanvasUtils = function(config) {
 
   var self = this;
 
-  function buildCanvasStates(canvases, viewer, dispatcher) {
+  function buildCanvasStates(canvases, dispatcher) {
     var canvasObjects = {};
 
     canvases.forEach(function(canvas, index) {
      canvasObjects[canvas['@id']] = new CanvasObject({
        canvas: canvas,
        index: index,
-       dispatcher: dispatcher,
-       viewer: viewer
+       dispatcher: dispatcher
      });
     });
 
@@ -21,27 +20,17 @@ var CanvasUtils = function(config) {
   }
   this.canvases = config.canvases;
   this.dispatcher = config.dispatcher;
-  this.canvasObjects = buildCanvasStates(this.canvases, config.viewer, this.dispatcher);
-
-  this.dispatcher.on('canvas-selected', function(actionDetails) {
-    self.selectCanvas(actionDetails.detail);
-  });
+  this.canvasObjects = buildCanvasStates(this.canvases, this.dispatcher);
 };
 
 CanvasUtils.prototype = {
-  selectCanvas: function(item) {
-    item = this.canvasObjects[item];
-    // item.openMainTileSource();
-    // propagate this from the canvas somehow.
-  },
-
   isValidCanvasIndex: function(index) {
     return(index > 0 && index < this.canvases.length);
   },
 
   loadTileSourceForIndex: function(index) {
     var canvasId = this.canvases[index]['@id'];
-    // this.canvasObjects[canvasId].openMainTileSource();
+    this.canvasObjects[canvasId].openMainTileSource();
     // send this as an event, let some renderer handle it.
   },
 
@@ -77,12 +66,12 @@ CanvasUtils.prototype = {
       newCanvas = getCanvasByIndex(newIndex);
     }
 
-    this.loadTileSourceForIndex(newIndex);
+    // this.loadTileSourceForIndex(newIndex);
 
     // Load tilesource for the non-selected side of the pair, if it exists
     var facingPageIndex = newIndex + incrementValue;
     if(this.isValidCanvasIndex(facingPageIndex)) {
-      this.loadTileSourceForIndex(facingPageIndex);
+      // this.loadTileSourceForIndex(facingPageIndex);
     }
 
     self.electCanvasForIndex(newIndex);
@@ -93,7 +82,7 @@ CanvasUtils.prototype = {
 
     // do nothing if newIndex is out of range
     if (this.isValidCanvasIndex(newIndex)) {
-      this.loadTileSourceForIndex(newIndex);
+      // this.loadTileSourceForIndex(newIndex);
       this.selectCanvasForIndex(newIndex);
     }
   }

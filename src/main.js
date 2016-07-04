@@ -3,10 +3,10 @@ var d3 = require('./lib/d3-slim-dist'),
     CanvasObject = require('./canvasObject'),
     CanvasUtils = require('./canvasUtils'),
     ViewerState = require('./viewerState'),
+    iiif = require('./iiifUtils'),
     RenderState = require('./renderState'),
     OsdRenderer = require('./osdRenderer'),
     d3Utils = require('./d3Utils'),
-    iiif = require('./iiifUtils'),
     events = require('events');
 
 var manifestor = function(options) {
@@ -51,7 +51,6 @@ var manifestor = function(options) {
     return manifest.viewingHint ? manifest.viewingHint : 'individuals';
   }
 
-
   dispatcher.setMaxListeners(0);
 
   var fullSizeStyle = {
@@ -77,7 +76,6 @@ var manifestor = function(options) {
   viewer = osd.initOSD(osdContainer);
   canvasUtils = new CanvasUtils({
     canvases: canvases,
-    viewer: viewer,
     dispatcher: dispatcher
   });
 
@@ -119,6 +117,7 @@ var manifestor = function(options) {
 
 
   function scrollHandler(event) {
+    viewer.forceRedraw();
     if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
       renderState.setState({ lastScrollPosition: $(this).scrollTop() });
       osd.setViewerBoundsFromState(true);
@@ -233,7 +232,7 @@ var manifestor = function(options) {
 
       osd.disableZoomAndPan();
       d.setScrollElementEvents();
-      osd.setViewerBoundsFromState(!animateViewport);
+      osd.setViewerBoundsFromState(true);
 
       setTimeout(function(){ // Do we want this to happen based on an event instead?
         renderState.setState({zooming: false});
@@ -284,15 +283,15 @@ var manifestor = function(options) {
   }
 
   function _navigate(forward) {
-    var state = viewerState.getState();
-    var currentCanvasIndex = viewerState.selectedCanvasObject().index;
-    var incrementValue = forward ? 1 : -1;
+    // var state = viewerState.getState();
+    // var currentCanvasIndex = viewerState.selectedCanvasObject().index;
+    // var incrementValue = forward ? 1 : -1;
 
-    if(state.viewingMode === 'paged') {
-      canvasUtils.navigatePaged(currentCanvasIndex, incrementValue);
-    } else {
-      canvasUtils.navigateIndividual(currentCanvasIndex, incrementValue);
-    }
+    // if(state.viewingMode === 'paged') {
+    //   canvasUtils.navigatePaged(currentCanvasIndex, incrementValue);
+    // } else {
+    //   canvasUtils.navigateIndividual(currentCanvasIndex, incrementValue);
+    // }
   }
 
   function next() {
@@ -304,7 +303,6 @@ var manifestor = function(options) {
   }
 
   function destroy() {
-    // TODO: is there more cleanup needed?
     if (viewer) {
       viewer.destroy();
     }
@@ -323,6 +321,10 @@ var manifestor = function(options) {
     _destroyed = true; // cancels the timer
   }
 
+  function on(event, handler) {
+    dispatcher.on(event, handler);
+  }
+
   return {
     destroy: destroy,
     // scrollThumbs: scrollThumbs,
@@ -338,7 +340,7 @@ var manifestor = function(options) {
     getState: getState,
     setState: setState,
     osd: viewer,
-    on: dispatcher.on, // takes an event name and a callback
+    on: on, // takes an event name and a callback
     getSelectedCanvas: getSelectedCanvas
   };
 };

@@ -120,7 +120,7 @@ var App = {
 
       // Debug/example code: Listen for tile source requests and loads
       self.viewer.on('detail-tile-source-requested', function(e) {
-        // console.log('detail tile source requested', e.detail);
+        console.log('detail tile source requested', e.detail);
       });
       self.viewer.on('viewer-state-updated', function() {
         console.log('I have updated!');
@@ -150,15 +150,13 @@ var App = {
       };
 
       self.viewer.on('image-hide', function(e) {
-        _setCheckbox(e.detail, false);
       });
 
       self.viewer.on('image-show', function(e) {
-        _setCheckbox(e.detail, true);
       });
 
-      self.viewer.on('image-resource-tile-source-opened', function(e) {
-        _setCheckbox(e.detail.id, e.detail.visible);
+      self.viewer.on('image-status-updated', function(imageResource) {
+        _setImagesForCanvas(self.viewer.getSelectedCanvas());
       });
 
       var _setImagesForCanvas = function(canvas) {
@@ -179,16 +177,16 @@ var App = {
           }
 
           var listItem = $('<li>');
+          listItem.prop('id', image.id);
           var layerThumb = $('<img class="layerthumb">');
-          var label = $('<h3 class="layerName">').append('<span>'+text+'</span>');
+          var label = $('<h3 class="layerName">').append('<span>'+text+image.getStatus()+'</span>');
           var slider = $('<input class="opacitySlider" type="range" min="0" max="100" step="2" value="100">');
           // var sliderLabel = $('<label>').text('Opacity');
 
           var checkbox = $('<input type=checkbox>');
-          checkbox.prop('id', image.id);
-          checkbox.prop('checked', image.visible);
+          checkbox.prop('checked', image.getVisibile());
 
-          checkbox.change(image, function(event) {
+          checkbox.on('change', function(event) {
             if(event.target.checked) {
               image.show();
             } else {

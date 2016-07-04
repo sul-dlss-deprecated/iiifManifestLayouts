@@ -1,9 +1,6 @@
-require('openseadragon');
-
 var ImageResource = function(config) {
   'use strict';
 
-  console.log(config.bounds);
   this.id = config.id;
   this.label = config.label || "No Label";
   this.needed = config.needed || false;
@@ -18,114 +15,50 @@ var ImageResource = function(config) {
   this.status = 'initialized'; // can be 'requested', 'pending','shown', or 'failed'
   this.parent = config.parent;
   this.dispatcher = config.parent.dispatcher;
-  this.viewer = config.parent.viewer;
 };
 
 ImageResource.prototype = {
-  hide: function() {
-    this.visible = false;
-    this.updateOpacity();
-    this.dispatcher.emit('image-hide', {detail: this.id});
-  },
-
-  show: function() {
-    this.visible = true;
-    this.updateOpacity();
-    this.dispatcher.emit('image-show', {detail: this.id});
-  },
-
-  updateOpacity: function() {
-    if(this.tiledImage) {
-      if(this.visible) {
-        this.tiledImage.setOpacity(this.opacity * this.parent.getOpacity());
-      } else {
-        this.tiledImage.setOpacity(0);
-      }
+  show: function(timeout) {
+    if (!this.needed) {
+      this.setNeeded(true);
     }
+    this.opacity = 1;
+    this.visible = true;
+    this.dispatcher.emit('image-show', this);
+  },
+
+  hide: function(timeout) {
+    this.visible = false;
+    this.opacity = 0;
+    this.dispatcher.emit('image-hide', this);
+  },
+
+  getVisibile: function() {
+    return this.visible;
   },
 
   setNeeded: function(needed) {
     this.needed = needed;
-    this.dispatcher.emit('image-needed-updated', {detail: this.id});
+    if (needed) {
+      this.dispatcher.emit('image-needed', this);
+    }
   },
 
-  getNeeded: function() {
+  getThumbnailNeeded: function() {
+    return this.needed;
+  },
+
+  getFullNeeded: function() {
     return this.needed;
   },
 
   setOpacity: function(opacity) {
     this.opacity = opacity;
-    this.updateOpacity();
-    this.dispatcher.emit('image-opacity-updated', {detail: this.id});
+    this.dispatcher.emit('image-opacity-updated', this);
   },
 
   getOpacity: function() {
     return this.opacity;
-  },
-
-  openTileSource: function(options) {
-    var self = this;
-
-    options = options || {};
-
-    // We've already loaded this tilesource
-    if(this.status === 'shown') {
-      return;
-    }
-
-    // otherwise, continue loading the tileSource.
-    this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': self });
-    this.status = 'requested';
-    var bounds = this.getGlobalBounds();
-
-    this.viewer.addTiledImage({
-      x: bounds.x,
-      y: bounds.y,
-      width: bounds.width,
-      tileSource: this.tileSource,
-      opacity: this.opacity,
-      clip: this.clipRegion,
-      index: this.zIndex,
-
-      success: function(event) {
-        var main = event.item;
-
-        var finish = function() {
-          self.tiledImage = main;
-          self.updateForParentChange(true);
-          self.updateOpacity();
-          self.updateItemIndex();
-          self.show();
-          self.status = 'shown';
-          self.dispatcher.emit('image-resource-tile-source-opened', { detail: self });
-        };
-
-        if (options.waitForFirstTile) {
-          self.status = 'pending';
-
-          var tileDrawnHandler = function(event) {
-            if (event.tiledImage === main) {
-              finish();
-              self.viewer.removeHandler('tile-drawn', tileDrawnHandler);
-            }
-          };
-
-          self.parent.viewer.addHandler('tile-drawn', tileDrawnHandler);
-        } else {
-          finish();
-        }
-      },
-
-      error: function(event) {
-        var errorInfo = {
-          id: self.tileSource,
-          message: event.message,
-          source: event.source
-        };
-        self.status = 'failed';
-        self.parent.dispatcher.emit('image-resource-tile-source-failed', {'detail': errorInfo});
-      }
-    });
   },
 
   getImageType: function() {
@@ -151,19 +84,8 @@ ImageResource.prototype = {
     };
   },
 
-  updateForParentChange: function(immediately) {
-    if(this.tiledImage) {
-      var bounds = this.getGlobalBounds();
-      this.tiledImage.setPosition({x: bounds.x, y: bounds.y}, immediately);
-      this.tiledImage.setWidth(bounds.width, immediately);
-    }
-  },
-
   containsGlobalPoint: function(point) {
     var bounds = this.getGlobalBounds();
-
-    var width = this.parent.bounds.width * this.width;
-    var height = this.parent.bounds.height * this.height;
 
     var rectRight = bounds.x + bounds.width;
     var rectBottom = bounds.y + bounds.height;
@@ -173,52 +95,13 @@ ImageResource.prototype = {
 
   setStatus: function(status) {
     this.status = status;
+    this.dispatcher.emit('image-status-updated', this);
   },
 
   getStatus: function() {
     return this.status;
-  },
-
-  destroy: function() {
-    if(this.tiledImage) {
-      this.viewer.world.removeItem(this.tiledImage);
-      this.tiledImage = null;
-    }
-  },
-
-  fade: function(targetOpacity, callback) {
-    var self = this;
-    var currentOpacity = this.opacity;
-    var step = (targetOpacity - currentOpacity) / 30;
-    if (step === 0) {
-      if (callback) callback();
-      return;
-    }
-
-    var frame = function() {
-      currentOpacity += step;
-      if ((step > 0 && currentOpacity >= targetOpacity) || (step < 0 && currentOpacity <= targetOpacity)) {
-        self.setOpacity(targetOpacity);
-        if (callback) callback();
-        return;
-      }
-
-      self.setOpacity(currentOpacity);
-      OpenSeadragon.requestAnimationFrame(frame);
-    };
-    OpenSeadragon.requestAnimationFrame(frame);
-  },
-
-  updateItemIndex: function() {
-    if(this.tiledImage && this.viewer.world.getItemCount() > this.zIndex) {
-      this.viewer.world.setItemIndex(this.tiledImage, this.zIndex);
-   }
-  },
-
-  removeFromCanvas: function() {
-    var previous = this.parent.images.indexOf(this);
-    this.parent.images.splice(previous, 1);
   }
+
 };
 
 module.exports = ImageResource;

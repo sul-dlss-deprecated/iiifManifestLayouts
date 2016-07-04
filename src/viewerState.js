@@ -1,5 +1,3 @@
-'use strict';
-
 var canvasUtils = require('./canvasUtils');
 
 var viewerState = function(config) {
@@ -15,6 +13,9 @@ var viewerState = function(config) {
     width: config.width,
     height: config.height
   };
+
+  // Listen for actions. This wrapper responds to asynchronous
+  // processes and "actions", as distinct from "events"
 };
 
 viewerState.prototype = {
@@ -42,6 +43,14 @@ viewerState.prototype = {
       this.setState({
         selectedCanvas: newCanvas,
         perspective: 'detail'
+      });
+      this.state.canvasObjects[this.state.selectedCanvas].images.filter(function(image) {
+        console.log(image.getImageType());
+        return (image.getImageType() === 'main');
+      }).forEach(function(image) {
+        console.log('deep in the forEach');
+        console.log(image);
+        image.show();
       });
       this.dispatcher.emit('canvas-selected', { detail: newCanvas });
       return this.state.canvasObjects[this.state.selectedCanvas];

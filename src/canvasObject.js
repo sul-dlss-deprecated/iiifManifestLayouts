@@ -22,7 +22,6 @@ var CanvasObject = function(config) {
   this.viewingHint = config.canvas.viewingHint;
 
   this.dispatcher = config.dispatcher;
-  this.viewer = config.viewer;
   this.canvas = config.canvas;
   this.images = [];
 
@@ -38,51 +37,6 @@ var CanvasObject = function(config) {
 };
 
 CanvasObject.prototype = {
-  removeThumbnail: function() {
-    if(this.thumbnail){
-      this.thumbnail.fade(0);
-      this.thumbnail.removeFromCanvas();
-      this.thumbnail.destroy();
-      delete this.thumbnail;
-    }
-  },
-
-  openMainTileSource: function(imageIndex) {
-    console.log('I am being called by index: ' + imageIndex);
-    if(this.images.length === 0) {
-      return; // there are no images to open
-    }
-
-    this.dispatcher.emit('detail-tile-source-opened', { 'detail': this.id });
-
-    var image = this.getMainImage();
-    var self = this;
-
-    var onTileDrawn = function(event) {
-      if(event.detail.tileSource === image.tileSource) {
-        self.dispatcher.removeListener('image-resource-tile-source-opened', onTileDrawn);
-        self.removeThumbnail();
-      }
-    };
-    this.dispatcher.on('image-resource-tile-source-opened', onTileDrawn);
-    var thumbnailStatus = (this.thumbnail ? this.thumbnail.getStatus() : '');
-    image.openTileSource({
-      waitForFirstTile: thumbnailStatus === 'shown'
-    });
-  },
-
-  openThumbnail: function() {
-    var self = this;
-    this.thumbnail = ThumbnailFactory(this.canvas, self);
-    if(this.thumbnail) {
-      this.thumbnail.openTileSource();
-      this.images.push(this.thumbnail);
-      this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
-    } else { // sometimes there isn't a thumbnail
-      this.openMainTileSource();
-    }
-  },
-
   //Assumes that the point parameter is already in viewport coordinates.
   containsPoint: function(point) {
     var rectRight = this.bounds.x + this.bounds.width;
@@ -118,9 +72,7 @@ CanvasObject.prototype = {
     this.bounds.width = width;
     this.bounds.height = height;
 
-    this.images.forEach(function(image) {
-      image.updateForParentChange(true);
-    });
+    self.dispatcher.emit('canvas-position-updated', self);
   },
 
   getBounds: function() {
