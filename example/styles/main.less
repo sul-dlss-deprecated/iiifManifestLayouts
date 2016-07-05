@@ -50,16 +50,25 @@ body {
     left:0;
     cursor: pointer;
     box-sizing: border-box;
-    // border: 1px solid deepskyblue;
-    box-shadow: 0 0 0 1px deepskyblue;
-    // &:hover {
-    //     border: 1px solid white;
-    //     box-shadow: 0 0 12px white;
-    // }
-    // &.selected {
-    //     border: 2px solid deepskyblue;
-    //     box-shadow: 0 0 12px deepskyblue;
-    // }
+    background-color: gray;
+    box-shadow: 0 0 0 5px gray;
+    &:hover {
+      background-color: lightgray;
+      box-shadow: 0 0 12px white;
+    }
+    img {
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      top:0;
+      opacity:1;
+      transition: all 0.2s ease-out;
+      &.loading {
+        opacity:0;
+        transition: all 0.2s ease-out;
+      }
+    }
 }
 .frame {
     position: absolute;

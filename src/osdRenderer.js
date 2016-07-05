@@ -21,23 +21,17 @@ var OsdRenderer = function(config) {
     // This implies that the request has been issued already
     // and the opacity can be updated.
     if (imageResource.getStatus() === 'drawn') {
-      imageResource.osdTiledImage.setOpacity(
-        imageResource.getOpacity() * imageResource.parent.getOpacity()
-      );
+      self.updateImageOpacity(imageResource);
     }
   });
   this.dispatcher.on('image-hide', function(imageResource) {
     if (imageResource.getStatus() === 'drawn') {
-      imageResource.osdTiledImage.setOpacity(
-        imageResource.getOpacity() * imageResource.parent.getOpacity()
-      );
+      self.updateImageOpacity(imageResource);
     }
   });
   this.dispatcher.on('image-opacity-updated', function(imageResource) {
-    if (imageResource.osdTiledImage) {
-      imageResource.osdTiledImage.setOpacity(
-        imageResource.getOpacity() * imageResource.parent.getOpacity()
-      );
+    if (imageResource.getStatus() === 'drawn') {
+      self.updateImageOpacity(imageResource);
     }
   });
 
@@ -98,12 +92,8 @@ OsdRenderer.prototype = {
   },
 
   updateImageOpacity: function(imageResource) {
-    if(imageResource.tiledImage) {
-      if(this.visible) {
-        this.tiledImage.setOpacity(this.opacity * this.parent.getOpacity());
-      } else {
-        this.tiledImage.setOpacity(0);
-      }
+    if(imageResource.osdTiledImage) {
+      imageResource.osdTiledImage.setOpacity(imageResource.opacity * imageResource.parent.getOpacity());
     }
   },
 
@@ -153,6 +143,26 @@ OsdRenderer.prototype = {
         imageResource.setStatus('failed');
       }
     });
+  },
+
+  syncAllImageProperties: function(imageResource) {
+    if(imageResource.osdTiledImage) {
+      var bounds = imageResource.getGlobalBounds();
+      // the "true" second argument is the "immediately" flag,
+      // telling osd not to animate.
+      imageResource.osdTiledImage.setPosition({
+        x:bounds.x,
+        y:bounds.y
+      }, true);
+      imageResource.osdTiledImage.setWidth(bounds.width, true);
+      imageResource.osdTiledImage.setOpacity(
+        imageResource.getOpacity() * imageResource.parent.getOpacity()
+      );
+      self.updateImageLayeringIndex(imageResource);
+    }
+  },
+
+  updateImageLayeringIndex: function(imageResource) {
   },
 
   updateImagePosition: function(imageResource) {
@@ -216,8 +226,8 @@ OsdRenderer.prototype = {
       vState.height
     );
 
-    // should be "animate";
-    this.viewer.viewport.fitBounds(viewBounds, true);
+    console.log(animate);
+    this.viewer.viewport.fitBounds(viewBounds, animate);
   },
 
   getViewerScale: function() {

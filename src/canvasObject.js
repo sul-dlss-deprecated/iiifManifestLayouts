@@ -5,24 +5,21 @@ var ThumbnailFactory = require('./ThumbnailFactory');
 var CanvasObject = function(config) {
   'use strict';
   var self = this;
+
+  this.dispatcher = config.dispatcher;
+  this.id = config.canvas['@id'];
+  this.label = config.canvas.label;
+  this.canvas = config.canvas;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
   this.index = config.index;
-
-  this.id = config.canvas['@id'];
-
   this.bounds = {
     x : config.x || 0,
     y : config.y || 0,
     height : config.canvas.height,
     width : config.canvas.width
   };
-
-  this.label = config.canvas.label;
   this.viewingHint = config.canvas.viewingHint;
-
-  this.dispatcher = config.dispatcher;
-  this.canvas = config.canvas;
   this.images = [];
 
   if(config.canvas.images) {
@@ -33,7 +30,7 @@ var CanvasObject = function(config) {
       }
     });
   }
-  this._floatImagesToBottom();
+  this.thumbnailResource = ThumbnailFactory(this.canvas, self);
 };
 
 CanvasObject.prototype = {

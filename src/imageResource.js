@@ -100,6 +100,42 @@ ImageResource.prototype = {
 
   getStatus: function() {
     return this.status;
+  },
+
+  moveToIndex: function(index) {
+    this.parent.moveToIndex(this, index);
+  },
+
+  moveToBottom: function() {
+    this.parent.moveToBottom(this);
+  },
+
+  moveToTop: function(image) {
+    this.parent.moveToTop(this);
+  },
+
+  insertAboveIndex: function(image, index) {
+    this.parent.insertAboveIndex(this, index);
+  },
+
+  insertBelowIndex: function(image, index) {
+    this.parent.insertBelowIndex(this, index);
+  },
+
+  insertAboveResource: function(image, resource) {
+    this.parent.insertAboveResource(this, resource);
+  },
+
+  insertBelowResource: function(image, resource) {
+    this.parent.insertBelowResource(this, resource);
+  },
+
+  moveUpOne: function(image) {
+    this.parent.moveUpOne(this);
+  },
+
+  moveDownOne: function(image) {
+    this.parent.moveDownOne(this);
   }
 
 };

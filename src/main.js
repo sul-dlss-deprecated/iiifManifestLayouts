@@ -117,7 +117,6 @@ var manifestor = function(options) {
 
 
   function scrollHandler(event) {
-    viewer.forceRedraw();
     if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
       renderState.setState({ lastScrollPosition: $(this).scrollTop() });
       osd.setViewerBoundsFromState(true);
@@ -125,15 +124,6 @@ var manifestor = function(options) {
   }
 
   scrollContainer.on('scroll', scrollHandler);
-
-  d3.timer(function() {
-    if (_destroyed) {
-      return true;
-    }
-
-    viewer.forceRedraw();
-    return false;
-  });
 
   function getState() {
     return viewerState.getState();
@@ -232,7 +222,7 @@ var manifestor = function(options) {
 
       osd.disableZoomAndPan();
       d.setScrollElementEvents();
-      osd.setViewerBoundsFromState(true);
+      osd.setViewerBoundsFromState(animateViewport);
 
       setTimeout(function(){ // Do we want this to happen based on an event instead?
         renderState.setState({zooming: false});
