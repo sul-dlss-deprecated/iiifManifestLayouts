@@ -126,6 +126,7 @@ OsdRenderer.prototype = {
         var tileDrawnHandler = function(event) {
           if (event.tiledImage === tiledImage) {
             imageResource.setStatus('drawn');
+            self.syncAllImageProperties(imageResource);
             self.viewer.removeHandler('tile-drawn', tileDrawnHandler);
           }
         };
@@ -146,6 +147,9 @@ OsdRenderer.prototype = {
   },
 
   syncAllImageProperties: function(imageResource) {
+    var self = this;
+    console.log(self);
+
     if(imageResource.osdTiledImage) {
       var bounds = imageResource.getGlobalBounds();
       // the "true" second argument is the "immediately" flag,

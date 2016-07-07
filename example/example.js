@@ -11,17 +11,17 @@ var App = {
     this.$images.empty();
 
     // Some choice fixture objects with real content.
-   [
-   {url: 'http://demos.biblissima-condorcet.fr/iiif/metadata/BVMM/chateauroux/manifest.json', label: 'BNF Detail Images Demo (Chateauroux)'},
-   {url:'http://manifests.ydc2.yale.edu/manifest/Osbornfa1v2.json', label: "Yale Osborn with choice (see 53r)"},
-   {url: 'http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', label: 'Stanford DMS Manuscript (example of typical object)'},
-   {url: 'http://iiif.ub.uni-leipzig.de/0000000001/manifest.json', label: 'Leipzig Scroll'}
-   ].forEach(function(fixture) {
-    $('<option>')
-      .val(fixture.url)
-      .text(fixture.label)
-      .appendTo(App.$manifestPicker);
-   });
+    [
+      {url: 'http://demos.biblissima-condorcet.fr/iiif/metadata/BVMM/chateauroux/manifest.json', label: 'BNF Detail Images Demo (Chateauroux)'},
+      {url:'http://manifests.ydc2.yale.edu/manifest/Osbornfa1v2.json', label: "Yale Osborn with choice (see 53r)"},
+      {url: 'http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', label: 'Stanford DMS Manuscript (example of typical object)'},
+      {url: 'http://iiif.ub.uni-leipzig.de/0000000001/manifest.json', label: 'Leipzig Scroll'}
+    ].forEach(function(fixture) {
+      $('<option>')
+        .val(fixture.url)
+        .text(fixture.label)
+        .appendTo(App.$manifestPicker);
+    });
 
     this.openSelectedManifest();
 
@@ -181,8 +181,8 @@ var App = {
           var layerThumb = $('<img class="layerthumb">');
           var label = $('<h3 class="layerName">').append('<span>'+text+image.getStatus()+'</span>');
           var slider = $('<input class="opacitySlider" type="range" min="0" max="100" step="2" value="100">');
-          // var sliderLabel = $('<label>').text('Opacity');
-
+          slider.val(image.getOpacity() * 100);
+          var sliderLabel = $('<label>').text('Opacity');
           var checkbox = $('<input type=checkbox>');
           checkbox.prop('checked', image.getVisibile());
 
@@ -202,7 +202,7 @@ var App = {
           listItem.append(label);
           listItem.prepend(layerThumb);
           listItem.prepend(checkbox);
-          // listItem.append(sliderLabel);
+          listItem.append(sliderLabel);
           label.append(slider);
           listItem.prependTo(self.$images);
         });
