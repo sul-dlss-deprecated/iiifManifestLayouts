@@ -113,15 +113,11 @@ var App = {
           right: 10,
           bottom: 20 // units in % of pixel height of viewport
         },
-        // selectedCanvas: manifest.sequences[0].canvases[50]['@id']
+        selectedCanvas: manifest.sequences[0].canvases[10]['@id']
       });
 
       self.viewer.selectViewingMode(self.currentMode);
 
-      // Debug/example code: Listen for tile source requests and loads
-      self.viewer.on('detail-tile-source-requested', function(e) {
-        console.log('detail tile source requested', e.detail);
-      });
       self.viewer.on('viewer-state-updated', function() {
         console.log('I have updated!');
       });
@@ -145,14 +141,18 @@ var App = {
       });
 
       var _setCheckbox = function(id, value) {
-        var checkbox = $('#' + id);
+        var checkbox = $('#' + id).find('input[type=checkbox]');
         checkbox.prop('checked', value);
       };
 
       self.viewer.on('image-hide', function(e) {
+        console.log(e);
+        _setCheckbox(e.id, e.getVisible());
       });
 
       self.viewer.on('image-show', function(e) {
+        console.log(e);
+        _setCheckbox(e.id, e.getVisible());
       });
 
       self.viewer.on('image-status-updated', function(imageResource) {
@@ -163,11 +163,9 @@ var App = {
         self.selectedCanvas = canvas;
         self.$images.empty();
 
-        console.log(selectedCanvas);
         window.selectedCanvas = selectedCanvas;
 
         self.selectedCanvas.images.forEach(function(image) {
-          console.log(image);
           var text = image.label;
           if(image.imageType === 'main') {
             text += " (default)";
@@ -182,9 +180,9 @@ var App = {
           var label = $('<h3 class="layerName">').append('<span>'+text+image.getStatus()+'</span>');
           var slider = $('<input class="opacitySlider" type="range" min="0" max="100" step="2" value="100">');
           slider.val(image.getOpacity() * 100);
-          var sliderLabel = $('<label>').text('Opacity');
+          // var sliderLabel = $('<label>').text('Opacity');
           var checkbox = $('<input type=checkbox>');
-          checkbox.prop('checked', image.getVisibile());
+          checkbox.prop('checked', image.getVisible());
 
           checkbox.on('change', function(event) {
             if(event.target.checked) {
@@ -202,7 +200,7 @@ var App = {
           listItem.append(label);
           listItem.prepend(layerThumb);
           listItem.prepend(checkbox);
-          listItem.append(sliderLabel);
+          // listItem.append(sliderLabel);
           label.append(slider);
           listItem.prependTo(self.$images);
         });
@@ -221,10 +219,6 @@ var App = {
       key('shift+j', function() {
         if (self.viewer) {
           self.viewer.selectPerspective('detail');
-          var selectedCanvas = self.viewer.getSelectedCanvas();
-          if(selectedCanvas) {
-            _setImagesForCanvas(selectedCanvas);
-          }
         }
         console.log('shifting to detail perspective');
       });

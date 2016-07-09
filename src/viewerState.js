@@ -24,6 +24,7 @@ viewerState.prototype = {
   },
 
   setState: function(newState) {
+    console.log('started');
     var differences = {};
     for(var key in newState) {
       if(newState.hasOwnProperty(key)) {
@@ -37,6 +38,7 @@ viewerState.prototype = {
   },
 
   selectedCanvasObject: function(newCanvas) {
+    console.log('canvasSet');
     if (!arguments.length) {
       return this.state.canvasObjects[this.state.selectedCanvas];
     } else  {

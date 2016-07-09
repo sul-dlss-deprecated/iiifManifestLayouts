@@ -22,18 +22,16 @@ ImageResource.prototype = {
     if (!this.needed) {
       this.setNeeded(true);
     }
-    this.opacity = 1;
     this.visible = true;
     this.dispatcher.emit('image-show', this);
   },
 
   hide: function(timeout) {
     this.visible = false;
-    this.opacity = 0;
     this.dispatcher.emit('image-hide', this);
   },
 
-  getVisibile: function() {
+  getVisible: function() {
     return this.visible;
   },
 
@@ -54,7 +52,9 @@ ImageResource.prototype = {
 
   setOpacity: function(opacity) {
     this.opacity = opacity;
-    this.dispatcher.emit('image-opacity-updated', this);
+    if ( this.visible ) {
+      this.dispatcher.emit('image-opacity-updated', this);
+    }
   },
 
   getOpacity: function() {

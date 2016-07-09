@@ -30,6 +30,7 @@ var CanvasObject = function(config) {
       }
     });
   }
+
   this.thumbnailResource = ThumbnailFactory(this.canvas, self);
 };
 
@@ -62,6 +63,10 @@ CanvasObject.prototype = {
     return this.images.filter(function(image) { return image.id === id; })[0];
   },
 
+  getThumbnailResource: function() {
+    return this.thumbnailResource;
+  },
+
   setBounds: function(x, y, width, height) {
     var self = this;
     this.bounds.x = x;
@@ -90,6 +95,46 @@ CanvasObject.prototype = {
 
   getAspectRatio: function() {
     return this.bounds.width / this.bounds.height;
+  },
+
+  getThumbnailNeeded: function() {
+    return this.thumbnailNeeded;
+  },
+
+  setThumbnailNeeded: function(needed) {
+    this.thumbnailNeeded = needed;
+    if (needed) {
+      this.thumbnailResource.setNeeded(true);
+      this.dispatcher.emit('canvas-thumbnail-needed', this);
+    }
+  },
+
+  show: function(timeout) {
+    if (!this.needed) {
+      this.setNeeded(true);
+    }
+    this.visible = true;
+    this.dispatcher.emit('image-show', this);
+  },
+
+  hide: function(timeout) {
+    this.visible = false;
+    this.dispatcher.emit('image-hide', this);
+  },
+
+  getVisible: function() {
+    return this.visible;
+  },
+
+  setNeeded: function(needed) {
+    this.needed = needed;
+    if (needed) {
+      this.dispatcher.emit('canvas-needed', this);
+    }
+  },
+
+  getNeeded: function() {
+    return this.needed;
   },
 
   getOpacity: function() {

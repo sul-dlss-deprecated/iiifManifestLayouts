@@ -112,6 +112,8 @@ var manifestor = function(options) {
   osd.addOSDHandlers(viewerState, renderState);
   viewer.addHandler('animation', function(event) {
     // Synchronise d3 canvases with OSD zoom events.
+    // Add this to the renderstate, or route through an
+    // internal "action";
     d.scaleForZoom(osd.getViewerScale(), osd.getZoomTranslation());
   });
 

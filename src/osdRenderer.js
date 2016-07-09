@@ -26,7 +26,7 @@ var OsdRenderer = function(config) {
   });
   this.dispatcher.on('image-hide', function(imageResource) {
     if (imageResource.getStatus() === 'drawn') {
-      self.updateImageOpacity(imageResource);
+      imageResource.osdTiledImage.setOpacity(0);
     }
   });
   this.dispatcher.on('image-opacity-updated', function(imageResource) {
@@ -35,9 +35,12 @@ var OsdRenderer = function(config) {
     }
   });
 
-  // transition start
+  // Transition start
+  // disable all user control
 
-  // transition end
+  // Transition end
+  // re-enable the control appropriate for this mode.
+  //
 };
 
 OsdRenderer.prototype = {
@@ -57,17 +60,6 @@ OsdRenderer.prototype = {
   updateItemIndex: function() {
     if(this.tiledImage && this.viewer.world.getItemCount() > this.zIndex) {
       this.viewer.world.setItemIndex(this.tiledImage, this.zIndex);
-    }
-  },
-
-  openThumbnail: function(canvasObject) {
-    var self = this;
-    this.thumbnail = ThumbnailFactory(this.canvas, self);
-    if(this.thumbnail) {
-      self.openTileSource(imageResource);
-      this.images.push(this.thumbnail);
-    } else { // sometimes there isn't a thumbnail
-      this.openMainTileSource();
     }
   },
 
@@ -101,7 +93,7 @@ OsdRenderer.prototype = {
     var self = this;
 
     // We've already loaded this tilesource
-    if(imageResource.status === 'shown') {
+    if(imageResource.status === 'drawn') {
       return;
     }
 
@@ -122,11 +114,11 @@ OsdRenderer.prototype = {
 
         imageResource.osdTiledImage = tiledImage;
         imageResource.setStatus('loaded');
+        self.syncAllImageProperties(imageResource);
 
         var tileDrawnHandler = function(event) {
           if (event.tiledImage === tiledImage) {
             imageResource.setStatus('drawn');
-            self.syncAllImageProperties(imageResource);
             self.viewer.removeHandler('tile-drawn', tileDrawnHandler);
           }
         };
@@ -148,12 +140,11 @@ OsdRenderer.prototype = {
 
   syncAllImageProperties: function(imageResource) {
     var self = this;
-    console.log(self);
 
     if(imageResource.osdTiledImage) {
       var bounds = imageResource.getGlobalBounds();
-      // the "true" second argument is the "immediately" flag,
-      // telling osd not to animate.
+      // If ever the clipRegion parameter becomes
+      // writable, add it here.
       imageResource.osdTiledImage.setPosition({
         x:bounds.x,
         y:bounds.y
@@ -180,9 +171,9 @@ OsdRenderer.prototype = {
     }
   },
 
-  fadeTilesource: function(targetOpacity, callback) {
+  fadeTilesource: function(startingOpacity, targetOpacity, callback) {
     var self = this;
-    var currentOpacity = this.opacity;
+
     var step = (targetOpacity - currentOpacity) / 30;
     if (step === 0) {
       if (callback) callback();
@@ -190,14 +181,14 @@ OsdRenderer.prototype = {
     }
 
     var frame = function() {
-      currentOpacity += step;
-      if ((step > 0 && currentOpacity >= targetOpacity) || (step < 0 && currentOpacity <= targetOpacity)) {
+      startingOpacity += step;
+      if ((step > 0 && startingOpacity >= targetOpacity) || (step < 0 && startingOpacity <= targetOpacity)) {
         self.setOpacity(targetOpacity);
         if (callback) callback();
         return;
       }
 
-      self.setOpacity(currentOpacity);
+      self.setOpacity(startingOpacity);
       OpenSeadragon.requestAnimationFrame(frame);
     };
     OpenSeadragon.requestAnimationFrame(frame);
@@ -230,7 +221,6 @@ OsdRenderer.prototype = {
       vState.height
     );
 
-    console.log(animate);
     this.viewer.viewport.fitBounds(viewBounds, animate);
   },
 
@@ -321,13 +311,13 @@ OsdRenderer.prototype = {
 
         if (changed) {
           self.renderState.setState({ inZoomConstraints: true });
-          self.viewer.viewport.fitBounds(currentBounds);
+          self.viewer.viewport.fitBounds(constraintBounds);
           self.renderState.setState({ inZoomConstraints: false });
         }
       }
 
-      // var zoom = viewer.viewport.getZoom();
-      // var maxZoom = 2;
+      var zoom = self.viewer.viewport.getZoom();
+      var maxZoom = 2;
 
       // var zoomPoint = viewer.viewport.zoomPoint || viewer.viewport.getCenter();
       // var info = this.hitTest(zoomPoint);
@@ -345,9 +335,9 @@ OsdRenderer.prototype = {
         // }
       // }
 
-      // if (zoom > maxZoom) {
-      //   this.viewer.viewport.zoomSpring.target.value = maxZoom;
-      // }
+      if (zoom > maxZoom) {
+        self.viewer.viewport.zoomSpring.target.value = maxZoom;
+      }
     };
 
     this.viewer.addHandler('zoom', function(event) {
