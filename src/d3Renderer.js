@@ -1,5 +1,3 @@
-'use strict';
-
 var d3 = require('./lib/d3-slim-dist');
 
 var d3Utils = function(config) {

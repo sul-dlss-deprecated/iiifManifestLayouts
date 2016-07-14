@@ -1,12 +1,10 @@
 var d3 = require('./lib/d3-slim-dist'),
     manifestLayout = require('./manifestLayout'),
-    CanvasObject = require('./canvasObject'),
-    CanvasUtils = require('./canvasUtils'),
     ViewerState = require('./viewerState'),
     iiif = require('./iiifUtils'),
     RenderState = require('./renderState'),
     OsdRenderer = require('./osdRenderer'),
-    d3Utils = require('./d3Utils'),
+    d3Renderer = require('./d3Renderer'),
     events = require('events');
 
 var manifestor = function(options) {
@@ -98,7 +96,7 @@ var manifestor = function(options) {
     overviewTop: 0
   });
 
-  d = new d3Utils({
+  d = new d3Renderer({
     dispatcher: dispatcher,
     viewerState: viewerState,
     renderState: renderState,
@@ -209,8 +207,9 @@ var manifestor = function(options) {
       viewBounds = frames.filter(function(frame) {
         return frame.canvas.selected;
       })[0].vantage;
-
       renderState.setState({constraintBounds: viewBounds});
+
+      dispatcher.emit('transition-to-detail');
       var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
       d.setScrollElementEvents();
       viewer.viewport.fitBounds(osdBounds, !animateViewport);
@@ -221,6 +220,7 @@ var manifestor = function(options) {
         overviewTop: frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100),
         zooming: true
       });
+      dispatcher.emit('transition-to-overview');
 
       osd.disableZoomAndPan();
       d.setScrollElementEvents();

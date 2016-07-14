@@ -35,10 +35,10 @@ var OsdRenderer = function(config) {
     }
   });
 
-  // Transition start
+  // Perspective transition start
   // disable all user control
 
-  // Transition end
+  // Perspective transition end
   // re-enable the control appropriate for this mode.
   //
 };
@@ -253,7 +253,6 @@ OsdRenderer.prototype = {
       if(zoom >= _transitionZoomLevel) {
         for(var key in state.canvasObjects) {
           if(state.canvasObjects[key].containsPoint(center)) {
-            self.openMainTileSource(state.canvasObjects[key]);
           }
         }
       }
