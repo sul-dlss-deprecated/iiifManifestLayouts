@@ -2,8 +2,8 @@
   "name": "iiifManifestLayout",
   "version": "0.0.10",
   "description": "A project that does stuff.",
-  "homepage": "https://github.com/sul-dlss/iiifManifestLayouts",
-  "repository": "sul-dlss/iiifManifestLayouts",
+  "homepage": "https://sul-dlss.github.io/iiifManifestLayouts",
+  "repository": "https://github.com/sul-dlss/iiifManifestLayouts",
   "author": "aeschylus",
   "files": [
     "dist"
