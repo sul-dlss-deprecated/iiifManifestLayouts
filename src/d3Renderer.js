@@ -1,6 +1,6 @@
 var d3 = require('./lib/d3-slim-dist');
 
-var d3Utils = function(config) {
+var d3Renderer = function(config) {
   this.dispatcher = config.dispatcher;
   this.renderState = config.renderState;
   this.viewerState = config.viewerState;
@@ -11,7 +11,7 @@ var d3Utils = function(config) {
   this.labelClass = config.labelClass;
 };
 
-d3Utils.prototype = {
+d3Renderer.prototype = {
   setScrollElementEvents: function() {
     if(! this.viewerState) {
       return;
@@ -163,8 +163,8 @@ d3Utils.prototype = {
         canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
         // canvasImageState.openThumbnail();
       });
-    // .append('img')
-    // .attr('src', function(d) { return d.canvas.iiifService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
+      // .append('img')
+      // .attr('src', function(d) { return d.canvas.id + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
 
     frameEnter.append('div')
       .attr('class', this.labelClass)
@@ -181,4 +181,4 @@ d3Utils.prototype = {
   }
 };
 
-module.exports = d3Utils;
+module.exports = d3Renderer;

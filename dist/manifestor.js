@@ -19891,18 +19891,16 @@ $.extend( $.World.prototype, $.EventSource.prototype, /** @lends OpenSeadragon.W
 }( OpenSeadragon ));
 
 },{}],3:[function(require,module,exports){
-'use strict';
-
-require('openseadragon');
-
 var ImageResource = function(config) {
+  'use strict';
+
   this.id = config.id;
   this.label = config.label || "No Label";
   this.needed = config.needed || false;
   this.visible = config.visible || false;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
-  this.bounds = config.bounds || new OpenSeadragon.Rect(0, 0, 1, 1);
+  this.bounds = config.bounds || {x:0, y:0, width:1,height:1};
   this.zIndex = config.zIndex;
   this.tileSource = config.tileSource;
   this.dynamic = config.dynamic || false;
@@ -19910,139 +19908,77 @@ var ImageResource = function(config) {
   this.status = 'initialized'; // can be 'requested', 'pending','shown', or 'failed'
   this.parent = config.parent;
   this.dispatcher = config.parent.dispatcher;
-  this.viewer = config.parent.viewer;
 };
 
 ImageResource.prototype = {
-  hide: function() {
-    this.visible = false;
-    this.updateOpacity();
-    this.dispatcher.emit('image-hide', {detail: this.id});
-  },
-
-  show: function() {
-    this.visible = true;
-    this.updateOpacity();
-    this.dispatcher.emit('image-show', {detail: this.id});
-  },
-
-  updateOpacity: function() {
-    if(this.tiledImage) {
-      if(this.visible) {
-        this.tiledImage.setOpacity(this.opacity * this.parent.getOpacity());
-      } else {
-        this.tiledImage.setOpacity(0);
-      }
+  show: function(timeout) {
+    if (!this.needed) {
+      this.setNeeded(true);
     }
+    this.visible = true;
+    this.dispatcher.emit('image-show', this);
+  },
+
+  hide: function(timeout) {
+    this.visible = false;
+    this.dispatcher.emit('image-hide', this);
+  },
+
+  getVisible: function() {
+    return this.visible;
+  },
+
+  setNeeded: function(needed) {
+    this.needed = needed;
+    if (needed) {
+      this.dispatcher.emit('image-needed', this);
+    }
+  },
+
+  getThumbnailNeeded: function() {
+    return this.needed;
+  },
+
+  getFullNeeded: function() {
+    return this.needed;
   },
 
   setOpacity: function(opacity) {
     this.opacity = opacity;
-    this.updateOpacity();
+    if ( this.visible ) {
+      this.dispatcher.emit('image-opacity-updated', this);
+    }
   },
 
   getOpacity: function() {
     return this.opacity;
   },
 
-  openTileSource: function(options) {
-    var self = this;
-
-    options = options || {};
-
-    // We've already loaded this tilesource
-    if(this.status === 'shown') {
-      return;
-    }
-
-    // otherwise, continue loading the tileSource.
-    this.dispatcher.emit('image-resource-tile-source-requested', { 'detail': self });
-    this.status = 'requested';
-    var bounds = this._getBoundsInViewer(this.bounds);
-
-    this.viewer.addTiledImage({
-      x: bounds.x,
-      y: bounds.y,
-      width: bounds.width,
-      tileSource: this.tileSource,
-      opacity: this.opacity,
-      clip: this.clipRegion,
-      index: this.zIndex,
-
-      success: function(event) {
-        var main = event.item;
-
-        var finish = function() {
-          self.tiledImage = main;
-          self.updateForParentChange(true);
-          self.updateOpacity();
-          self.updateItemIndex();
-          self.show();
-          self.status = 'shown';
-          self.dispatcher.emit('image-resource-tile-source-opened', { detail: self });
-        };
-
-        if (options.waitForFirstTile) {
-          self.status = 'pending';
-
-          var tileDrawnHandler = function(event) {
-            if (event.tiledImage === main) {
-              finish();
-              self.viewer.removeHandler('tile-drawn', tileDrawnHandler);
-            }
-          };
-
-          self.parent.viewer.addHandler('tile-drawn', tileDrawnHandler);
-        } else {
-          finish();
-        }
-      },
-
-      error: function(event) {
-        var errorInfo = {
-          id: self.tileSource,
-          message: event.message,
-          source: event.source
-        };
-        self.status = 'failed';
-        self.parent.dispatcher.emit('image-resource-tile-source-failed', {'detail': errorInfo});
-      }
-    });
-  },
-
   getImageType: function() {
     return this.imageType;
   },
 
-  getBounds: function() {
-    return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+  getLocalBounds: function() {
+    // Eexpressed as 0-1 factor of parent.
+    //
+    // For example: { x: 0.2, y: 0.8, width: 0.34, height: 0.12 }
+    // These are intended to be multiplied by the parent canvas
+    // dimensions to obtain global coordinates.
+    return this.bounds;
   },
 
-  _getBoundsInViewer: function(rect) {
-    if(rect) {
-      return new OpenSeadragon.Rect(
-          this.parent.bounds.x + (this.parent.bounds.width * rect.x),
-          this.parent.bounds.y + (this.parent.bounds.width * rect.y),
-          this.parent.bounds.width * rect.width,
-          this.parent.bounds.height * rect.height
-      );
-    }
+  getGlobalBounds: function() {
+    var self = this;
+    return {
+      x: this.parent.bounds.x + (this.parent.bounds.width * self.bounds.x),
+      y: this.parent.bounds.y + (this.parent.bounds.width * self.bounds.y),
+      width: this.parent.bounds.width * self.bounds.width,
+      height: this.parent.bounds.height * self.bounds.height
+    };
   },
 
-  updateForParentChange: function(immediately) {
-    if(this.tiledImage) {
-      var bounds = this._getBoundsInViewer(this.bounds);
-      this.tiledImage.setPosition(bounds.getTopLeft(), immediately);
-      this.tiledImage.setWidth(bounds.width, immediately);
-    }
-  },
-
-  //Assumes that the point parameter is already in viewport coordinates.
-  containsViewerPoint: function(point) {
-    var bounds = this._getBoundsInViewer(this.bounds);
-
-    var width = this.parent.bounds.width * this.width;
-    var height = this.parent.bounds.height * this.height;
+  containsGlobalPoint: function(point) {
+    var bounds = this.getGlobalBounds();
 
     var rectRight = bounds.x + bounds.width;
     var rectBottom = bounds.y + bounds.height;
@@ -20050,58 +19986,56 @@ ImageResource.prototype = {
     return (bounds.x <= point.x && rectRight >= point.x && bounds.y <= point.y && rectBottom >= point.y);
   },
 
+  setStatus: function(status) {
+    this.status = status;
+    this.dispatcher.emit('image-status-updated', this);
+  },
+
   getStatus: function() {
     return this.status;
   },
 
-  destroy: function() {
-    if(this.tiledImage) {
-      this.viewer.world.removeItem(this.tiledImage);
-      this.tiledImage = null;
-    }
+  moveToIndex: function(index) {
+    this.parent.moveToIndex(this, index);
   },
 
-   fade: function(targetOpacity, callback) {
-    var self = this;
-    var currentOpacity = this.opacity;
-    var step = (targetOpacity - currentOpacity) / 30;
-    if (step === 0) {
-      if (callback) callback();
-      return;
-    }
-
-    var frame = function() {
-      currentOpacity += step;
-      if ((step > 0 && currentOpacity >= targetOpacity) || (step < 0 && currentOpacity <= targetOpacity)) {
-        self.setOpacity(targetOpacity);
-        if (callback) callback();
-        return;
-      }
-
-      self.setOpacity(currentOpacity);
-      OpenSeadragon.requestAnimationFrame(frame);
-    };
-    OpenSeadragon.requestAnimationFrame(frame);
+  moveToBottom: function() {
+    this.parent.moveToBottom(this);
   },
 
-  updateItemIndex: function() {
-    if(this.tiledImage && this.viewer.world.getItemCount() > this.zIndex) {
-      this.viewer.world.setItemIndex(this.tiledImage, this.zIndex);
-    }
+  moveToTop: function(image) {
+    this.parent.moveToTop(this);
   },
 
-  removeFromCanvas: function() {
-    var previous = this.parent.images.indexOf(this);
-    this.parent.images.splice(previous, 1);
+  insertAboveIndex: function(image, index) {
+    this.parent.insertAboveIndex(this, index);
   },
-}
+
+  insertBelowIndex: function(image, index) {
+    this.parent.insertBelowIndex(this, index);
+  },
+
+  insertAboveResource: function(image, resource) {
+    this.parent.insertAboveResource(this, resource);
+  },
+
+  insertBelowResource: function(image, resource) {
+    this.parent.insertBelowResource(this, resource);
+  },
+
+  moveUpOne: function(image) {
+    this.parent.moveUpOne(this);
+  },
+
+  moveDownOne: function(image) {
+    this.parent.moveDownOne(this);
+  }
+
+};
 
 module.exports = ImageResource;
 
-},{"openseadragon":2}],4:[function(require,module,exports){
-'use strict';
-
-require('openseadragon');
+},{}],4:[function(require,module,exports){
 var ImageResource = require('./ImageResource');
 
 var _getRectFromStringArray = function(arr) {
@@ -20109,7 +20043,12 @@ var _getRectFromStringArray = function(arr) {
     return parseInt(number, 10);
   });
 
-  return new OpenSeadragon.Rect(rectArray[0] , rectArray[1], rectArray[2], rectArray[3]);
+  return {
+    x: rectArray[0],
+    y: rectArray[1],
+    width: rectArray[2],
+    height: rectArray[3]
+  };
 };
 
 var _getSegmentFromUrl = function(url) {
@@ -20178,7 +20117,7 @@ var _buildChoiceConfigs = function(resource) {
       config.imageType = type;
     }
     return config;
-  }
+  };
   var configs = [];
   var choice = _buildImageChoice(resource.default, 'main');
   if(choice) {
@@ -20199,12 +20138,12 @@ var ImageResourceFactory = function(image, parent) {
 
   var _makeCoordinatesPercentages = function(bounds) {
     // We want to deal with these in terms of percentages relative to the canvas.
-    return new OpenSeadragon.Rect(
-      bounds.x / parent.bounds.width,
-      bounds.y / parent.bounds.width,
-      bounds.width / parent.bounds.width,
-      bounds.height / parent.bounds.height
-    );
+    return {
+      x: bounds.x / parent.bounds.width,
+      y: bounds.y / parent.bounds.width,
+      width: bounds.width / parent.bounds.width,
+      height: bounds.height / parent.bounds.height
+    };
   };
 
   var _makeImageFromConfig = function(config) {
@@ -20223,23 +20162,20 @@ var ImageResourceFactory = function(image, parent) {
     case 'dctypes:Image':
       var config = _buildImageConfig(image.resource);
       return _makeImageFromConfig(config);
-      break;
     case 'oa:Choice':
       var configs = _buildChoiceConfigs(image.resource);
       return configs.map(function(config) {
         return _makeImageFromConfig(config);
       });
-      break;
     case 'oa:SpecificResource':
       var resource = image.resource;
-      var config = _buildImageConfig(resource);
+      config = _buildImageConfig(resource);
 
       if(config && resource.selector && resource.selector.region) {
         var clipArray = resource.selector.region.split(',');
         config.clipRegion = _getRectFromStringArray(clipArray);
       }
       return _makeImageFromConfig(config);
-      break;
     default:
       throw new Error("Cannot create an image from type " + resourceType);
   }
@@ -20247,7 +20183,7 @@ var ImageResourceFactory = function(image, parent) {
 
 module.exports = ImageResourceFactory;
 
-},{"./ImageResource":3,"openseadragon":2}],5:[function(require,module,exports){
+},{"./ImageResource":3}],5:[function(require,module,exports){
 'use strict';
 
 var ImageResource = require('./ImageResource');
@@ -20255,18 +20191,14 @@ var imageFormatError = "Unsupported image format for LegacyTileSource.";
 
 var _getResourceFormat = function(mimeType) {
   switch(mimeType) {
-    case('image/jpeg'):
-      return 'jpg';
-      break;
-    case('image/png'):
-      return 'png';
-      break;
-    case('image/gif'):
-      return 'gif';
-      break;
-    default:
-      throw(imageFormatError)
-      break;
+  case('image/jpeg'):
+    return 'jpg';
+  case('image/png'):
+    return 'png';
+  case('image/gif'):
+    return 'gif';
+  default:
+    throw(imageFormatError);
   }
 };
 
@@ -20274,7 +20206,7 @@ var _getThumbUrl = function(resource, width) {
 
   var _buildResourceSize = function() {
     return "/full/" + width + ",/";
-  }
+  };
 
   var id = resource['@id'];
   if(!id.toLowerCase().match(/^.*\.(png|jpg|jpeg|gif)$/)) { // it is still a service URL
@@ -20294,15 +20226,15 @@ var _getThumbLevel = function(resource, width, height) {
   return {
     url: _getThumbUrl(resource, width),
     height: height,
-    width: width,
-  }
+    width: width
+  };
 };
 
 var _makeThumbnailConfig = function(resource, parent) {
   var bounds = parent.getBounds();
   var doubleCeiling = function(size) {
     return Math.ceil(size * 2);
-  }
+  };
 
   return {
     tileSource: {
@@ -20344,43 +20276,28 @@ var ThumbnailFactory = function(canvas, parent) {
 module.exports = ThumbnailFactory;
 
 },{"./ImageResource":3}],6:[function(require,module,exports){
-'use strict';
-
-var canvasLayout = function(canvas) {
-  return canvas;
-};
-
-module.exports = canvasLayout;
-
-},{}],7:[function(require,module,exports){
-'use strict';
-
-require('openseadragon');
 var ImageResource = require('./ImageResource');
 var ImageResourceFactory = require('./ImageResourceFactory');
 var ThumbnailFactory = require('./ThumbnailFactory');
 
 var CanvasObject = function(config) {
+  'use strict';
   var self = this;
+
+  this.dispatcher = config.dispatcher;
+  this.id = config.canvas['@id'];
+  this.label = config.canvas.label;
+  this.canvas = config.canvas;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
   this.index = config.index;
-
-  this.id = config.canvas['@id'];
-
   this.bounds = {
     x : config.x || 0,
     y : config.y || 0,
     height : config.canvas.height,
     width : config.canvas.width
   };
-
-  this.label = config.canvas.label;
   this.viewingHint = config.canvas.viewingHint;
-
-  this.dispatcher = config.dispatcher;
-  this.viewer = config.viewer;
-  this.canvas = config.canvas;
   this.images = [];
 
   if(config.canvas.images) {
@@ -20391,54 +20308,11 @@ var CanvasObject = function(config) {
       }
     });
   }
-  this._floatImagesToBottom();
+
+  this.thumbnailResource = ThumbnailFactory(this.canvas, self);
 };
 
 CanvasObject.prototype = {
-  removeThumbnail: function() {
-    if(this.thumbnail){
-      this.thumbnail.fade(0);
-      this.thumbnail.removeFromCanvas();
-      this.thumbnail.destroy();
-      delete this.thumbnail;
-    }
-  },
-
-  openMainTileSource: function(imageIndex) {
-    if(this.images.length === 0) {
-      return; // there are no images to open
-    }
-
-    this.dispatcher.emit('detail-tile-source-opened', { 'detail': this.id });
-
-    var image = this.getMainImage();
-    var self = this;
-
-    var onTileDrawn = function(event) {
-      if(event.detail.tileSource === image.tileSource) {
-        self.dispatcher.removeListener('image-resource-tile-source-opened', onTileDrawn);
-        self.removeThumbnail();
-      }
-    };
-    this.dispatcher.on('image-resource-tile-source-opened', onTileDrawn);
-    var thumbnailStatus = (this.thumbnail ? this.thumbnail.getStatus() : '');
-    image.openTileSource({
-      waitForFirstTile: thumbnailStatus === 'shown'
-    });
-  },
-
-  openThumbnail: function() {
-    var self = this;
-    this.thumbnail = ThumbnailFactory(this.canvas, self);
-    if(this.thumbnail) {
-      this.thumbnail.openTileSource();
-      this.images.push(this.thumbnail);
-      this.dispatcher.emit('detail-thumbnail-opened', { 'detail': this.id });
-    } else { // sometimes there isn't a thumbnail
-      this.openMainTileSource();
-    }
-  },
-
   //Assumes that the point parameter is already in viewport coordinates.
   containsPoint: function(point) {
     var rectRight = this.bounds.x + this.bounds.width;
@@ -20467,6 +20341,10 @@ CanvasObject.prototype = {
     return this.images.filter(function(image) { return image.id === id; })[0];
   },
 
+  getThumbnailResource: function() {
+    return this.thumbnailResource;
+  },
+
   setBounds: function(x, y, width, height) {
     var self = this;
     this.bounds.x = x;
@@ -20474,19 +20352,67 @@ CanvasObject.prototype = {
     this.bounds.width = width;
     this.bounds.height = height;
 
-    this.images.forEach(function(image) {
-      image.updateForParentChange(true);
-    });
+    self.dispatcher.emit('canvas-position-updated', self);
   },
 
-  // Returns an OpenSeadragon Rect object - some OpenSeadragon consumers of this function want one,
-  // and others can get x, y, width and height out easily.
   getBounds: function() {
-    return new OpenSeadragon.Rect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+    var self = this;
+    return {
+      x: this.bounds.x,
+      y: this.bounds.y,
+      width: this.bounds.width,
+      height: this.bounds.height,
+      getTopLeft: function() {
+        return {
+          x: self.bounds.x,
+          y: self.bounds.y
+        };
+      }
+    };
   },
 
   getAspectRatio: function() {
     return this.bounds.width / this.bounds.height;
+  },
+
+  getThumbnailNeeded: function() {
+    return this.thumbnailNeeded;
+  },
+
+  setThumbnailNeeded: function(needed) {
+    this.thumbnailNeeded = needed;
+    if (needed) {
+      this.thumbnailResource.setNeeded(true);
+      this.dispatcher.emit('canvas-thumbnail-needed', this);
+    }
+  },
+
+  show: function(timeout) {
+    if (!this.needed) {
+      this.setNeeded(true);
+    }
+    this.visible = true;
+    this.dispatcher.emit('image-show', this);
+  },
+
+  hide: function(timeout) {
+    this.visible = false;
+    this.dispatcher.emit('image-hide', this);
+  },
+
+  getVisible: function() {
+    return this.visible;
+  },
+
+  setNeeded: function(needed) {
+    this.needed = needed;
+    if (needed) {
+      this.dispatcher.emit('canvas-needed', this);
+    }
+  },
+
+  getNeeded: function() {
+    return this.needed;
   },
 
   getOpacity: function() {
@@ -20512,7 +20438,11 @@ CanvasObject.prototype = {
     this._floatImagesToBottom();
     var oldIndex = this.images.indexOf(image);
 
+    console.log("old index: " + oldIndex);
+    console.log("index: " + index);
     if (index === oldIndex || oldIndex === -1 ) {
+      // Index either is invalid or is the same
+      // as the previous index, requiring no change.
         return;
     }
     if ( index >= this.images.length ) {
@@ -20559,48 +20489,38 @@ CanvasObject.prototype = {
 
   moveDownOne: function(image) {
     this.insertBelowResource(image, image);
-  },
+  }
 };
 
 module.exports = CanvasObject;
 
-},{"./ImageResource":3,"./ImageResourceFactory":4,"./ThumbnailFactory":5,"openseadragon":2}],8:[function(require,module,exports){
-'use strict'
-
+},{"./ImageResource":3,"./ImageResourceFactory":4,"./ThumbnailFactory":5}],7:[function(require,module,exports){
 var CanvasObject = require('./canvasObject');
 
 var CanvasUtils = function(config) {
-  function buildCanvasStates(canvases, viewer, dispatcher) {
+  'use strict';
+
+  var self = this;
+
+  function buildCanvasStates(canvases, dispatcher) {
     var canvasObjects = {};
 
     canvases.forEach(function(canvas, index) {
      canvasObjects[canvas['@id']] = new CanvasObject({
        canvas: canvas,
        index: index,
-       dispatcher: dispatcher,
-       viewer: viewer
+       dispatcher: dispatcher
      });
     });
 
     return canvasObjects;
-  };
+  }
   this.canvases = config.canvases;
   this.dispatcher = config.dispatcher;
-  this.canvasObjects = buildCanvasStates(this.canvases, config.viewer, this.dispatcher);
-}
+  this.canvasObjects = buildCanvasStates(this.canvases, this.dispatcher);
+};
 
 CanvasUtils.prototype = {
-  addImageCluster: function(id) {
-    this.canvasObjects[id] = {
-    };
-  },
-
-  selectCanvas: function(item) {
-    var item = this.canvasObjects[item];
-    item.openMainTileSource();
-    this.dispatcher.emit('canvas-selected', { detail: item });
-  },
-
   isValidCanvasIndex: function(index) {
     return(index > 0 && index < this.canvases.length);
   },
@@ -20608,6 +20528,7 @@ CanvasUtils.prototype = {
   loadTileSourceForIndex: function(index) {
     var canvasId = this.canvases[index]['@id'];
     this.canvasObjects[canvasId].openMainTileSource();
+    // send this as an event, let some renderer handle it.
   },
 
   selectCanvasForIndex: function(index) {
@@ -20616,6 +20537,7 @@ CanvasUtils.prototype = {
   },
 
   navigatePaged: function(currentIndex, incrementValue) {
+    // Simply set which ones are "needed", let osd do the rest.
     var self = this;
     var newIndex = currentIndex + incrementValue;
 
@@ -20631,7 +20553,7 @@ CanvasUtils.prototype = {
     var getCanvasByIndex = function(index) {
       var canvasId = self.canvases[index]['@id'];
       return self.canvasObjects[canvasId];
-    }
+    };
 
     // Do not select non-paged canvases in paged mode. Instead, find the next available
     // canvas that does not have that viewingHint.
@@ -20641,15 +20563,15 @@ CanvasUtils.prototype = {
       newCanvas = getCanvasByIndex(newIndex);
     }
 
-    this.loadTileSourceForIndex(newIndex);
+    // this.loadTileSourceForIndex(newIndex);
 
     // Load tilesource for the non-selected side of the pair, if it exists
     var facingPageIndex = newIndex + incrementValue;
     if(this.isValidCanvasIndex(facingPageIndex)) {
-      this.loadTileSourceForIndex(facingPageIndex);
+      // this.loadTileSourceForIndex(facingPageIndex);
     }
 
-    _this.electCanvasForIndex(newIndex);
+    self.electCanvasForIndex(newIndex);
   },
 
   navigateIndividual: function(currentIndex, incrementValue) {
@@ -20657,7 +20579,7 @@ CanvasUtils.prototype = {
 
     // do nothing if newIndex is out of range
     if (this.isValidCanvasIndex(newIndex)) {
-      this.loadTileSourceForIndex(newIndex);
+      // this.loadTileSourceForIndex(newIndex);
       this.selectCanvasForIndex(newIndex);
     }
   }
@@ -20665,12 +20587,10 @@ CanvasUtils.prototype = {
 
 module.exports = CanvasUtils;
 
-},{"./canvasObject":7}],9:[function(require,module,exports){
-'use strict';
-
+},{"./canvasObject":6}],8:[function(require,module,exports){
 var d3 = require('./lib/d3-slim-dist');
 
-var d3Utils = function(config) {
+var d3Renderer = function(config) {
   this.dispatcher = config.dispatcher;
   this.renderState = config.renderState;
   this.viewerState = config.viewerState;
@@ -20681,7 +20601,7 @@ var d3Utils = function(config) {
   this.labelClass = config.labelClass;
 };
 
-d3Utils.prototype = {
+d3Renderer.prototype = {
   setScrollElementEvents: function() {
     if(! this.viewerState) {
       return;
@@ -20831,10 +20751,10 @@ d3Utils.prototype = {
             canvasImageState = self.viewerState.getState().canvasObjects[canvasData.id];
 
         canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
-        canvasImageState.openThumbnail();
+        // canvasImageState.openThumbnail();
       });
-    // .append('img')
-    // .attr('src', function(d) { return d.canvas.iiifService + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
+      // .append('img')
+      // .attr('src', function(d) { return d.canvas.id + '/full/' + Math.ceil(d.canvas.width * 2) + ',/0/default.jpg';});
 
     frameEnter.append('div')
       .attr('class', this.labelClass)
@@ -20848,12 +20768,12 @@ d3Utils.prototype = {
         .each(function() { ++n; })
         .each("end", function() { if (!--n) callback.apply(this, arguments); });
     }
-  },
+  }
 };
 
-module.exports = d3Utils;
+module.exports = d3Renderer;
 
-},{"./lib/d3-slim-dist":11}],10:[function(require,module,exports){
+},{"./lib/d3-slim-dist":10}],9:[function(require,module,exports){
 'use strict';
 
 var iiifUtils = {
@@ -20937,7 +20857,7 @@ var iiifUtils = {
 
 module.exports = iiifUtils;
 
-},{}],11:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 !function(){
   var d3 = {version: "3.5.8"}; // semver
 var d3_arraySlice = [].slice,
@@ -23434,22 +23354,20 @@ function d3_transitionNode(node, i, ns, id, inherit) {
   else this.d3 = d3;
 }();
 
-},{}],12:[function(require,module,exports){
-'use strict';
-
-var d3 = require('./lib/d3-slim-dist');
-var manifestLayout = require('./manifestLayout');
-var canvasLayout = require('./canvasLayout');
-var CanvasObject = require('./canvasObject');
-var CanvasUtils = require('./canvasUtils');
-var ViewerState = require('./viewerState');
-var RenderState = require('./renderState');
-var OSDUtils = require('./osdUtils');
-var d3Utils = require('./d3Utils');
-var iiif = require('./iiifUtils');
-var events = require('events');
+},{}],11:[function(require,module,exports){
+var d3 = require('./lib/d3-slim-dist'),
+    manifestLayout = require('./manifestLayout'),
+    CanvasUtils = require('./canvasUtils'),
+    ViewerState = require('./viewerState'),
+    iiif = require('./iiifUtils'),
+    RenderState = require('./renderState'),
+    OsdRenderer = require('./osdRenderer'),
+    d3Renderer = require('./d3Renderer'),
+    events = require('events');
 
 var manifestor = function(options) {
+  'use strict';
+
   var manifest = options.manifest,
       sequence = options.sequence,
       canvases = options.sequence ? options.sequence.canvases : manifest.sequences[0].canvases,
@@ -23465,10 +23383,14 @@ var manifestor = function(options) {
       viewerState,
       renderState,
       d, // todo: name this better
-      osd = new OSDUtils(),
       viewer,
       canvasUtils,
-      _dispatcher = new events.EventEmitter(),
+      dispatcher = new events.EventEmitter(),
+      osd = new OsdRenderer({
+        dispatcher: dispatcher,
+        renderState: renderState,
+        viewerState: viewerState
+      }),
       _destroyed = false;
 
   function getViewingDirection() {
@@ -23485,12 +23407,7 @@ var manifestor = function(options) {
     return manifest.viewingHint ? manifest.viewingHint : 'individuals';
   }
 
-  function on(event, handler) {
-    _dispatcher.on(event, handler);
-  }
-
-  // Each canvas will listen when it opens tile sources, and clients consuming this code may attach some as well.
-  _dispatcher.setMaxListeners(canvases.length * 2);
+  dispatcher.setMaxListeners(0);
 
   var fullSizeStyle = {
     'width': '100%',
@@ -23503,7 +23420,7 @@ var manifestor = function(options) {
   var overlays = $('<div class="overlaysContainer">').css(fullSizeStyle);
   var osdContainer = $('<div class="osd-container">').css(fullSizeStyle);
 
-  fullSizeStyle['overflow'] = 'hidden';
+  fullSizeStyle.overflow = 'hidden';
   fullSizeStyle['overflow-x'] = 'hidden';
 
   var scrollContainer = $('<div class="scroll-container">').css(fullSizeStyle);
@@ -23515,12 +23432,11 @@ var manifestor = function(options) {
   viewer = osd.initOSD(osdContainer);
   canvasUtils = new CanvasUtils({
     canvases: canvases,
-    viewer: viewer,
-    dispatcher: _dispatcher
+    dispatcher: dispatcher
   });
 
   viewerState = viewerState || new ViewerState({
-    dispatcher: _dispatcher,
+    dispatcher: dispatcher,
     canvasObjects: canvasUtils.canvasObjects,
     selectedCanvas: selectedCanvas, // @id of the canvas:
     perspective: initialPerspective, // can be 'overview' or 'detail'
@@ -23538,8 +23454,8 @@ var manifestor = function(options) {
     overviewTop: 0
   });
 
-  d = new d3Utils({
-    dispatcher: _dispatcher,
+  d = new d3Renderer({
+    dispatcher: dispatcher,
     viewerState: viewerState,
     renderState: renderState,
     scrollContainer: scrollContainer,
@@ -23552,34 +23468,24 @@ var manifestor = function(options) {
   osd.addOSDHandlers(viewerState, renderState);
   viewer.addHandler('animation', function(event) {
     // Synchronise d3 canvases with OSD zoom events.
+    // Add this to the renderstate, or route through an
+    // internal "action";
     d.scaleForZoom(osd.getViewerScale(), osd.getZoomTranslation());
   });
 
-  function canvasClickHandler(event) {
-    selectCanvas($(this).data('id'));
-  }
 
   function scrollHandler(event) {
     if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
       renderState.setState({ lastScrollPosition: $(this).scrollTop() });
       osd.setViewerBoundsFromState(true);
     }
-  };
+  }
 
-  container.on('click', '.' + canvasClass, canvasClickHandler);
   scrollContainer.on('scroll', scrollHandler);
-
-  d3.timer(function() {
-    if (_destroyed) {
-      return true;
-    }
-
-    viewer.forceRedraw();
-  });
 
   function getState() {
     return viewerState.getState();
-  };
+  }
 
   // Do we really want to expose this?
   function setState(state) {
@@ -23638,10 +23544,10 @@ var manifestor = function(options) {
     var renderNewPerspective = function(perspective) {
       var animate = (perspective === 'detail');
       var renderComplete = function() {
-        _dispatcher.removeListener('render-layout-complete', renderComplete);
+        dispatcher.removeListener('render-layout-complete', renderComplete);
         doRender(perspective, !animate);
       };
-      _dispatcher.on('render-layout-complete', renderComplete);
+      dispatcher.on('render-layout-complete', renderComplete);
       frames = doRender('intermediate', animate);
     };
 
@@ -23674,7 +23580,7 @@ var manifestor = function(options) {
 
       osd.disableZoomAndPan();
       d.setScrollElementEvents();
-      osd.setViewerBoundsFromState(!animateViewport);
+      osd.setViewerBoundsFromState(animateViewport);
 
       setTimeout(function(){ // Do we want this to happen based on an event instead?
         renderState.setState({zooming: false});
@@ -23683,10 +23589,10 @@ var manifestor = function(options) {
     }
   }
 
-  _dispatcher.on('viewer-state-updated', render);
+  dispatcher.on('viewer-state-updated', render);
 
   function selectCanvas(item) {
-    canvasUtils.selectCanvas(item);
+    viewerState.selectedCanvasObject(item);
   }
 
   function getSelectedCanvas() {
@@ -23725,15 +23631,15 @@ var manifestor = function(options) {
   }
 
   function _navigate(forward) {
-    var state = viewerState.getState();
-    var currentCanvasIndex = viewerState.selectedCanvasObject().index;
-    var incrementValue = forward ? 1 : -1;
+    // var state = viewerState.getState();
+    // var currentCanvasIndex = viewerState.selectedCanvasObject().index;
+    // var incrementValue = forward ? 1 : -1;
 
-    if(state.viewingMode === 'paged') {
-      canvasUtils.navigatePaged(currentCanvasIndex, incrementValue);
-    } else {
-      canvasUtils.navigateIndividual(currentCanvasIndex, incrementValue);
-    }
+    // if(state.viewingMode === 'paged') {
+    //   canvasUtils.navigatePaged(currentCanvasIndex, incrementValue);
+    // } else {
+    //   canvasUtils.navigateIndividual(currentCanvasIndex, incrementValue);
+    // }
   }
 
   function next() {
@@ -23745,7 +23651,6 @@ var manifestor = function(options) {
   }
 
   function destroy() {
-    // TODO: is there more cleanup needed?
     if (viewer) {
       viewer.destroy();
     }
@@ -23754,7 +23659,6 @@ var manifestor = function(options) {
     overlays.remove();
     scrollContainer.remove();
     osdContainer.remove();
-    container.off('click', canvasClickHandler);
 
     viewerState = null;
     renderState = null;
@@ -23763,6 +23667,10 @@ var manifestor = function(options) {
     canvasUtils = null;
 
     _destroyed = true; // cancels the timer
+  }
+
+  function on(event, handler) {
+    dispatcher.on(event, handler);
   }
 
   return {
@@ -23775,18 +23683,19 @@ var manifestor = function(options) {
     selectPerspective: selectPerspective,
     selectViewingMode: selectViewingMode,
     selectViewingDirection: selectViewingDirection,
+    // selectLayoutStrategy: selectLayoutStrategy,
     updateThumbSize: updateThumbSize,
     getState: getState,
     setState: setState,
     osd: viewer,
-    on: on,
+    on: on, // takes an event name and a callback
     getSelectedCanvas: getSelectedCanvas
   };
 };
 
 module.exports = manifestor;
 
-},{"./canvasLayout":6,"./canvasObject":7,"./canvasUtils":8,"./d3Utils":9,"./iiifUtils":10,"./lib/d3-slim-dist":11,"./manifestLayout":13,"./osdUtils":14,"./renderState":15,"./viewerState":16,"events":1}],13:[function(require,module,exports){
+},{"./canvasUtils":7,"./d3Renderer":8,"./iiifUtils":9,"./lib/d3-slim-dist":10,"./manifestLayout":12,"./osdRenderer":13,"./renderState":14,"./viewerState":15,"events":1}],12:[function(require,module,exports){
 'use strict';
 
 var manifestLayout = function(options) {
@@ -24475,15 +24384,53 @@ var manifestLayout = function(options) {
 
 module.exports = manifestLayout;
 
-},{}],14:[function(require,module,exports){
-'use strict';
-
+},{}],13:[function(require,module,exports){
 require('openseadragon');
 
-var OSDUtils = function() {
+var OsdRenderer = function(config) {
+  var self = this;
+
+  this.dispatcher = config.dispatcher;
+  this.renderState = config.renderState;
+  this.viewerState = config.viewerState;
+  this.scrollContainer = config.scrollContainer;
+
+  this.dispatcher.on('canvas-position-updated', function(canvasObject) {
+    canvasObject.images.forEach(function(imageResource) {
+      self.updateImagePosition(imageResource);
+    });
+  });
+  this.dispatcher.on('image-needed', function(imageResource) {
+    self.openTileSource(imageResource);
+  });
+  this.dispatcher.on('image-show', function(imageResource) {
+    // Check whether or not this item has been drawn.
+    // This implies that the request has been issued already
+    // and the opacity can be updated.
+    if (imageResource.getStatus() === 'drawn') {
+      self.updateImageOpacity(imageResource);
+    }
+  });
+  this.dispatcher.on('image-hide', function(imageResource) {
+    if (imageResource.getStatus() === 'drawn') {
+      imageResource.osdTiledImage.setOpacity(0);
+    }
+  });
+  this.dispatcher.on('image-opacity-updated', function(imageResource) {
+    if (imageResource.getStatus() === 'drawn') {
+      self.updateImageOpacity(imageResource);
+    }
+  });
+
+  // Perspective transition start
+  // disable all user control
+
+  // Perspective transition end
+  // re-enable the control appropriate for this mode.
+  //
 };
 
-OSDUtils.prototype = {
+OsdRenderer.prototype = {
   initOSD: function(osdContainer) {
     this.viewer = OpenSeadragon({
       element: osdContainer[0],
@@ -24492,6 +24439,146 @@ OSDUtils.prototype = {
     });
 
     return this.viewer;
+  },
+
+  tileSourceConfig: function(imageResource) {
+  },
+
+  updateItemIndex: function() {
+    if(this.tiledImage && this.viewer.world.getItemCount() > this.zIndex) {
+      this.viewer.world.setItemIndex(this.tiledImage, this.zIndex);
+    }
+  },
+
+  getTileSourceFromImageResource: function() {
+    return {};
+  },
+
+  removeThumbnail: function(imageResource) {
+    if(imageResource.thumbnail){
+      imageResource.thumbnail.fade(0);
+      imageResource.thumbnail.removeFromCanvas();
+      imageResource.thumbnail.destroy();
+      delete imageResource.thumbnail;
+    }
+  },
+
+  removeTilesource: function(imageResourceID) {
+    if(this.tiledImage) {
+      this.viewer.world.removeItem(this.tiledImage);
+      this.tiledImage = null;
+    }
+  },
+
+  updateImageOpacity: function(imageResource) {
+    if(imageResource.osdTiledImage) {
+      imageResource.osdTiledImage.setOpacity(imageResource.opacity * imageResource.parent.getOpacity());
+    }
+  },
+
+  openTileSource: function(imageResource, tileSource) {
+    var self = this;
+
+    // We've already loaded this tilesource
+    if(imageResource.status === 'drawn') {
+      return;
+    }
+
+    imageResource.setStatus('requested');
+    var bounds = imageResource.getGlobalBounds();
+
+    this.viewer.addTiledImage({
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      tileSource: imageResource.tileSource,
+      opacity: imageResource.opacity,
+      clip: imageResource.clipRegion,
+      index: imageResource.zIndex,
+
+      success: function(event) {
+        var tiledImage = event.item;
+
+        imageResource.osdTiledImage = tiledImage;
+        imageResource.setStatus('loaded');
+        self.syncAllImageProperties(imageResource);
+
+        var tileDrawnHandler = function(event) {
+          if (event.tiledImage === tiledImage) {
+            imageResource.setStatus('drawn');
+            self.viewer.removeHandler('tile-drawn', tileDrawnHandler);
+          }
+        };
+        self.viewer.addHandler('tile-drawn', tileDrawnHandler);
+      },
+
+      error: function(event) {
+        // Add any auth information here.
+        //
+        // var errorInfo = {
+        //   id: imageResource.osdTileSource,
+        //   message: event.message,
+        //   source: event.source
+        // };
+        imageResource.setStatus('failed');
+      }
+    });
+  },
+
+  syncAllImageProperties: function(imageResource) {
+    var self = this;
+
+    if(imageResource.osdTiledImage) {
+      var bounds = imageResource.getGlobalBounds();
+      // If ever the clipRegion parameter becomes
+      // writable, add it here.
+      imageResource.osdTiledImage.setPosition({
+        x:bounds.x,
+        y:bounds.y
+      }, true);
+      imageResource.osdTiledImage.setWidth(bounds.width, true);
+      imageResource.osdTiledImage.setOpacity(
+        imageResource.getOpacity() * imageResource.parent.getOpacity()
+      );
+      self.updateImageLayeringIndex(imageResource);
+    }
+  },
+
+  updateImageLayeringIndex: function(imageResource) {
+  },
+
+  updateImagePosition: function(imageResource) {
+    if(imageResource.osdTiledImage) {
+      var bounds = imageResource.getGlobalBounds();
+      bounds = new OpenSeadragon.Rect(bounds.x, bounds.y, bounds.width, bounds.height);
+      // the "true" second argument is the "immediately" flag,
+      // telling osd not to animate.
+      imageResource.osdTiledImage.setPosition(bounds.getTopLeft(), true);
+      imageResource.osdTiledImage.setWidth(bounds.width, true);
+    }
+  },
+
+  fadeTilesource: function(startingOpacity, targetOpacity, callback) {
+    var self = this;
+
+    var step = (targetOpacity - currentOpacity) / 30;
+    if (step === 0) {
+      if (callback) callback();
+      return;
+    }
+
+    var frame = function() {
+      startingOpacity += step;
+      if ((step > 0 && startingOpacity >= targetOpacity) || (step < 0 && startingOpacity <= targetOpacity)) {
+        self.setOpacity(targetOpacity);
+        if (callback) callback();
+        return;
+      }
+
+      self.setOpacity(startingOpacity);
+      OpenSeadragon.requestAnimationFrame(frame);
+    };
+    OpenSeadragon.requestAnimationFrame(frame);
   },
 
   disableZoomAndPan: function() {
@@ -24514,7 +24601,13 @@ OSDUtils.prototype = {
     }
     var rState = this.renderState.getState();
     var vState = this.viewerState.getState();
-    var viewBounds = new OpenSeadragon.Rect(rState.overviewLeft, rState.overviewTop + rState.lastScrollPosition, vState.width, vState.height);
+    var viewBounds = new OpenSeadragon.Rect(
+      rState.overviewLeft,
+      rState.overviewTop + rState.lastScrollPosition,
+      vState.width,
+      vState.height
+    );
+
     this.viewer.viewport.fitBounds(viewBounds, animate);
   },
 
@@ -24547,12 +24640,10 @@ OSDUtils.prototype = {
       if(zoom >= _transitionZoomLevel) {
         for(var key in state.canvasObjects) {
           if(state.canvasObjects[key].containsPoint(center)) {
-            state.canvasObjects[key].openMainTileSource();
           }
         }
       }
     };
-
 
     var _applyConstraints = function() {
       var state = self.renderState.getState();
@@ -24563,6 +24654,13 @@ OSDUtils.prototype = {
         state.constraintBounds.height
       );
 
+      // Change the below to check a local variable for
+      // whether the request to update is different. If
+      // not, then do not re-set the bounds. I believe
+      // this is the source of the jitteriness.
+      //
+      // Essentially if we're already zooming to the bound,
+      // then do not re-start the animation spring - just no-op.
       if (constraintBounds && !state.inZoomConstraints) {
         var changed = false;
         var currentBounds = self.viewer.viewport.getBounds();
@@ -24599,13 +24697,13 @@ OSDUtils.prototype = {
 
         if (changed) {
           self.renderState.setState({ inZoomConstraints: true });
-          self.viewer.viewport.fitBounds(currentBounds);
+          self.viewer.viewport.fitBounds(constraintBounds);
           self.renderState.setState({ inZoomConstraints: false });
         }
       }
 
-      // var zoom = viewer.viewport.getZoom();
-      // var maxZoom = 2;
+      var zoom = self.viewer.viewport.getZoom();
+      var maxZoom = 2;
 
       // var zoomPoint = viewer.viewport.zoomPoint || viewer.viewport.getCenter();
       // var info = this.hitTest(zoomPoint);
@@ -24623,16 +24721,20 @@ OSDUtils.prototype = {
         // }
       // }
 
-      // if (zoom > maxZoom) {
-      //   this.viewer.viewport.zoomSpring.target.value = maxZoom;
-      // }
-    }
+      if (zoom > maxZoom) {
+        self.viewer.viewport.zoomSpring.target.value = maxZoom;
+      }
+    };
+
     this.viewer.addHandler('zoom', function(event) {
       if (self.viewerState.getState().perspective === 'detail') {
         _applyConstraints();
       }
+      // getting the center won't work if there isn't a tilesource
+      // already opened, because openseadragon doesn't have a concept
+      // of a rectangle without an image ("frame").
       var center = self.viewer.viewport.getBounds().getCenter();
-      _semanticZoom(event.zoom, center);
+      // _semanticZoom(event.zoom, center);
     });
 
     this.viewer.addHandler('pan', function(event) {
@@ -24640,32 +24742,14 @@ OSDUtils.prototype = {
         _applyConstraints();
       }
       var zoom = self.viewer.viewport.getZoom();
-      _semanticZoom(zoom, event.center);
-    });
-
-    this.viewer.addHandler('canvas-click', function(event) {
-      var hitCanvases = [];
-      var clickPosition = self.viewer.viewport.pointFromPixel(event.position);
-      var state = viewerState.getState();
-      for(var key in state.canvasObjects) {
-        if(state.canvasObjects[key].containsPoint(clickPosition)){
-          hitCanvases.push(state.canvasObjects[key]);
-        }
-      }
-      if(event.quick && hitCanvases[0]) {
-        var bounds = hitCanvases[0].getBounds();
-        self.viewer.viewport.fitBounds(bounds);
-        hitCanvases[0].openMainTileSource();
-      }
+      // _semanticZoom(zoom, event.center);
     });
   }
 };
 
-module.exports = OSDUtils;
+module.exports = OsdRenderer;
 
-},{"openseadragon":2}],15:[function(require,module,exports){
-'use strict';
-
+},{"openseadragon":2}],14:[function(require,module,exports){
 var renderState = function(config) {
   this.state = {
     zooming: config.zooming,
@@ -24695,20 +24779,12 @@ renderState.prototype = {
 
 module.exports = renderState;
 
-},{}],16:[function(require,module,exports){
-'use strict';
-
+},{}],15:[function(require,module,exports){
 var canvasUtils = require('./canvasUtils');
 
 var viewerState = function(config) {
   var self = this;
   this.dispatcher = config.dispatcher;
-  this.dispatcher.on('canvas-selected', function(event) {
-    self.setState({
-      selectedCanvas: event.detail.id,
-      perspective: 'detail'
-    });
-  });
 
   this.state = {
     canvasObjects: config.canvasObjects,
@@ -24719,6 +24795,9 @@ var viewerState = function(config) {
     width: config.width,
     height: config.height
   };
+
+  // Listen for actions. This wrapper responds to asynchronous
+  // processes and "actions", as distinct from "events"
 };
 
 viewerState.prototype = {
@@ -24727,6 +24806,7 @@ viewerState.prototype = {
   },
 
   setState: function(newState) {
+    console.log('started');
     var differences = {};
     for(var key in newState) {
       if(newState.hasOwnProperty(key)) {
@@ -24739,12 +24819,30 @@ viewerState.prototype = {
     this.dispatcher.emit('viewer-state-updated', {detail: differences});
   },
 
-  selectedCanvasObject: function() {
-    return this.state.canvasObjects[this.state.selectedCanvas];
+  selectedCanvasObject: function(newCanvas) {
+    console.log('canvasSet');
+    if (!arguments.length) {
+      return this.state.canvasObjects[this.state.selectedCanvas];
+    } else  {
+      this.setState({
+        selectedCanvas: newCanvas,
+        perspective: 'detail'
+      });
+      this.state.canvasObjects[this.state.selectedCanvas].images.filter(function(image) {
+        console.log(image.getImageType());
+        return (image.getImageType() === 'main');
+      }).forEach(function(image) {
+        console.log('deep in the forEach');
+        console.log(image);
+        image.show();
+      });
+      this.dispatcher.emit('canvas-selected', { detail: newCanvas });
+      return this.state.canvasObjects[this.state.selectedCanvas];
+    }
   }
 };
 
 module.exports = viewerState;
 
-},{"./canvasUtils":8}]},{},[12])(12)
+},{"./canvasUtils":7}]},{},[11])(11)
 });
