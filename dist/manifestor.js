@@ -1,7 +1,7 @@
 /*
  iiifManifestLayout
  version: 0.0.10
- https://github.com/sul-dlss/iiifManifestLayouts
+ https://sul-dlss.github.io/iiifManifestLayouts
  Browserified module compilation
 */
 
@@ -19891,11 +19891,10 @@ $.extend( $.World.prototype, $.EventSource.prototype, /** @lends OpenSeadragon.W
 }( OpenSeadragon ));
 
 },{}],3:[function(require,module,exports){
-'use strict';
-
 require('openseadragon');
 
 var ImageResource = function(config) {
+  'use strict';
   this.id = config.id;
   this.label = config.label || "No Label";
   this.needed = config.needed || false;
@@ -19933,6 +19932,7 @@ ImageResource.prototype = {
       } else {
         this.tiledImage.setOpacity(0);
       }
+      console.log(this.tiledImage);
     }
   },
 
@@ -20021,10 +20021,10 @@ ImageResource.prototype = {
   _getBoundsInViewer: function(rect) {
     if(rect) {
       return new OpenSeadragon.Rect(
-          this.parent.bounds.x + (this.parent.bounds.width * rect.x),
-          this.parent.bounds.y + (this.parent.bounds.width * rect.y),
-          this.parent.bounds.width * rect.width,
-          this.parent.bounds.height * rect.height
+        this.parent.bounds.x + (this.parent.bounds.width * rect.x),
+        this.parent.bounds.y + (this.parent.bounds.width * rect.y),
+        this.parent.bounds.width * rect.width,
+        this.parent.bounds.height * rect.height
       );
     }
   },
@@ -20061,7 +20061,7 @@ ImageResource.prototype = {
     }
   },
 
-   fade: function(targetOpacity, callback) {
+  fade: function(targetOpacity, callback) {
     var self = this;
     var currentOpacity = this.opacity;
     var step = (targetOpacity - currentOpacity) / 30;
@@ -20087,20 +20087,18 @@ ImageResource.prototype = {
   updateItemIndex: function() {
     if(this.tiledImage && this.viewer.world.getItemCount() > this.zIndex) {
       this.viewer.world.setItemIndex(this.tiledImage, this.zIndex);
-    }
+   }
   },
 
   removeFromCanvas: function() {
     var previous = this.parent.images.indexOf(this);
     this.parent.images.splice(previous, 1);
-  },
-}
+  }
+};
 
 module.exports = ImageResource;
 
 },{"openseadragon":2}],4:[function(require,module,exports){
-'use strict';
-
 require('openseadragon');
 var ImageResource = require('./ImageResource');
 
@@ -20178,7 +20176,7 @@ var _buildChoiceConfigs = function(resource) {
       config.imageType = type;
     }
     return config;
-  }
+  };
   var configs = [];
   var choice = _buildImageChoice(resource.default, 'main');
   if(choice) {
@@ -20223,23 +20221,20 @@ var ImageResourceFactory = function(image, parent) {
     case 'dctypes:Image':
       var config = _buildImageConfig(image.resource);
       return _makeImageFromConfig(config);
-      break;
     case 'oa:Choice':
       var configs = _buildChoiceConfigs(image.resource);
       return configs.map(function(config) {
         return _makeImageFromConfig(config);
       });
-      break;
     case 'oa:SpecificResource':
       var resource = image.resource;
-      var config = _buildImageConfig(resource);
+      config = _buildImageConfig(resource);
 
       if(config && resource.selector && resource.selector.region) {
         var clipArray = resource.selector.region.split(',');
         config.clipRegion = _getRectFromStringArray(clipArray);
       }
       return _makeImageFromConfig(config);
-      break;
     default:
       throw new Error("Cannot create an image from type " + resourceType);
   }
@@ -20255,18 +20250,14 @@ var imageFormatError = "Unsupported image format for LegacyTileSource.";
 
 var _getResourceFormat = function(mimeType) {
   switch(mimeType) {
-    case('image/jpeg'):
-      return 'jpg';
-      break;
-    case('image/png'):
-      return 'png';
-      break;
-    case('image/gif'):
-      return 'gif';
-      break;
-    default:
-      throw(imageFormatError)
-      break;
+  case('image/jpeg'):
+    return 'jpg';
+  case('image/png'):
+    return 'png';
+  case('image/gif'):
+    return 'gif';
+  default:
+    throw(imageFormatError);
   }
 };
 
@@ -20274,7 +20265,9 @@ var _getThumbUrl = function(resource, width) {
 
   var _buildResourceSize = function() {
     return "/full/" + width + ",/";
-  }
+  };
+
+  console.log(resource);
 
   var id = resource['@id'];
   if(!id.toLowerCase().match(/^.*\.(png|jpg|jpeg|gif)$/)) { // it is still a service URL
@@ -20294,15 +20287,15 @@ var _getThumbLevel = function(resource, width, height) {
   return {
     url: _getThumbUrl(resource, width),
     height: height,
-    width: width,
-  }
+    width: width
+  };
 };
 
 var _makeThumbnailConfig = function(resource, parent) {
   var bounds = parent.getBounds();
   var doubleCeiling = function(size) {
     return Math.ceil(size * 2);
-  }
+  };
 
   return {
     tileSource: {
@@ -20321,6 +20314,7 @@ var _makeThumbnailConfig = function(resource, parent) {
 var ThumbnailFactory = function(canvas, parent) {
   // The canvas has a thumbnail object.
   if(canvas.thumbnail) {
+    console.log('There is a canvas thumbnail');
     return new ImageResource(_makeThumbnailConfig(canvas.thumbnail, parent));
   }
 
@@ -20353,7 +20347,6 @@ var canvasLayout = function(canvas) {
 module.exports = canvasLayout;
 
 },{}],7:[function(require,module,exports){
-'use strict';
 
 require('openseadragon');
 var ImageResource = require('./ImageResource');
@@ -20361,6 +20354,7 @@ var ImageResourceFactory = require('./ImageResourceFactory');
 var ThumbnailFactory = require('./ThumbnailFactory');
 
 var CanvasObject = function(config) {
+  'use strict';
   var self = this;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
@@ -20512,6 +20506,8 @@ CanvasObject.prototype = {
     this._floatImagesToBottom();
     var oldIndex = this.images.indexOf(image);
 
+    console.log("old index: " + oldIndex);
+    console.log("index: " + index);
     if (index === oldIndex || oldIndex === -1 ) {
         return;
     }
@@ -20559,17 +20555,19 @@ CanvasObject.prototype = {
 
   moveDownOne: function(image) {
     this.insertBelowResource(image, image);
-  },
+  }
 };
 
 module.exports = CanvasObject;
 
 },{"./ImageResource":3,"./ImageResourceFactory":4,"./ThumbnailFactory":5,"openseadragon":2}],8:[function(require,module,exports){
-'use strict'
-
 var CanvasObject = require('./canvasObject');
 
 var CanvasUtils = function(config) {
+  'use strict';
+
+  var self = this;
+
   function buildCanvasStates(canvases, viewer, dispatcher) {
     var canvasObjects = {};
 
@@ -20583,11 +20581,15 @@ var CanvasUtils = function(config) {
     });
 
     return canvasObjects;
-  };
+  }
   this.canvases = config.canvases;
   this.dispatcher = config.dispatcher;
   this.canvasObjects = buildCanvasStates(this.canvases, config.viewer, this.dispatcher);
-}
+
+  this.dispatcher.on('canvas-selected', function(actionDetails) {
+    self.selectCanvas(actionDetails.detail);
+  });
+};
 
 CanvasUtils.prototype = {
   addImageCluster: function(id) {
@@ -20596,9 +20598,8 @@ CanvasUtils.prototype = {
   },
 
   selectCanvas: function(item) {
-    var item = this.canvasObjects[item];
+    item = this.canvasObjects[item];
     item.openMainTileSource();
-    this.dispatcher.emit('canvas-selected', { detail: item });
   },
 
   isValidCanvasIndex: function(index) {
@@ -20607,6 +20608,7 @@ CanvasUtils.prototype = {
 
   loadTileSourceForIndex: function(index) {
     var canvasId = this.canvases[index]['@id'];
+    console.log(canvasId);
     this.canvasObjects[canvasId].openMainTileSource();
   },
 
@@ -20631,7 +20633,7 @@ CanvasUtils.prototype = {
     var getCanvasByIndex = function(index) {
       var canvasId = self.canvases[index]['@id'];
       return self.canvasObjects[canvasId];
-    }
+    };
 
     // Do not select non-paged canvases in paged mode. Instead, find the next available
     // canvas that does not have that viewingHint.
@@ -20649,7 +20651,7 @@ CanvasUtils.prototype = {
       this.loadTileSourceForIndex(facingPageIndex);
     }
 
-    _this.electCanvasForIndex(newIndex);
+    self.electCanvasForIndex(newIndex);
   },
 
   navigateIndividual: function(currentIndex, incrementValue) {
@@ -23435,21 +23437,21 @@ function d3_transitionNode(node, i, ns, id, inherit) {
 }();
 
 },{}],12:[function(require,module,exports){
-'use strict';
-
-var d3 = require('./lib/d3-slim-dist');
-var manifestLayout = require('./manifestLayout');
-var canvasLayout = require('./canvasLayout');
-var CanvasObject = require('./canvasObject');
-var CanvasUtils = require('./canvasUtils');
-var ViewerState = require('./viewerState');
-var RenderState = require('./renderState');
-var OSDUtils = require('./osdUtils');
-var d3Utils = require('./d3Utils');
-var iiif = require('./iiifUtils');
-var events = require('events');
+var d3 = require('./lib/d3-slim-dist'),
+    manifestLayout = require('./manifestLayout'),
+    canvasLayout = require('./canvasLayout'),
+    CanvasObject = require('./canvasObject'),
+    CanvasUtils = require('./canvasUtils'),
+    ViewerState = require('./viewerState'),
+    RenderState = require('./renderState'),
+    OSDUtils = require('./osdUtils'),
+    d3Utils = require('./d3Utils'),
+    iiif = require('./iiifUtils'),
+    events = require('events');
 
 var manifestor = function(options) {
+  'use strict';
+
   var manifest = options.manifest,
       sequence = options.sequence,
       canvases = options.sequence ? options.sequence.canvases : manifest.sequences[0].canvases,
@@ -23489,8 +23491,7 @@ var manifestor = function(options) {
     _dispatcher.on(event, handler);
   }
 
-  // Each canvas will listen when it opens tile sources, and clients consuming this code may attach some as well.
-  _dispatcher.setMaxListeners(canvases.length * 2);
+  _dispatcher.setMaxListeners(0);
 
   var fullSizeStyle = {
     'width': '100%',
@@ -23503,7 +23504,7 @@ var manifestor = function(options) {
   var overlays = $('<div class="overlaysContainer">').css(fullSizeStyle);
   var osdContainer = $('<div class="osd-container">').css(fullSizeStyle);
 
-  fullSizeStyle['overflow'] = 'hidden';
+  fullSizeStyle.overflow = 'hidden';
   fullSizeStyle['overflow-x'] = 'hidden';
 
   var scrollContainer = $('<div class="scroll-container">').css(fullSizeStyle);
@@ -23555,18 +23556,14 @@ var manifestor = function(options) {
     d.scaleForZoom(osd.getViewerScale(), osd.getZoomTranslation());
   });
 
-  function canvasClickHandler(event) {
-    selectCanvas($(this).data('id'));
-  }
 
   function scrollHandler(event) {
     if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
       renderState.setState({ lastScrollPosition: $(this).scrollTop() });
       osd.setViewerBoundsFromState(true);
     }
-  };
+  }
 
-  container.on('click', '.' + canvasClass, canvasClickHandler);
   scrollContainer.on('scroll', scrollHandler);
 
   d3.timer(function() {
@@ -23575,11 +23572,12 @@ var manifestor = function(options) {
     }
 
     viewer.forceRedraw();
+    return false;
   });
 
   function getState() {
     return viewerState.getState();
-  };
+  }
 
   // Do we really want to expose this?
   function setState(state) {
@@ -23686,7 +23684,7 @@ var manifestor = function(options) {
   _dispatcher.on('viewer-state-updated', render);
 
   function selectCanvas(item) {
-    canvasUtils.selectCanvas(item);
+    viewerState.selectedCanvasObject(item);
   }
 
   function getSelectedCanvas() {
@@ -23754,7 +23752,6 @@ var manifestor = function(options) {
     overlays.remove();
     scrollContainer.remove();
     osdContainer.remove();
-    container.off('click', canvasClickHandler);
 
     viewerState = null;
     renderState = null;
@@ -23775,6 +23772,7 @@ var manifestor = function(options) {
     selectPerspective: selectPerspective,
     selectViewingMode: selectViewingMode,
     selectViewingDirection: selectViewingDirection,
+    // selectLayoutStrategy: selectLayoutStrategy,
     updateThumbSize: updateThumbSize,
     getState: getState,
     setState: setState,
@@ -24476,8 +24474,6 @@ var manifestLayout = function(options) {
 module.exports = manifestLayout;
 
 },{}],14:[function(require,module,exports){
-'use strict';
-
 require('openseadragon');
 
 var OSDUtils = function() {
@@ -24664,8 +24660,6 @@ OSDUtils.prototype = {
 module.exports = OSDUtils;
 
 },{"openseadragon":2}],15:[function(require,module,exports){
-'use strict';
-
 var renderState = function(config) {
   this.state = {
     zooming: config.zooming,
@@ -24703,12 +24697,6 @@ var canvasUtils = require('./canvasUtils');
 var viewerState = function(config) {
   var self = this;
   this.dispatcher = config.dispatcher;
-  this.dispatcher.on('canvas-selected', function(event) {
-    self.setState({
-      selectedCanvas: event.detail.id,
-      perspective: 'detail'
-    });
-  });
 
   this.state = {
     canvasObjects: config.canvasObjects,
@@ -24739,8 +24727,17 @@ viewerState.prototype = {
     this.dispatcher.emit('viewer-state-updated', {detail: differences});
   },
 
-  selectedCanvasObject: function() {
-    return this.state.canvasObjects[this.state.selectedCanvas];
+  selectedCanvasObject: function(newCanvas) {
+    if (!arguments.length) {
+      return this.state.canvasObjects[this.state.selectedCanvas];
+    } else  {
+      this.setState({
+        selectedCanvas: newCanvas,
+        perspective: 'detail'
+      });
+      this.dispatcher.emit('canvas-selected', { detail: newCanvas });
+      return this.state.canvasObjects[this.state.selectedCanvas];
+    }
   }
 };
 
