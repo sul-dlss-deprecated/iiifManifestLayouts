@@ -1,5 +1,5 @@
 {
-  "name": "iiifManifestLayout",
+  "name": "iiif-almagest",
   "version": "0.0.10",
   "description": "A project that does stuff.",
   "homepage": "https://github.com/sul-dlss/iiifManifestLayouts",
@@ -13,10 +13,10 @@
     "iiif",
     "open",
     "Seadragon",
-    "d",
-    "3"
+    "d3"
   ],
   "dependencies": {
+    "iiif-layout-functions": "0.0.1-alpha.0",
     "openseadragon": "^2.1.0"
   },
   "devDependencies": {

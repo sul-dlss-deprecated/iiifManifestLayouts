@@ -21,20 +21,15 @@
             <h2>Choose Manifest</h2>
             <select id="manifestPicker" name="manifestPicker">
             </select>
-            <h2>Images</h2>
-            <p>Drag the images up and down to change their z-order. Check the box to display them.</p>
-            <ul id="images-list"></ul>
-            <h2>Layout Parameters</h2>
-            <label for=scale>Thumb Size</label>
-            <input id="scale" name="scale" type="range" min=50 max=200 value=100 step=1/>
-            <br/>
-            <label for=strategy>Layout Strategy</label>
-            <select id="strategy" name="strategy">
-                <option value="value1" selected>Fixed Height</option>
-                <option value="value2">Grid</option>
-                <option value="value3">Hybrid</option>
+            <h2>Manifest Navigation</h2>
+            <button>Next</button>
+            <button>Previous</button>
+            <label for=readingDirection>Viewing Perspective</label>
+            <select id="perspective" name="perspective">
+                <option value="overview" selected>Overview</option>
+                <option value="detail">Detail</option>
             </select>
-            <label for=mode>Viewing Mode (m)</label>
+            <label for=mode>Viewing Mode</label>
             <select id="mode" name="mode">
                 <option value="individuals" selected>individuals</option>
                 <option value="paged">paged</option>
@@ -46,6 +41,19 @@
                 <option value="right-to-left">Right to Left</option>
                 <option value="top-to-bottom">Top to Bottom</option>
                 <option value="bottom-to-top">Bottom to Top</option>
+            </select>
+            <h2>Resources for Current Canvas</h2>
+            <p>Drag the images up and down to change their z-order. Check the box to display them.</p>
+            <ul id="images-list"></ul>
+            <h2>Layout Parameters</h2>
+            <label for=scale>Thumb Size</label>
+            <input id="scale" name="scale" type="range" min=50 max=200 value=100 step=1/>
+            <br/>
+            <label for=strategy>Layout Strategy</label>
+            <select id="strategy" name="strategy">
+                <option value="value1" selected>Fixed Height</option>
+                <option value="value2">Grid</option>
+                <option value="value3">Hybrid</option>
             </select>
             <label for=strategy>Canvas Padding</label>
             <input name="" type="text" value="top" />
@@ -70,7 +78,7 @@
         <!-- CONTENT END -->
         <script type="text/javascript" src="../node_modules/jquery/dist/jquery.min.js"></script>
         <script type="text/javascript" src="jquery-ui/jquery-ui.min.js"></script>
-        <script type="text/javascript" src="../dist/manifestor.js"></script>
+        <script type="text/javascript" src="../stage/manifestor.js"></script>
         <script type="text/javascript" src="../node_modules/keymaster/keymaster.js"></script>
         <script type="text/javascript" src="example.js"></script>
     </body>

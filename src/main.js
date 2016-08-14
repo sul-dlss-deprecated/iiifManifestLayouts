@@ -1,238 +1,172 @@
-var d3 = require('./lib/d3-slim-dist'),
-    manifestLayout = require('./manifestLayout'),
-    CanvasUtils = require('./canvasUtils'),
-    ViewerState = require('./viewerState'),
-    iiif = require('./iiifUtils'),
-    RenderState = require('./renderState'),
+var viewerStateStore = require('./viewerState'),
+    renderStateStore = require('./renderState'),
     OsdRenderer = require('./osdRenderer'),
-    d3Renderer = require('./d3Renderer'),
+    D3Renderer = require('./d3Renderer'),
     events = require('events');
 
 var manifestor = function(options) {
   'use strict';
 
-  var manifest = options.manifest,
-      sequence = options.sequence,
-      canvases = options.sequence ? options.sequence.canvases : manifest.sequences[0].canvases,
-      container = options.container,
-      initialViewingDirection = options.viewingDirection ? options.viewingDirection : getViewingDirection(),
-      initialViewingMode = options.viewingMode ? options.viewingHint : getViewingHint(),
-      initialPerspective = options.perspective ? options.perspective : 'overview',
-      selectedCanvas = options.selectedCanvas || iiif.getFirst(canvases),
-      canvasClass = options.canvasClass || 'canvas',
-      frameClass = options.frameClass || 'frame',
-      labelClass = options.labelClass || 'label',
-      viewportPadding = options.viewportPadding,
-      viewerState,
+  var viewerState,
       renderState,
-      d, // todo: name this better
-      viewer,
-      canvasUtils,
-      dispatcher = new events.EventEmitter(),
-      osd = new OsdRenderer({
-        dispatcher: dispatcher,
-        renderState: renderState,
-        viewerState: viewerState
-      }),
-      _destroyed = false;
-
-  function getViewingDirection() {
-    if (sequence && sequence.viewingDirection) {
-      return sequence.viewingDirection;
-    }
-    return manifest.viewingDirection ? manifest.viewingDirection : 'left-to-right';
-  }
-
-  function getViewingHint() {
-    if (sequence && sequence.viewingHint) {
-      return sequence.viewingHint;
-    }
-    return manifest.viewingHint ? manifest.viewingHint : 'individuals';
-  }
+      d3Renderer, // todo: name this better
+      osdRenderer,
+      dispatcher = new events.EventEmitter();
 
   dispatcher.setMaxListeners(0);
+  options.dispatcher = dispatcher;
+  options.width = options.container.offsetWidth;
+  options.height = options.container.offsetHeight;
 
-  var fullSizeStyle = {
-    'width': '100%',
-    'height': '100%',
-    'position': 'absolute',
-    'top': 0,
-    'left': 0
-  };
+  viewerState = viewerStateStore(options);
+  renderState = renderStateStore(options);
 
-  var overlays = $('<div class="overlaysContainer">').css(fullSizeStyle);
-  var osdContainer = $('<div class="osd-container">').css(fullSizeStyle);
-
-  fullSizeStyle.overflow = 'hidden';
-  fullSizeStyle['overflow-x'] = 'hidden';
-
-  var scrollContainer = $('<div class="scroll-container">').css(fullSizeStyle);
-
-  container.append(osdContainer);
-  container.append(scrollContainer);
-  scrollContainer.append(overlays);
-
-  viewer = osd.initOSD(osdContainer);
-  canvasUtils = new CanvasUtils({
-    canvases: canvases,
-    dispatcher: dispatcher
-  });
-
-  viewerState = viewerState || new ViewerState({
+  osdRenderer = new OsdRenderer({
+    container: options.container,
     dispatcher: dispatcher,
-    canvasObjects: canvasUtils.canvasObjects,
-    selectedCanvas: selectedCanvas, // @id of the canvas:
-    perspective: initialPerspective, // can be 'overview' or 'detail'
-    viewingMode: initialViewingMode, // manifest derived or user specified (iiif viewingHint)
-    viewingDirection: initialViewingDirection, // manifest derived or user specified (iiif viewingHint)
-    width: container.width(),
-    height: container.height()
-  });
-  renderState = renderState || new RenderState({
-    zooming: false,
-    constraintBounds: {x:0, y:0, width:container.width(), height:container.height()},
-    inZoomConstraints: false,
-    lastScrollPosition: $(this).scrollTop(),
-    overviewLeft: 0,
-    overviewTop: 0
+    renderState: renderState,
+    viewerState: viewerState
   });
 
-  d = new d3Renderer({
+  d3Renderer = D3Renderer({
     dispatcher: dispatcher,
     viewerState: viewerState,
     renderState: renderState,
-    scrollContainer: scrollContainer,
-    overlays: overlays,
-    canvasClass: canvasClass,
-    frameClass: frameClass,
-    labelClass: labelClass
+    container: options.container,
+    canvasClass: options.canvasClass || 'canvas',
+    frameClass: options.frameClass || 'frame',
+    labelClass: options.labelClass || 'label'
   });
+  // var renderState = new RenderState({
+  //   zooming: false,
+  //   constraintBounds: {
+  //     x:0,
+  //     y:0,
+  //     width:options.container.width(),
+  //     height: options.container.height()
+  //   },
+  //   inZoomConstraints: false,
+  //   overviewLeft: 0,
+  //   overviewTop: 0
+  // });
 
-  osd.addOSDHandlers(viewerState, renderState);
-  viewer.addHandler('animation', function(event) {
-    // Synchronise d3 canvases with OSD zoom events.
-    // Add this to the renderstate, or route through an
-    // internal "action";
-    d.scaleForZoom(osd.getViewerScale(), osd.getZoomTranslation());
-  });
 
+  // function scrollHandler(event) {
+  //   if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
+  //     renderState.setState({ lastScrollPosition: $(this).scrollTop() });
+  //     osd.setViewerBoundsFromState(true);
+  //   }
+  // }
 
-  function scrollHandler(event) {
-    if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
-      renderState.setState({ lastScrollPosition: $(this).scrollTop() });
-      osd.setViewerBoundsFromState(true);
-    }
-  }
-
-  scrollContainer.on('scroll', scrollHandler);
-
-  function getState() {
-    return viewerState.getState();
-  }
+  // scrollContainer.on('scroll', scrollHandler);
 
   // Do we really want to expose this?
   function setState(state) {
     viewerState.setState(state);
   }
 
-  function render(event) {
-    var differences = event.detail;
-    var userState = viewerState.getState();
-    var previousPerspective = differences.perspective || userState.perspective;
+  // function render(event) {
+  //   var differences = event.detail;
+  //   var userState = viewerState.getState();
+  //   var previousPerspective = differences.perspective || userState.perspective;
 
-    // Layout is configured from current user state. The
-    // layout algorithm, viewing hints, animations (such as
-    // initial layout without animation) are all
-    // functions of the current user state.
-    var layout = manifestLayout({
-      canvases: canvases,
-      width: userState.width,
-      height: userState.height,
-      scaleFactor: userState.scaleFactor,
-      viewingDirection: userState.viewingDirection,
-      viewingMode: userState.viewingMode,
-      canvasHeight: 100,
-      canvasWidth: 100,
-      selectedCanvas: userState.selectedCanvas,
-      framePadding: {
-        top: 10,
-        bottom: 40,
-        left: 10,
-        right: 10
-      },
-      viewportPadding: viewportPadding,
-      minimumImageGap: 5, // precent of viewport
-      facingCanvasPadding: 0.1 // precent of viewport
-    });
+  //   // Layout is configured from current user state. The
+  //   // layout algorithm, viewing hints, animations (such as
+  //   // initial layout without animation) are all
+  //   // functions of the current user state.
+  //   var layout = manifestLayout({
+  //     canvases: canvases,
+  //     width: userState.width,
+  //     height: userState.height,
+  //     scaleFactor: userState.scaleFactor,
+  //     viewingDirection: userState.viewingDirection,
+  //     viewingMode: userState.viewingMode,
+  //     canvasHeight: 100,
+  //     canvasWidth: 100,
+  //     selectedCanvas: userState.selectedCanvas,
+  //     framePadding: {
+  //       top: 10,
+  //       bottom: 40,
+  //       left: 10,
+  //       right: 10
+  //     },
+  //     viewportPadding: viewportPadding,
+  //     minimumImageGap: 5, // precent of viewport
+  //     facingCanvasPadding: 0.1 // precent of viewport
+  //   });
 
-    var getFrames = function (mode) {
-      var canvas = viewerState.selectedCanvasObject();
-      var anchor = canvas.getBounds().getTopLeft();
-      var frames = layout[mode](anchor);
-      return frames;
-    };
+  //   var getFrames = function (mode) {
+  //     var canvas = viewerState.selectedCanvasObject();
+  //     var anchor = canvas.getBounds().getTopLeft();
+  //     var frames = layout[mode](anchor);
+  //     return frames;
+  //   };
 
-    var doRender = function (mode, animate) {
-      if (differences.length === 1 && differences[0] === 'scaleFactor') {
-        animate = false;
-      }
+  //   var doRender = function (mode, animate) {
+  //     if (differences.length === 1 && differences[0] === 'scaleFactor') {
+  //       // Immediate-mode changes
+  //       // All other properties held constant
+  //       animate = false;
+  //     }
 
-      var frames = getFrames(mode);
-      d.renderLayout(frames, animate);
-      return frames;
-    };
+  //     var frames = getFrames(mode);
+  //     // (-_-) ...srsly?
+  //     d.renderLayout(frames, animate);
+  //     return frames;
+  //   };
 
-    var frames;
+  //   var frames;
 
-    var renderNewPerspective = function(perspective) {
-      var animate = (perspective === 'detail');
-      var renderComplete = function() {
-        dispatcher.removeListener('render-layout-complete', renderComplete);
-        doRender(perspective, !animate);
-      };
-      dispatcher.on('render-layout-complete', renderComplete);
-      frames = doRender('intermediate', animate);
-    };
+  //   var renderNewPerspective = function(perspective) {
+  //     var animate = (perspective === 'detail');
 
-    if('perspective' in differences) {
-      renderNewPerspective(userState.perspective);
-    } else {
-      var animateRender = ('selectedCanvas' in differences || 'viewingMode' in differences);
-      frames = doRender(userState.perspective, animateRender);
-    }
+  //     var renderComplete = function() {
+  //       // Adding and then removing sets up the two-stage animation.
+  //       dispatcher.removeListener('render-layout-complete', renderComplete);
+  //       doRender(perspective, !animate);
+  //     };
+  //     dispatcher.on('render-layout-complete', renderComplete);
+  //     frames = doRender('intermediate', animate);
+  //   };
 
-    var animateViewport = ('perspective' in differences || 'selectedCanvas' in differences);
+  //   if('perspective' in differences) {
+  //     renderNewPerspective(userState.perspective);
+  //   } else {
+  //     var animateRender = ('selectedCanvas' in differences || 'viewingMode' in differences);
+  //     frames = doRender(userState.perspective, animateRender);
+  //   }
 
-    var viewBounds;
-    if (userState.perspective === 'detail') {
-      viewBounds = frames.filter(function(frame) {
-        return frame.canvas.selected;
-      })[0].vantage;
+  //   var animateViewport = ('perspective' in differences || 'selectedCanvas' in differences);
 
-      renderState.setState({constraintBounds: viewBounds});
-      var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
-      d.setScrollElementEvents();
-      viewer.viewport.fitBounds(osdBounds, !animateViewport);
-      osd.enableZoomAndPan();
-    } else {
-      renderState.setState({
-        overviewLeft: frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100),
-        overviewTop: frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100),
-        zooming: true
-      });
+  //   var viewBounds;
+  //   if (userState.perspective === 'detail') {
+  //     viewBounds = frames.filter(function(frame) {
+  //       return frame.canvas.selected;
+  //     })[0].vantage;
 
-      osd.disableZoomAndPan();
-      d.setScrollElementEvents();
-      osd.setViewerBoundsFromState(animateViewport);
+  //     renderState.setState({constraintBounds: viewBounds});
+  //     var osdBounds = new OpenSeadragon.Rect(viewBounds.x, viewBounds.y, viewBounds.width, viewBounds.height);
+  //     d.setScrollElementEvents();
+  //     viewer.viewport.fitBounds(osdBounds, !animateViewport);
+  //     osd.enableZoomAndPan();
+  //   } else {
+  //     renderState.setState({
+  //       overviewLeft: frames[0].x - (layout.viewport.width * layout.viewport.padding.left / 100),
+  //       overviewTop: frames[0].y - (layout.viewport.height * layout.viewport.padding.top / 100),
+  //       zooming: true
+  //     });
 
-      setTimeout(function(){ // Do we want this to happen based on an event instead?
-        renderState.setState({zooming: false});
-        d.setScrollElementEvents();
-      }, 1200);
-    }
-  }
+  //     osd.disableZoomAndPan();
+  //     d.setScrollElementEvents();
+  //     osd.setViewerBoundsFromState(animateViewport);
 
-  dispatcher.on('viewer-state-updated', render);
+  //     setTimeout(function(){ // Do we want this to happen based on an event instead?
+  //       renderState.setState({zooming: false});
+  //       d.setScrollElementEvents();
+  //     }, 1200);
+  //   }
+  // }
+
 
   function selectCanvas(item) {
     viewerState.selectedCanvasObject(item);
@@ -293,32 +227,9 @@ var manifestor = function(options) {
     _navigate(false);
   }
 
-  function destroy() {
-    if (viewer) {
-      viewer.destroy();
-    }
-    osd = null;
-
-    overlays.remove();
-    scrollContainer.remove();
-    osdContainer.remove();
-
-    viewerState = null;
-    renderState = null;
-
-    d = null;
-    canvasUtils = null;
-
-    _destroyed = true; // cancels the timer
-  }
-
-  function on(event, handler) {
-    dispatcher.on(event, handler);
-  }
-
   return {
-    destroy: destroy,
-    // scrollThumbs: scrollThumbs,
+    // Actions to update the internal state.
+    // setScrollPosition: setScrollPosition,
     next: next,
     previous: previous,
     resize: resize,
@@ -326,13 +237,18 @@ var manifestor = function(options) {
     selectPerspective: selectPerspective,
     selectViewingMode: selectViewingMode,
     selectViewingDirection: selectViewingDirection,
-    // selectLayoutStrategy: selectLayoutStrategy,
     updateThumbSize: updateThumbSize,
-    getState: getState,
+    on: function on(event, handler) {
+      dispatcher.on(event, handler);
+    },
+
+    // Convenience methods for reading state
+    getSelectedCanvas: getSelectedCanvas,
+    getState: function() {
+      return viewerState.getState();
+    },
     setState: setState,
-    osd: viewer,
-    on: on, // takes an event name and a callback
-    getSelectedCanvas: getSelectedCanvas
+    osd: osdRenderer.viewer
   };
 };
 

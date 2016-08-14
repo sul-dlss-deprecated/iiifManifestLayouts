@@ -1,20 +1,19 @@
 var renderState = function(config) {
-  this.state = {
+  var state = {
     zooming: config.zooming,
     constraintBounds: config.constraintBounds,
     inZoomConstraints: config.inZoomConstraints,
-    lastScrollPosition: config.lastScrollPosition,
+    scrollPosition: config.lastScrollPosition,
     overviewLeft: config.overviewLeft,
     overviewTop: config.overviewTop
   };
-};
 
-renderState.prototype = {
-  getState: function() {
-    return this.state;
-  },
 
-  setState: function(newState) {
+  function getState() {
+    return state;
+  }
+
+  function setState(newState) {
     for(var key in newState) {
       if(newState.hasOwnProperty(key)) {
         if(this.state[key] !== newState[key]) {

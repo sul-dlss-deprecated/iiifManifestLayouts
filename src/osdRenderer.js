@@ -1,12 +1,17 @@
 require('openseadragon');
 
-var OsdRenderer = function(config) {
+var OsdRenderer = function(options) {
   var self = this;
 
-  this.dispatcher = config.dispatcher;
-  this.renderState = config.renderState;
-  this.viewerState = config.viewerState;
-  this.scrollContainer = config.scrollContainer;
+  this.dispatcher = options.dispatcher;
+  this.renderState = options.renderState;
+  this.viewerState = options.viewerState;
+  this.viewer = OpenSeadragon({
+    element: options.container,
+    showNavigationControl: false,
+    preserveViewport: true
+  });
+  self.addOSDHandlers(this.viewerState, this.renderState);
 
   this.dispatcher.on('canvas-position-updated', function(canvasObject) {
     canvasObject.images.forEach(function(imageResource) {
@@ -14,6 +19,7 @@ var OsdRenderer = function(config) {
     });
   });
   this.dispatcher.on('image-needed', function(imageResource) {
+    console.log('image-needed');
     self.openTileSource(imageResource);
   });
   this.dispatcher.on('image-show', function(imageResource) {
@@ -35,23 +41,44 @@ var OsdRenderer = function(config) {
     }
   });
 
-  // Perspective transition start
-  // disable all user control
-
-  // Perspective transition end
-  // re-enable the control appropriate for this mode.
-  //
+  // this.dispatcher.on('immediateUpdate', self.immediateUpdate);
+  // this.dispatcher.on('transitionToOverview', self.overviewTransition);
+  // this.dispatcher.on('transitionToDetail', self.detailTransition);
+  // this.dispatcher.on('selectCanvas', self.selectCanvas);
+  // this.dispatcher.on('changeViewingMode', self.changeViewingMode);
+  // this.dispatcher.on('changeViewingDirection', self.changeViewingMode);
+  // this.dispatcher.on('translateZoom', self.translateZoom);
 };
 
 OsdRenderer.prototype = {
-  initOSD: function(osdContainer) {
-    this.viewer = OpenSeadragon({
-      element: osdContainer[0],
-      showNavigationControl: false,
-      preserveViewport: true
-    });
-
-    return this.viewer;
+  immediateUpdate: function() {
+    // Set the viewport to the correct
+    // zoom level and framing area.
+    var canvas = this.viewerState.selectedCanvasObject();
+    var anchor = canvas.getBounds().getTopLeft();
+    this.setViewerBoundsFromState(false);
+  },
+  transitionToOverview: function() {
+    // Zoom out to the overview
+    // target area for the selected
+    // canvas with an animation.
+  },
+  transitionToDetail: function() {
+    // Zoom in to the detail view
+    // target area for the selected
+    // canvas with an animation.
+  },
+  selectCanvas: function() {
+    // Pan and Zoom to the target
+    // area with an animation.
+  },
+  changeViewingMode: function() {
+    // Pan and Zoom to the frame
+    // area with an animation.
+  },
+  changeViewingDirection: function() {
+    // Zoom out to image constraints
+    // for currently selected image.
   },
 
   tileSourceConfig: function(imageResource) {
@@ -347,7 +374,7 @@ OsdRenderer.prototype = {
       // already opened, because openseadragon doesn't have a concept
       // of a rectangle without an image ("frame").
       var center = self.viewer.viewport.getBounds().getCenter();
-      // _semanticZoom(event.zoom, center);
+      _semanticZoom(event.zoom, center);
     });
 
     this.viewer.addHandler('pan', function(event) {
@@ -355,7 +382,7 @@ OsdRenderer.prototype = {
         _applyConstraints();
       }
       var zoom = self.viewer.viewport.getZoom();
-      // _semanticZoom(zoom, event.center);
+      _semanticZoom(zoom, event.center);
     });
   }
 };

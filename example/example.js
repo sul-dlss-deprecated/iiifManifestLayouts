@@ -102,7 +102,7 @@ var App = {
 
       self.viewer = manifestor({
         manifest: manifest,
-        container: $('#example-container'),
+        container: $('#example-container')[0],
         perspective:  'overview',
         canvasClass: 'canvas', //default set to 'canvas'
         frameClass: 'frame', //default set to 'frame'
@@ -250,7 +250,8 @@ var App = {
     if (this.viewer) {
       this.viewer.selectViewingMode(newMode);
     }
-  }
+  },
+
 };
 
 // ----------
