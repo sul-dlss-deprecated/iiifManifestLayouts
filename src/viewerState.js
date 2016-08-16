@@ -12,6 +12,7 @@ var viewerState = function(config) {
         viewingDirection : config.viewingDirection ? config.viewingDirection : getViewingDirection(config.sequence, config.manifest), // manifest derived or user specified (iiif viewingHint)
         width : config.width,
         height : config.height,
+        scaleFactor: config.scaleFactor,
         framePadding : config.framePadding,
         viewportPadding : config.viewportPadding,
         minimumImageGap : config.viewportPadding,
@@ -70,7 +71,6 @@ var viewerState = function(config) {
   }
 
   function selectedCanvasObject(newCanvas) {
-    console.log('canvasSet');
     if (!arguments.length) {
       return state.canvasObjects[state.selectedCanvas];
     } else  {
@@ -78,6 +78,9 @@ var viewerState = function(config) {
         selectedCanvas: newCanvas,
         perspective: 'detail'
       });
+
+      // Mark all canvases as "needed" that may be in a view with this canvas
+      // This is accomplished by means of the "show" method on its image resources.
       state.canvasObjects[state.selectedCanvas].images.filter(function(image) {
         console.log(image.getImageType());
         return (image.getImageType() === 'main');
@@ -86,6 +89,7 @@ var viewerState = function(config) {
         image.show();
       });
       dispatcher.emit('canvas-selected', { detail: newCanvas });
+      console.log('canvasSet');
       return state.canvasObjects[state.selectedCanvas];
     }
   }
@@ -95,8 +99,19 @@ var viewerState = function(config) {
       return state.perspective;
     } else  {
       state.perspective = perspective;
-      dispatcher.emit('perspective-updated');
+
+      dispatcher.emit('perspectiveUpdated');
       return state.perspective;
+    }
+  }
+
+  function scaleFactor(scaleFactor){
+    if (!arguments.length) {
+      return state.scaleFactor;
+    } else  {
+      state.scaleFactor = scaleFactor;
+      dispatcher.emit('scaleFactorUpdated');
+      return state.scaleFactor;
     }
   }
 
@@ -135,7 +150,7 @@ var viewerState = function(config) {
       // this.loadTileSourceForIndex(facingPageIndex);
     }
 
-    self.electCanvasForIndex(newIndex);
+    self.selectCanvasForIndex(newIndex);
   }
 
   function navigateIndividual(currentIndex, incrementValue) {
@@ -147,6 +162,7 @@ var viewerState = function(config) {
       this.selectCanvasForIndex(newIndex);
     }
   }
+
   // Listen for actions. This wrapper responds to asynchronous
   // processes and "actions", as distinct from "events", which
   // notify other consumers of state changes.

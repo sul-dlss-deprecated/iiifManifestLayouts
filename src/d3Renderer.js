@@ -1,81 +1,185 @@
 var d3 = require('./lib/d3-slim-dist'),
-manifestLayout = require('./manifestLayout.js');
+    manifestLayout = require('iiif-layout-functions');
 
 var d3Renderer = function(config) {
   var dispatcher = config.dispatcher,
       renderState = config.renderState,
       viewerState = config.viewerState,
-      scrollContainer = config.scrollContainer,
       container = config.container,
+      scrollContainer,
+      osdContainer,
       canvasClass = config.canvasClass,
       frameClass = config.frameClass,
       labelClass = config.labelClass;
 
-  // dispatcher.on('immediateUpdate', immediateLayout);
-  // dispatcher.on('scrollOverview', scrollOverview);
-  // dispatcher.on('transitionToOverview', transitionToOverview);
-  // dispatcher.on('transitionToDetail', transitionToDetail;
-  // dispatcher.on('selectCanvas', selectCanvas);
-  // dispatcher.on('changeViewingMode', changeViewingMode);
-  // dispatcher.on('changeViewingDirection', changeViewingMode);
-  // dispatcher.on('translateZoom', setZoomRegion);
+  buildContainers();
   immediateUpdate();
 
-  function setScrollElementEvents() {
-    if(! viewerState) {
-      return;
-    }
-    var animationTiming = 1200;
-    var interactionOverlay = d3.select(container);
+  // dispatcher.on('scrollOverview', scrollOverview);
+  dispatcher.on('currentZoomUpdated', setZoomRegion);
+  dispatcher.on('perspectiveUpdated', changePerspective);
+  // dispatcher.on('selectCanvas', selectCanvas);
+  dispatcher.on('viewingModeUpdated', changeViewingMode);
+  // dispatcher.on('changeViewingDirection', changeViewingMode);
+  dispatcher.on('scaleFactorUpdated', immediateUpdate);
+  dispatcher.on('image-status-updated', updateThumbs);
+
+  function buildContainers() {
+    osdContainer = d3.select(container)
+      .append('div')
+      .attr('class', 'osd-container')
+      .style({
+        width: '100%',
+        height: '100%',
+        position: 'absolute',
+        top: 0,
+        left: 0
+      });
+
+    scrollContainer = d3.select(container).selectAll('.manifest-scroll-container')
+      .data([true]);
+
+    scrollContainer.enter()
+      .append('div')
+      .attr('class', 'manifest-scroll-container')
+      .style({
+        width: '100%',
+        height: '100%',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        'overflow': 'hidden',
+        'overflow-x': 'hidden'
+      });
+
+    container = scrollContainer.selectAll('.manifest-layouts-DOM-container')
+      .data([true]);
+
+    container.enter()
+      .append('div')
+      .attr('class', 'manifest-layouts-DOM-container')
+      .style({
+        width: '100%',
+        height: '100%',
+        position: 'absolute',
+        top: 0,
+        left: 0
+      });
+
+  }
+  enableOverviewScrollEvents();
+
+  function disableScrollEvents() {
     var state = viewerState.getState();
-    if (state.perspective === 'detail') {
-      interactionOverlay
-        .style('opacity', 0)
-        .style('pointer-events', 'none');
+    container
+      .style('pointer-events', 'none');
 
-      d3.select(scrollContainer[0])
-        .style('pointer-events', 'none')
-        .style('overflow-y', 'hidden');
-
-    } else if(! renderState.getState().zooming) {
-      interactionOverlay
-        .style('pointer-events', 'all')
-        .transition()
-        .duration(animationTiming/2)
-        .style('opacity', 1);
-
-      d3.select(scrollContainer[0])
-        .style('pointer-events', 'all')
-        .style('overflow-y', 'scroll');
-    }
+    scrollContainer
+      .style('pointer-events', 'none')
+      .style('overflow-y', 'hidden');
   }
 
-  function setZoomRegion(scale, point) {
-    var transform = 'scale(' + scale + ') translate(' + -point.x + 'px,' + -point.y + 'px)';
+  function enableOverviewScrollEvents() {
+    container
+      .style('pointer-events', 'all');
 
-    d3.select(overlayContainer)
+    scrollContainer
+      .style('pointer-events', 'all')
+      .style('overflow-y', 'scroll');
+  }
+
+  function enableDetailContinuousScrollEvents(viewingDirection) {
+    scrollContainer
+      .style('pointer-events', 'all');
+
+    if (viewingDirection === 'right-to-left' || viewingDirection === 'left-to-right') {
+      scrollContainer
+        .style('overflow-x', 'scroll')
+        .style('overflow-y', 'hidden');
+      return;
+    } else {
+      scrollContainer
+        .style('overflow-x', 'hidden')
+        .style('overflow-y', 'scroll');
+      return;
+    }
+  }
+  function setZoomRegion() {
+    var scale = renderState.getState().currentZoom.scale;
+    var center = renderState.getState().currentZoom.center;
+    var transform = 'scale(' + scale + ') translate(' + -center.x + 'px,' + -center.y + 'px)';
+
+    container
       .style('transform', transform)
       .style('-webkit-transform', transform);
   }
-
   function immediateUpdate() {
     // One-step layout of all canvases in the
     // current viewingMode, viewingDirection and perspective.
-    renderLayout(calculateLayout(viewerState.getState().perspective)({x:300, y:20}),false);
+    var layout = calculateLayout(viewerState.getState().perspective)(),
+    viewBounds = layout.filter(function(frame) {
+      return frame.canvas.selected;
+    })[0].vantage;
+
+    renderState.constraintBounds(viewBounds, false);
+
+    renderLayout(layout, false);
+  }
+  function changePerspective() {
+    if (viewerState.getState().perspective === 'detail') {
+      console.log("actually, we're going to detail");
+      transitionToDetail();
+      return;
+    }
+    transitionToOverview();
+    console.log("actually, we're going to overview");
   }
   function scrollOverview() {
   }
   function transitionToOverview() {
-    self.renderLayout(self.calculateLayout(self.viewerState.getState().perspective)({x:300, y:20}),false);
+    var stage1layout = calculateLayout('intermediate')(),
+        stage2layout = calculateLayout('overview')(),
+        stage2viewBounds = stage2layout.filter(function(frame) {
+          return frame.canvas.selected;
+        })[0].vantage;
+
+    renderState.constraintBounds(stage2viewBounds, true);
+    container
+      .transition()
+      .style('opacity', 1);
+
+    renderLayout(stage1layout, false, function() {
+      renderLayout(stage2layout, true);
+      renderState.constraintBounds(stage2viewBounds, true);
+      enableOverviewScrollEvents();
+    });
   }
   function transitionToDetail() {
-    renderLayout(calculateLayout(),false);
+    var stage1layout = calculateLayout('intermediate')(),
+        stage2layout = calculateLayout('detail')(),
+        stage1viewBounds = stage1layout.filter(function(frame) {
+          return frame.canvas.selected;
+        })[0].vantage;
+
+    renderState.constraintBounds(stage1viewBounds, true);
+    console.log('bounds in d3renderer');
+    console.log(stage1viewBounds);
+    disableScrollEvents();
+    container
+      .transition()
+      .style('opacity', 0);
+
+    renderLayout(stage1layout, true, function() {
+      console.log('transition finished');
+      renderLayout(stage2layout, false);
+    });
   }
   function selectCanvas() {
     renderLayout(calculateLayout(),false);
   }
   function changeViewingMode() {
-    renderLayout(calculateLayout(),false);
+    var stage2layout = calculateLayout(viewerState.getState().perspective)();
+    renderLayout(stage2layout, true);
   }
   function changeViewingDirection() {
     renderLayout(calculateLayout(),false);
@@ -112,77 +216,8 @@ var d3Renderer = function(config) {
     // and you will want to read about nested
     // selections in particular: http://bost.ocks.org/mike/nest/
 
-    var localViewerState = viewerState;
-    var main = d3.select(container)
-          .selectAll('.main')
-          .data([true])
-          .enter()
-          .append('div')
-          .attr('class', 'manifest-layouts-DOM-container')
-          .style({
-               width: '100%',
-               height: '100%',
-               position: 'absolute',
-               top: 0,
-               left: 0
-          });
-
-    var scrollContainer = main
-          .append('div')
-          .attr('class', 'manifest-scroll-container')
-          .style({
-            width: '100%',
-            height: '100%',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            'overflow': 'hidden',
-            'overflow-x': 'hidden'
-          });
-
-    var animationTiming = animate ? 1000 : 0;
-    var frame = main.selectAll('.' + frameClass).data(layoutData);
-
-    var getWidthInPx = function(d) {
-      return d.width + 'px';
-    };
-    var getHeightInPx = function(d) {
-      return d.height + 'px';
-    };
-
-    var getCanvasWidthInPx = function(d) {
-      return d.canvas.width + 'px';
-    };
-    var getCanvasHeightInPx = function(d) {
-      return d.canvas.height + 'px';
-    };
-
-    var getTransformStyle = function(d) {
-      return d3.interpolateString(
-        this.style.transform,
-        'translate(' + d.x +'px,' + d.y + 'px)'
-      );
-    };
-
-    var getSelectTransformStyle = function(d) {
-      return d3.interpolateString(
-        this.style.transform,
-        'translate(' + d.canvas.localX +'px,' + d.canvas.localY + 'px)'
-      );
-    };
-
-   var getEnterTransformStyle = function(d) {
-      return 'translate(' + d.x + 'px,' + d.y + 'px)';
-    };
-
-    var getEnterTranslate = function(d) {
-      return 'translateX(' + d.canvas.localX + 'px) translateY(' + d.canvas.localY + 'px)';
-    };
-
-    var getClass = function(d) {
-      var selected = d.canvas.selected;
-      return selected ? canvasClass + ' selected' : canvasClass;
-    };
+    var animationTiming = animate ? 1000 : 0,
+    frame = container.selectAll('.' + frameClass).data(layoutData);
 
     // Update Existing Frame Elements
     frame
@@ -226,12 +261,12 @@ var d3Renderer = function(config) {
       .styleTween('-webkit-transform', getSelectTransformStyle);
 
     var frameEnter = frame.enter()
-      .append('div')
-      .attr('class', frameClass)
-      .style('width', getWidthInPx)
-      .style('height', getHeightInPx)
-      .style('transform', getEnterTransformStyle)
-      .style('-webkit-transform', getEnterTransformStyle);
+          .append('div')
+          .attr('class', frameClass)
+          .style('width', getWidthInPx)
+          .style('height', getHeightInPx)
+          .style('transform', getEnterTransformStyle)
+          .style('-webkit-transform', getEnterTransformStyle);
 
     frameEnter.append('div')
       .attr('class', getClass)
@@ -246,12 +281,71 @@ var d3Renderer = function(config) {
         var canvasData = d.canvas,
             canvasImageState = viewerState.getState().canvasObjects[canvasData.id];
 
-        // canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
+        canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
+        canvasImageState.getThumbnailResource().show();
       });
 
     frameEnter.append('div')
       .attr('class', labelClass)
       .text(function(d) { return d.canvas.label; });
+  }
+
+  function updateThumbs(imageResource) {
+    container
+      .selectAll('.' + frameClass)
+      .filter(function(d) {
+        console.log(d);
+        return d.canvas.id === imageResource.parent.id;
+      })
+      .selectAll('.' + canvasClass)
+      .selectAll('img')
+      .data([imageResource.parent.thumbnailResource])
+      .enter()
+      .append('img')
+      .attr('src', function(d) {
+        return imageResource.tileSource.levels[0].url;
+      });
+  }
+
+  function getWidthInPx(d) {
+    return d.width + 'px';
+  }
+  function getHeightInPx(d) {
+    return d.height + 'px';
+  }
+
+  function getCanvasWidthInPx(d) {
+    return d.canvas.width + 'px';
+  }
+  function getCanvasHeightInPx(d) {
+    return d.canvas.height + 'px';
+  }
+
+  function getTransformStyle(d) {
+    return d3.interpolateString(
+      this.style.transform,
+      'translate(' + d.x +'px,' + d.y + 'px)'
+    );
+  }
+
+  function getSelectTransformStyle(d) {
+    return d3.interpolateString(
+      this.style.transform,
+      'translate(' + d.canvas.localX +'px,' + d.canvas.localY + 'px)'
+    );
+  }
+
+  function getEnterTransformStyle(d) {
+    return 'translate(' + d.x + 'px,' + d.y + 'px)';
+  }
+
+  function getEnterTranslate(d) {
+    return 'translateX(' + d.canvas.localX + 'px) translateY(' + d.canvas.localY + 'px)';
+  }
+
+  function getClass(d) {
+    var selected = d.canvas.selected;
+    return selected ? canvasClass + ' selected' : canvasClass;
   }
 
   function endall(transition, callback) {

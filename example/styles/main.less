@@ -30,7 +30,7 @@ body {
 
     .feature {
         padding: 15px;
-        margin-left:20%;
+        margin-left:30%;
         height:100%;
         box-sizing:border-box;
         position:relative;
@@ -49,7 +49,7 @@ body {
     top:0;
     left:0;
     cursor: pointer;
-    box-sizing: border-box;
+    border: 1px solid gray;
     background-color: gray;
     box-shadow: 0 0 5px gray;
     border-radius:4px;
@@ -57,12 +57,20 @@ body {
       background-color: lightgray;
       box-shadow: 0 0 12px white;
     }
+    // &.blank {
+    //   background:red;
+    //   box-shadow: none;
+    //   border:none;
+    // }
+    // &.prohibited {
+    // }
     img {
       position:absolute;
       left:0;
       right:0;
       bottom:0;
       top:0;
+      width:100%;
       opacity:1;
       transition: all 0.2s ease-out;
       // &.loading {
@@ -94,12 +102,15 @@ body {
 }
 
 #controls {
-    width: 20%;
-    float: left;
-    border-right: 1px solid gray;
-    height: 100%;
-    box-sizing: border-box;
-    padding: 0 15px;
+  min-width: 285px;
+  width:20%;
+  border-right: 1px solid gray;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 15px;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  position:fixed;
 }
 
 #example-container {

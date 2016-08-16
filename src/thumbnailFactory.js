@@ -33,12 +33,19 @@ var _getThumbUrl = function(resource, width) {
 };
 
 var _getThumbLevel = function(resource, width, height) {
+  var widthParam = 200,
+      scaleFactor = widthParam/width,
+      scaledWidth = width*scaleFactor,
+      scaledHeight = height*scaleFactor;
+
   if(resource.default) {
-    return _getThumbLevel(resource.default, width, height);
+    // resources with a default field are not actually
+    // images, but contain more images. Recurse to retrieve.
+    return _getThumbLevel(resource.default, scaledWidth, scaledHeight);
   }
 
   return {
-    url: _getThumbUrl(resource, width),
+    url: _getThumbUrl(resource, scaledWidth),
     height: height,
     width: width
   };
@@ -46,15 +53,12 @@ var _getThumbLevel = function(resource, width, height) {
 
 var _makeThumbnailConfig = function(resource, parent) {
   var bounds = parent.getBounds();
-  var doubleCeiling = function(size) {
-    return Math.ceil(size * 2);
-  };
 
   return {
     tileSource: {
       type: 'legacy-image-pyramid',
       levels: [
-        _getThumbLevel(resource, doubleCeiling(bounds.width), doubleCeiling(bounds.height)),
+        _getThumbLevel(resource, bounds.width, bounds.height),
       ]
     },
     parent: parent,

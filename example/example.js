@@ -69,13 +69,25 @@ var App = {
       }
     });
 
-    /*          key('j, down') */ // Implement nearest Neighbour Search
-    /*          key('k, up') */   // Might be easiest if the lines were
-    // saved somewhere.
     key('l, right', function() {
       if (self.viewer) {
         self.viewer.next();
       }
+    });
+
+    key('shift+j', function() {
+      if (self.viewer) {
+        self.viewer.selectPerspective('detail');
+      }
+      console.log('shifting to detail perspective');
+    });
+
+    key('shift+k', function() {
+      if (self.viewer) {
+        self.viewer.selectPerspective('overview');
+        self.$images.empty();
+      }
+      console.log('shifting to overview perspective');
     });
 
     $(window).on('resize', function() {
@@ -85,7 +97,6 @@ var App = {
     });
   },
 
-  // ----------
   openSelectedManifest: function() {
     var self = this;
 
@@ -116,7 +127,11 @@ var App = {
         selectedCanvas: manifest.sequences[0].canvases[10]['@id']
       });
 
-      self.viewer.selectViewingMode(self.currentMode);
+      var selectedCanvas = self.viewer.getSelectedCanvas();
+
+      if(selectedCanvas && self.viewer.getState().perspective == 'detail') {
+        _setImagesForCanvas(selectedCanvas);
+      }
 
       self.viewer.on('viewer-state-updated', function() {
         console.log('I have updated!');
@@ -206,34 +221,13 @@ var App = {
         });
       };
 
-      var selectedCanvas = self.viewer.getSelectedCanvas();
-
-      if(selectedCanvas && self.viewer.getState().perspective == 'detail') {
-        _setImagesForCanvas(selectedCanvas);
-      }
-
       self.viewer.on('canvas-selected', function(event) {
         _setImagesForCanvas(self.viewer.getSelectedCanvas());
       });
 
-      key('shift+j', function() {
-        if (self.viewer) {
-          self.viewer.selectPerspective('detail');
-        }
-        console.log('shifting to detail perspective');
-      });
-
-      key('shift+k', function() {
-        if (self.viewer) {
-          self.viewer.selectPerspective('overview');
-          self.$images.empty();
-        }
-        console.log('shifting to overview perspective');
-      });
     });
   },
 
-  // ----------
   cycleViewingModes: function() {
     var newMode;
     if (this.currentMode === 'individuals') {
@@ -250,8 +244,7 @@ var App = {
     if (this.viewer) {
       this.viewer.selectViewingMode(newMode);
     }
-  },
-
+  }
 };
 
 // ----------

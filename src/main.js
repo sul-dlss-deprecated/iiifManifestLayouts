@@ -37,19 +37,6 @@ var manifestor = function(options) {
     frameClass: options.frameClass || 'frame',
     labelClass: options.labelClass || 'label'
   });
-  // var renderState = new RenderState({
-  //   zooming: false,
-  //   constraintBounds: {
-  //     x:0,
-  //     y:0,
-  //     width:options.container.width(),
-  //     height: options.container.height()
-  //   },
-  //   inZoomConstraints: false,
-  //   overviewLeft: 0,
-  //   overviewTop: 0
-  // });
-
 
   // function scrollHandler(event) {
   //   if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
@@ -160,16 +147,9 @@ var manifestor = function(options) {
   //     d.setScrollElementEvents();
   //     osd.setViewerBoundsFromState(animateViewport);
 
-  //     setTimeout(function(){ // Do we want this to happen based on an event instead?
-  //       renderState.setState({zooming: false});
-  //       d.setScrollElementEvents();
-  //     }, 1200);
-  //   }
-  // }
 
-
-  function selectCanvas(item) {
-    viewerState.selectedCanvasObject(item);
+  function selectCanvas(canvasId) {
+    viewerState.selectedCanvasObject(canvasId);
   }
 
   function getSelectedCanvas() {
@@ -177,15 +157,18 @@ var manifestor = function(options) {
   }
 
   function selectPerspective(perspective) {
-    viewerState.setState({
-      perspective: perspective
-    });
+    if (viewerState.getState().perspective !== perspective) {
+      viewerState.selectedPerspective(perspective);
+    }
   }
 
   function selectViewingMode(viewingMode) {
-    viewerState.setState({
-      viewingMode: viewingMode
-    });
+    if (viewerState.getState().viewingMode !== viewingMode) {
+      viewerState.setState({
+        viewingMode: viewingMode
+      });
+      dispatcher.emit('viewingModeUpdated');
+    }
   }
 
   function selectViewingDirection(viewingDirection) {
@@ -196,8 +179,8 @@ var manifestor = function(options) {
 
   function resize() {
     viewerState.setState({
-      width: container.width(),
-      height: container.height()
+      width: options.container.offsetWidth,
+      height: options.container.offsetHeight
     });
   }
 
@@ -205,6 +188,7 @@ var manifestor = function(options) {
     viewerState.setState({
       scaleFactor: scaleFactor
     });
+    dispatcher.emit('scaleFactorUpdated');
   }
 
   function _navigate(forward) {

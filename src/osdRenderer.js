@@ -11,15 +11,15 @@ var OsdRenderer = function(options) {
     showNavigationControl: false,
     preserveViewport: true
   });
-  self.addOSDHandlers(this.viewerState, this.renderState);
+  this.addOSDHandlers(this.viewerState, this.renderState);
 
   this.dispatcher.on('canvas-position-updated', function(canvasObject) {
     canvasObject.images.forEach(function(imageResource) {
       self.updateImagePosition(imageResource);
     });
+    self.updateImagePosition(canvasObject.thumbnailResource);
   });
   this.dispatcher.on('image-needed', function(imageResource) {
-    console.log('image-needed');
     self.openTileSource(imageResource);
   });
   this.dispatcher.on('image-show', function(imageResource) {
@@ -42,8 +42,9 @@ var OsdRenderer = function(options) {
   });
 
   // this.dispatcher.on('immediateUpdate', self.immediateUpdate);
-  // this.dispatcher.on('transitionToOverview', self.overviewTransition);
-  // this.dispatcher.on('transitionToDetail', self.detailTransition);
+  this.dispatcher.on('constraintBoundsUpdated', function(animate) {
+    self.setViewerBoundsFromState(animate);
+  });
   // this.dispatcher.on('selectCanvas', self.selectCanvas);
   // this.dispatcher.on('changeViewingMode', self.changeViewingMode);
   // this.dispatcher.on('changeViewingDirection', self.changeViewingMode);
@@ -54,9 +55,15 @@ OsdRenderer.prototype = {
   immediateUpdate: function() {
     // Set the viewport to the correct
     // zoom level and framing area.
-    var canvas = this.viewerState.selectedCanvasObject();
-    var anchor = canvas.getBounds().getTopLeft();
     this.setViewerBoundsFromState(false);
+    this.viewer.viewport.fitBounds(this.renderState.getState().constraintBounds, false);
+  },
+  changePerspective: function(perspective) {
+    if (perspective === 'detail') {
+      // enable zooming and stuff
+      return;
+    }
+    // disable zooming and stuff
   },
   transitionToOverview: function() {
     // Zoom out to the overview
@@ -236,19 +243,16 @@ OsdRenderer.prototype = {
   },
 
   setViewerBoundsFromState: function(animate) {
-    if(!this.viewer) {
-      return;
-    }
     var rState = this.renderState.getState();
     var vState = this.viewerState.getState();
     var viewBounds = new OpenSeadragon.Rect(
-      rState.overviewLeft,
-      rState.overviewTop + rState.lastScrollPosition,
-      vState.width,
-      vState.height
+      rState.constraintBounds.x,
+      rState.constraintBounds.y,
+      rState.constraintBounds.width,
+      rState.constraintBounds.height
     );
 
-    this.viewer.viewport.fitBounds(viewBounds, animate);
+    this.viewer.viewport.fitBounds(viewBounds, !animate);
   },
 
   getViewerScale: function() {
@@ -268,9 +272,7 @@ OsdRenderer.prototype = {
     return p;
   },
 
-  addOSDHandlers: function(viewerState, renderState) {
-    this.viewerState = viewerState;
-    this.renderState = renderState;
+  addOSDHandlers: function() {
     var self = this;
 
     // Open the main tile source when we reach the specified zoom level on it
@@ -336,39 +338,30 @@ OsdRenderer.prototype = {
         }
 
         if (changed) {
-          self.renderState.setState({ inZoomConstraints: true });
-          self.viewer.viewport.fitBounds(constraintBounds);
-          self.renderState.setState({ inZoomConstraints: false });
+          self.renderState.inZoomConstraints(false);
+          self.viewer.viewport.fitBounds(constraintBounds, false);
+          self.renderState.inZoomConstraints(true);
         }
       }
 
       var zoom = self.viewer.viewport.getZoom();
       var maxZoom = 2;
 
-      // var zoomPoint = viewer.viewport.zoomPoint || viewer.viewport.getCenter();
-      // var info = this.hitTest(zoomPoint);
-      // if (info) {
-        // var page = this.pages[info.index];
-        // var tiledImage = page.hitTest(zoomPoint);
-        // if (tiledImage) {
-        //   maxZoom = this.viewer.maxZoomLevel;
-        //   if (!maxZoom) {
-        //     var imageWidth = tiledImage.getContentSize().x;
-        //     var viewerWidth = this.$el.width();
-        //     maxZoom = imageWidth * this.viewer.maxZoomPixelRatio / viewerWidth;
-        //     maxZoom /= tiledImage.getBounds().width;
-        //   }
-        // }
-      // }
-
       if (zoom > maxZoom) {
         self.viewer.viewport.zoomSpring.target.value = maxZoom;
       }
     };
 
+    this.viewer.addHandler('animation', function(event) {
+      self.renderState.currentZoom({
+        scale: self.getViewerScale(),
+        center: self.getZoomTranslation()
+      });
+    });
+
     this.viewer.addHandler('zoom', function(event) {
       if (self.viewerState.getState().perspective === 'detail') {
-        _applyConstraints();
+        // _applyConstraints();
       }
       // getting the center won't work if there isn't a tilesource
       // already opened, because openseadragon doesn't have a concept
@@ -379,7 +372,7 @@ OsdRenderer.prototype = {
 
     this.viewer.addHandler('pan', function(event) {
       if (self.viewerState.getState().perspective === 'detail') {
-        _applyConstraints();
+        // _applyConstraints();
       }
       var zoom = self.viewer.viewport.getZoom();
       _semanticZoom(zoom, event.center);
