@@ -125,7 +125,7 @@ var App = {
           right: 10,
           bottom: 20 // units in % of pixel height of viewport
         },
-        selectedCanvas: manifest.sequences[0].canvases[10]['@id']
+        selectedCanvas: manifest.sequences[0].canvases[0]['@id']
       });
 
       var selectedCanvas = self.viewer.getSelectedCanvas();

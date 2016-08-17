@@ -112,6 +112,7 @@ var d3Renderer = function(config) {
       return frame.canvas.selected;
     })[0].vantage;
 
+    renderLayout(layout, false);
     renderState.constraintBounds(viewBounds, false);
     if (viewerState.getState().perspective === 'detail') {
       disableScrollEvents();
@@ -122,7 +123,6 @@ var d3Renderer = function(config) {
         .style('opacity', 1);
       enableOverviewScrollEvents();
     }
-    renderLayout(layout, false);
   }
   function changePerspective() {
     if (viewerState.getState().perspective === 'detail') {
