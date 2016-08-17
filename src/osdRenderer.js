@@ -6,10 +6,12 @@ var OsdRenderer = function(options) {
   this.dispatcher = options.dispatcher;
   this.renderState = options.renderState;
   this.viewerState = options.viewerState;
+  console.log(OpenSeadragon.version);
   this.viewer = OpenSeadragon({
     element: options.container,
     showNavigationControl: false,
-    preserveViewport: true
+    preserveViewport: true,
+    autoResize: false
   });
   this.addOSDHandlers(this.viewerState, this.renderState);
 
@@ -21,6 +23,7 @@ var OsdRenderer = function(options) {
   });
   this.dispatcher.on('image-needed', function(imageResource) {
     self.openTileSource(imageResource);
+    console.log(imageResource.tileSource);
   });
   this.dispatcher.on('image-show', function(imageResource) {
     // Check whether or not this item has been drawn.
@@ -28,6 +31,7 @@ var OsdRenderer = function(options) {
     // and the opacity can be updated.
     if (imageResource.getStatus() === 'drawn') {
       self.updateImageOpacity(imageResource);
+      console.log(imageResource.tileSource);
     }
   });
   this.dispatcher.on('image-hide', function(imageResource) {
@@ -41,9 +45,11 @@ var OsdRenderer = function(options) {
     }
   });
 
-  // this.dispatcher.on('immediateUpdate', self.immediateUpdate);
   this.dispatcher.on('constraintBoundsUpdated', function(animate) {
     self.setViewerBoundsFromState(animate);
+  });
+  this.dispatcher.on('overviewScrollPositionUpdated', function() {
+    self.setViewerBoundsFromState(false);
   });
   // this.dispatcher.on('selectCanvas', self.selectCanvas);
   // this.dispatcher.on('changeViewingMode', self.changeViewingMode);

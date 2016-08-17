@@ -17,6 +17,10 @@ var renderState = function(config) {
     return state.zooming;
   }
 
+  function overviewScrollPosition(scrollPosition) {
+    dispatcher.emit('overviewScrollPositionUpdated');
+  }
+
   function constraintBounds(constraints, animate) {
     if (!arguments.length) {
       return state.constraintBounds;
@@ -49,6 +53,7 @@ var renderState = function(config) {
   return {
     zooming: zooming,
     constraintBounds: constraintBounds,
+    overviewScrollPosition: overviewScrollPosition,
     inZoomConstraints: inZoomConstraints,
     scrollPosition: 0,
     overviewLeft: 0,

@@ -45,7 +45,6 @@ var manifestor = function(options) {
   //   }
   // }
 
-  // scrollContainer.on('scroll', scrollHandler);
 
   // Do we really want to expose this?
   function setState(state) {
@@ -217,6 +216,7 @@ var manifestor = function(options) {
     next: next,
     previous: previous,
     resize: resize,
+    // canvases: viewerState.canvases.bind(viewerState),
     selectCanvas: selectCanvas,
     selectPerspective: selectPerspective,
     selectViewingMode: selectViewingMode,

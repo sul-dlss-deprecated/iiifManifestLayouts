@@ -2,11 +2,11 @@ var CanvasObject = require('./canvasObject');
 
 var viewerState = function(config) {
   var dispatcher = config.dispatcher,
-      canvases = config.sequence ? config.sequence.canvases : config.manifest.sequences[0].canvases,
+      configCanvases = config.sequence ? config.sequence.canvases : config.manifest.sequences[0].canvases,
       state = {
-        canvases : canvases,
-        canvasObjects : buildCanvasObjects(canvases),
-        selectedCanvas : config.selectedCanvas || canvases[0]['@id'], // @id of the canvas:
+        canvases : configCanvases,
+        canvasObjects : buildCanvasObjects(configCanvases),
+        selectedCanvas : config.selectedCanvas || configCanvases[0]['@id'], // @id of the canvas:
         perspective : config.perspective ? config.perspective : 'overview',
         viewingMode : config.viewingMode ? config.viewingHint : getViewingHint(config.sequence, config.manifest), // manifest derived or user specified (iiif viewingHint)
         viewingDirection : config.viewingDirection ? config.viewingDirection : getViewingDirection(config.sequence, config.manifest), // manifest derived or user specified (iiif viewingHint)
@@ -94,6 +94,19 @@ var viewerState = function(config) {
     }
   }
 
+  function canvases(canvases) {
+    if (!arguments.length) {
+      return state.canvases;
+    } else  {
+      state.canvases = state.canvases;
+      state.selectedCanvas = canvases.some(function(canvas){
+        return
+      }) ? state.selectedCanvas : canvases[0]['@id'];
+      dispatcher.emit('canvasesUpdated');
+      return state.canvases;
+    }
+  }
+
   function selectedPerspective(perspective) {
     if (!arguments.length) {
       return state.perspective;
@@ -170,7 +183,8 @@ var viewerState = function(config) {
     getState: getState,
     setState: setState,
     selectedCanvasObject: selectedCanvasObject,
-    selectedPerspective: selectedPerspective
+    selectedPerspective: selectedPerspective,
+    canvases: canvases
   };
 };
 

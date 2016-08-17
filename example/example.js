@@ -15,7 +15,8 @@ var App = {
       {url: 'http://demos.biblissima-condorcet.fr/iiif/metadata/BVMM/chateauroux/manifest.json', label: 'BNF Detail Images Demo (Chateauroux)'},
       {url:'http://manifests.ydc2.yale.edu/manifest/Osbornfa1v2.json', label: "Yale Osborn with choice (see 53r)"},
       {url: 'http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', label: 'Stanford DMS Manuscript (example of typical object)'},
-      {url: 'http://iiif.ub.uni-leipzig.de/0000000001/manifest.json', label: 'Leipzig Scroll'}
+      {url: 'http://iiif.ub.uni-leipzig.de/0000000001/manifest.json', label: 'Leipzig Scroll'},
+      {url: 'http://oculus-dev.harvardx.harvard.edu/manifests/drs:5981093', label: 'Harvard Richardson 7'}
     ].forEach(function(fixture) {
       $('<option>')
         .val(fixture.url)
@@ -108,9 +109,9 @@ var App = {
       /* http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json */
 
       if (self.viewer) {
-        self.viewer.destroy();
+        self.viewer.canvases(manifest.sequences[0].canvases);
+        return;
       }
-
       self.viewer = manifestor({
         manifest: manifest,
         container: $('#example-container')[0],
@@ -130,7 +131,7 @@ var App = {
       var selectedCanvas = self.viewer.getSelectedCanvas();
 
       if(selectedCanvas && self.viewer.getState().perspective == 'detail') {
-        _setImagesForCanvas(selectedCanvas);
+        setImagesForCanvas(selectedCanvas);
       }
 
       self.viewer.on('viewer-state-updated', function() {
@@ -171,10 +172,10 @@ var App = {
       });
 
       self.viewer.on('image-status-updated', function(imageResource) {
-        _setImagesForCanvas(self.viewer.getSelectedCanvas());
+        setImagesForCanvas(self.viewer.getSelectedCanvas());
       });
 
-      var _setImagesForCanvas = function(canvas) {
+      function setImagesForCanvas(canvas) {
         self.selectedCanvas = canvas;
         self.$images.empty();
 
@@ -222,7 +223,7 @@ var App = {
       };
 
       self.viewer.on('canvas-selected', function(event) {
-        _setImagesForCanvas(self.viewer.getSelectedCanvas());
+        setImagesForCanvas(self.viewer.getSelectedCanvas());
       });
 
     });

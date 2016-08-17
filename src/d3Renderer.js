@@ -7,7 +7,6 @@ var d3Renderer = function(config) {
       viewerState = config.viewerState,
       container = config.container,
       scrollContainer,
-      osdContainer,
       canvasClass = config.canvasClass,
       frameClass = config.frameClass,
       labelClass = config.labelClass;
@@ -15,27 +14,15 @@ var d3Renderer = function(config) {
   buildContainers();
   immediateUpdate();
 
-  // dispatcher.on('scrollOverview', scrollOverview);
   dispatcher.on('currentZoomUpdated', setZoomRegion);
   dispatcher.on('perspectiveUpdated', changePerspective);
   // dispatcher.on('selectCanvas', selectCanvas);
   dispatcher.on('viewingModeUpdated', changeViewingMode);
   // dispatcher.on('changeViewingDirection', changeViewingMode);
   dispatcher.on('scaleFactorUpdated', immediateUpdate);
-  dispatcher.on('image-status-updated', updateThumbs);
+  dispatcher.on('image-status-updated', updateThumb);
 
   function buildContainers() {
-    osdContainer = d3.select(container)
-      .append('div')
-      .attr('class', 'osd-container')
-      .style({
-        width: '100%',
-        height: '100%',
-        position: 'absolute',
-        top: 0,
-        left: 0
-      });
-
     scrollContainer = d3.select(container).selectAll('.manifest-scroll-container')
       .data([true]);
 
@@ -51,6 +38,10 @@ var d3Renderer = function(config) {
         'overflow': 'hidden',
         'overflow-x': 'hidden'
       });
+
+    scrollContainer.on('scroll', function(event) {
+      renderState.overviewScrollPosition(this.scrollTop);
+    });
 
     container = scrollContainer.selectAll('.manifest-layouts-DOM-container')
       .data([true]);
@@ -122,17 +113,23 @@ var d3Renderer = function(config) {
     })[0].vantage;
 
     renderState.constraintBounds(viewBounds, false);
-
+    if (viewerState.getState().perspective === 'detail') {
+      disableScrollEvents();
+      scrollContainer
+        .style('opacity', 0);
+    } else {
+      scrollContainer
+        .style('opacity', 1);
+      enableOverviewScrollEvents();
+    }
     renderLayout(layout, false);
   }
   function changePerspective() {
     if (viewerState.getState().perspective === 'detail') {
-      console.log("actually, we're going to detail");
       transitionToDetail();
       return;
     }
     transitionToOverview();
-    console.log("actually, we're going to overview");
   }
   function scrollOverview() {
   }
@@ -162,15 +159,12 @@ var d3Renderer = function(config) {
         })[0].vantage;
 
     renderState.constraintBounds(stage1viewBounds, true);
-    console.log('bounds in d3renderer');
-    console.log(stage1viewBounds);
     disableScrollEvents();
     container
       .transition()
       .style('opacity', 0);
 
     renderLayout(stage1layout, true, function() {
-      console.log('transition finished');
       renderLayout(stage2layout, false);
     });
   }
@@ -290,21 +284,28 @@ var d3Renderer = function(config) {
       .text(function(d) { return d.canvas.label; });
   }
 
-  function updateThumbs(imageResource) {
-    container
-      .selectAll('.' + frameClass)
-      .filter(function(d) {
-        console.log(d);
-        return d.canvas.id === imageResource.parent.id;
-      })
-      .selectAll('.' + canvasClass)
-      .selectAll('img')
-      .data([imageResource.parent.thumbnailResource])
-      .enter()
-      .append('img')
-      .attr('src', function(d) {
-        return imageResource.tileSource.levels[0].url;
-      });
+  function updateThumb(imageResource) {
+    // check if the resource is a thumbnail
+    // if it has been requested, add loading class
+    // if drawn, add image and give it a class
+    // to allow fading in.
+    // if failed, give it a failing class
+    // if locked, add a lock class
+    if (imageResource.status === 'drawn') {
+      container
+        .selectAll('.' + frameClass)
+        .filter(function(d) {
+          return d.canvas.id === imageResource.parent.id;
+        })
+        .selectAll('.' + canvasClass)
+        .selectAll('img')
+        .data([imageResource.parent.thumbnailResource])
+        .enter()
+        .append('img')
+        .attr('src', function(d) {
+          return imageResource.tileSource.levels[0].url;
+        });
+    }
   }
 
   function getWidthInPx(d) {

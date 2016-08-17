@@ -93,6 +93,17 @@ CanvasObject.prototype = {
     };
   },
 
+  canvasToWorldCoordinates: function(canvasRegion) {
+    var self = this;
+
+    return {
+      x: self.bounds.x + (canvasRegion.x * canvasRegion.x/self.bounds.width),
+      y: self.bounds.y + (canvasRegion.y * canvasRegion.y/self.bounds.width),
+      width: self.bounds.width * self.bounds.width/canvasRegion.width,
+      height: self.bounds.height * self.bounds.height/canvasRegion.height
+    };
+  },
+
   getAspectRatio: function() {
     return this.bounds.width / this.bounds.height;
   },
