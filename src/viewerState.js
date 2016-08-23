@@ -12,8 +12,8 @@ var viewerState = function(config) {
         viewingDirection : config.viewingDirection ? config.viewingDirection : getViewingDirection(config.sequence, config.manifest), // manifest derived or user specified (iiif viewingHint)
         width : config.width,
         height : config.height,
-        scaleFactor: config.scaleFactor,
-        framePadding : config.framePadding,
+        scaleFactor: config.scaleFactor || 0.5,
+        framePadding : config.framePadding || {top: 10, bottom: 40, right: 10, left: 10},
         viewportPadding : config.viewportPadding,
         minimumImageGap : config.viewportPadding,
         facingCanvasPadding : config.facingCanvasPadding
@@ -54,7 +54,6 @@ var viewerState = function(config) {
   }
 
   function setState(newState, actionType) {
-    console.log('started');
     var differences = {};
     for(var key in newState) {
       if(newState.hasOwnProperty(key)) {
@@ -81,15 +80,15 @@ var viewerState = function(config) {
 
       // Mark all canvases as "needed" that may be in a view with this canvas
       // This is accomplished by means of the "show" method on its image resources.
-      state.canvasObjects[state.selectedCanvas].images.filter(function(image) {
-        console.log(image.getImageType());
+      var canvas = state.canvasObjects[state.selectedCanvas];
+      canvas.images.filter(function(image) {
         return (image.getImageType() === 'main');
       }).forEach(function(image) {
-        console.log(image);
         image.show();
       });
-      dispatcher.emit('canvas-selected', { detail: newCanvas });
-      console.log('canvasSet');
+
+      canvas.thumbnailResource.remove();
+      dispatcher.emit('selectedCanvasUpdated');
       return state.canvasObjects[state.selectedCanvas];
     }
   }
@@ -128,52 +127,26 @@ var viewerState = function(config) {
     }
   }
 
-  function navigatePaged(currentIndex, incrementValue) {
-    // Simply set which ones are "needed", let osd do the rest.
-    var self = this;
-    var newIndex = currentIndex + incrementValue;
-
-    if (currentIndex % 2 !== 0) {
-      newIndex = currentIndex + (2 * incrementValue);
+  function size(width, height) {
+    if (!arguments.length) {
+      return {
+        width: state.width,
+        height: state.height
+      };
+    } else  {
+      state.width = width;
+      state.height = height;
+      dispatcher.emit('sizeUpdated');
+      return {
+        width: state.width,
+        height: state.height
+      };
     }
-
-    // return if newIndex is out of range
-    if (!this.isValidCanvasIndex(newIndex)) {
-      return;
-    }
-
-    var getCanvasByIndex = function(index) {
-      var canvasId = self.canvases[index]['@id'];
-      return self.canvasObjects[canvasId];
-    };
-
-    // Do not select non-paged canvases in paged mode. Instead, find the next available
-    // canvas that does not have that viewingHint.
-    var newCanvas = getCanvasByIndex(newIndex);
-    while(newCanvas.viewingHint === 'non-paged' && this.isValidCanvasIndex(newIndex)) {
-      newIndex += incrementValue;
-      newCanvas = getCanvasByIndex(newIndex);
-    }
-
-    // this.loadTileSourceForIndex(newIndex);
-
-    // Load tilesource for the non-selected side of the pair, if it exists
-    var facingPageIndex = newIndex + incrementValue;
-    if(this.isValidCanvasIndex(facingPageIndex)) {
-      // this.loadTileSourceForIndex(facingPageIndex);
-    }
-
-    self.selectCanvasForIndex(newIndex);
   }
 
-  function navigateIndividual(currentIndex, incrementValue) {
-    var newIndex = currentIndex + incrementValue;
-
-    // do nothing if newIndex is out of range
-    if (this.isValidCanvasIndex(newIndex)) {
-      // this.loadTileSourceForIndex(newIndex);
-      this.selectCanvasForIndex(newIndex);
-    }
+  function isValidCanvasIndex(index) {
+    console.log(index);
+    return(index > 0 && index < state.canvases.length);
   }
 
   // Listen for actions. This wrapper responds to asynchronous
@@ -184,7 +157,9 @@ var viewerState = function(config) {
     setState: setState,
     selectedCanvasObject: selectedCanvasObject,
     selectedPerspective: selectedPerspective,
-    canvases: canvases
+    isValidCanvasIndex: isValidCanvasIndex,
+    canvases: canvases,
+    size: size
   };
 };
 

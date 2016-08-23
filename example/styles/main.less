@@ -1,5 +1,6 @@
 @import (less) "lib/normalize.css"; /* Normalize.css - render elements consistently and in line with standards */
 @import "lib/lesshat.less"; /* LESS Hat - collection of LESS mixins */
+@charset 'UTF-8';
 
 /* Replace these example styles with your app's styles */
 body {
@@ -140,7 +141,14 @@ select {
 
 button {
   color:black;
-  width:30%;
+  width:45%;
+}
+
+button.next:after {
+ content: ' ⇨'
+}
+button.previous:before{
+  content: '⇦ '
 }
 
 input {

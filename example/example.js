@@ -33,8 +33,29 @@ var App = {
       });
     });
 
-    $('#manifestPicker').on('change', function() {
+    $(window).on('resize', function() {
+      if (self.viewer) {
+        self.viewer.resize();
+      }
+    });
+
+    $('#manifestPicker').on('change', function(e) {
       self.openSelectedManifest();
+    });
+
+    $('button.next').on('click', function(e) {
+      self.viewer.next();
+    });
+
+    $('button.previous').on('click', function(e) {
+      self.viewer.previous();
+    });
+
+    $('#perspective').on('change', function(e) {
+      self.currentPerspective = e.target[e.target.selectedIndex].value;
+      if (self.viewer) {
+        self.viewer.selectPerspective(self.currentPerspective);
+      }
     });
 
     $('#mode').on('change', function(e) {
@@ -108,10 +129,15 @@ var App = {
       /* http://iiif.io/api/presentation/2.0/example/fixtures/24/manifest.json */
       /* http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json */
 
+      // if (self.viewer) {
+      //   self.viewer.canvases(manifest.sequences[0].canvases);
+      //   return;
+      // }
+
       if (self.viewer) {
-        self.viewer.canvases(manifest.sequences[0].canvases);
-        return;
+        self.viewer.destroy();
       }
+
       self.viewer = manifestor({
         manifest: manifest,
         container: $('#example-container')[0],
@@ -133,10 +159,6 @@ var App = {
       if(selectedCanvas && self.viewer.getState().perspective == 'detail') {
         setImagesForCanvas(selectedCanvas);
       }
-
-      self.viewer.on('viewer-state-updated', function() {
-        console.log('I have updated!');
-      });
 
       $('#example-container').on('click', '.canvas', function (event) {
         self.viewer.selectCanvas($(this).data('id'));
@@ -215,6 +237,10 @@ var App = {
           });
           listItem.append(label);
           listItem.prepend(layerThumb);
+          if (image.getStatus() === 'drawn') {
+            layerThumb.attr('src', image.tileSource.url);
+            console.log(image);
+          }
           listItem.prepend(checkbox);
           // listItem.append(sliderLabel);
           label.append(slider);

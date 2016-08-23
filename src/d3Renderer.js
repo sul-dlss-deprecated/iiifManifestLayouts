@@ -16,10 +16,11 @@ var d3Renderer = function(config) {
 
   dispatcher.on('currentZoomUpdated', setZoomRegion);
   dispatcher.on('perspectiveUpdated', changePerspective);
-  // dispatcher.on('selectCanvas', selectCanvas);
+  dispatcher.on('selectedCanvasUpdated', selectCanvas);
   dispatcher.on('viewingModeUpdated', changeViewingMode);
-  // dispatcher.on('changeViewingDirection', changeViewingMode);
+  dispatcher.on('changeViewingDirection', changeViewingDirection);
   dispatcher.on('scaleFactorUpdated', immediateUpdate);
+  dispatcher.on('sizeUpdated', immediateUpdate);
   dispatcher.on('image-status-updated', updateThumb);
 
   function buildContainers() {
@@ -54,14 +55,13 @@ var d3Renderer = function(config) {
         height: '100%',
         position: 'absolute',
         top: 0,
-        left: 0
+        left: 0,
+        'pointer-events': 'none'
       });
 
   }
-  enableOverviewScrollEvents();
 
   function disableScrollEvents() {
-    var state = viewerState.getState();
     container
       .style('pointer-events', 'none');
 
@@ -141,7 +141,7 @@ var d3Renderer = function(config) {
         })[0].vantage;
 
     renderState.constraintBounds(stage2viewBounds, true);
-    container
+    d3.select('.manifest-layouts-DOM-container')
       .transition()
       .style('opacity', 1);
 
@@ -156,27 +156,54 @@ var d3Renderer = function(config) {
         stage2layout = calculateLayout('detail')(),
         stage1viewBounds = stage1layout.filter(function(frame) {
           return frame.canvas.selected;
+        })[0].vantage,
+        stage2viewBounds = stage2layout.filter(function(frame) {
+          return frame.canvas.selected;
         })[0].vantage;
 
     renderState.constraintBounds(stage1viewBounds, true);
     disableScrollEvents();
-    container
+    d3.select('.manifest-layouts-DOM-container')
       .transition()
       .style('opacity', 0);
 
     renderLayout(stage1layout, true, function() {
+      renderState.constraintBounds(stage2viewBounds, false);
+      // Include anchor for detail mode based on previous
+      // location in the overview mode.
       renderLayout(stage2layout, false);
     });
   }
   function selectCanvas() {
-    renderLayout(calculateLayout(),false);
+    var stage1layout = calculateLayout('detail')(),
+    stage1viewBounds = stage1layout.filter(function(frame) {
+      return frame.canvas.selected;
+    })[0].vantage;
+    renderState.constraintBounds(stage1viewBounds, true);
+    disableScrollEvents();
+    d3.select(container[0][0])
+      .transition()
+      .style('opacity', 0);
+
+    renderLayout(stage1layout, true, function() {
+    });
   }
   function changeViewingMode() {
-    var stage2layout = calculateLayout(viewerState.getState().perspective)();
-    renderLayout(stage2layout, true);
+    var layout = calculateLayout(viewerState.getState().perspective)(),
+    viewBounds = layout.filter(function(frame) {
+      return frame.canvas.selected;
+    })[0].vantage;
+
+    renderState.constraintBounds(viewBounds, true);
+    renderLayout(layout, true);
   }
   function changeViewingDirection() {
-    renderLayout(calculateLayout(),false);
+    var layout = calculateLayout(viewerState.getState().perspective)(),
+    viewBounds = layout.filter(function(frame) {
+      return frame.canvas.selected;
+    })[0].vantage;
+    renderState.constraintBounds(viewBounds,false);
+    renderLayout(layout,false);
   }
 
   function calculateLayout(layoutType) {
@@ -190,14 +217,9 @@ var d3Renderer = function(config) {
       viewingDirection: userState.viewingDirection,
       viewingMode: userState.viewingMode,
       canvasHeight: 200,
-      canvasWidth: 500,
+      canvasWidth: 200,
       selectedCanvas: userState.selectedCanvas,
-      framePadding: {
-        top: 10,
-        bottom: 40,
-        left: 10,
-        right: 10
-      },
+      framePadding: userState.framePadding,
       viewportPadding: userState.viewportPadding,
       minimumImageGap: 5, // precent of viewport
       facingCanvasPadding: 0.1 // precent of viewport
@@ -209,9 +231,8 @@ var d3Renderer = function(config) {
     // you need a general understanding of d3 selections,
     // and you will want to read about nested
     // selections in particular: http://bost.ocks.org/mike/nest/
-
     var animationTiming = animate ? 1000 : 0,
-    frame = container.selectAll('.' + frameClass).data(layoutData);
+        frame = container.selectAll('.' + frameClass).data(layoutData);
 
     // Update Existing Frame Elements
     frame
@@ -273,10 +294,14 @@ var d3Renderer = function(config) {
       .style('-webkit-transform', getEnterTranslate)
       .each(function(d) {
         var canvasData = d.canvas,
+            state = viewerState.getState(),
             canvasImageState = viewerState.getState().canvasObjects[canvasData.id];
 
         canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
-        canvasImageState.getThumbnailResource().show();
+
+        if (state.selectedCanvas !== canvasImageState.canvas.id) {
+          canvasImageState.getThumbnailResource().show();
+        }
       });
 
     frameEnter.append('div')
@@ -289,7 +314,7 @@ var d3Renderer = function(config) {
     // if it has been requested, add loading class
     // if drawn, add image and give it a class
     // to allow fading in.
-    // if failed, give it a failing class
+    // If failed, give it a failing class
     // if locked, add a lock class
     if (imageResource.status === 'drawn') {
       container

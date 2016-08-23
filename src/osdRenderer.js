@@ -6,12 +6,10 @@ var OsdRenderer = function(options) {
   this.dispatcher = options.dispatcher;
   this.renderState = options.renderState;
   this.viewerState = options.viewerState;
-  console.log(OpenSeadragon.version);
   this.viewer = OpenSeadragon({
     element: options.container,
     showNavigationControl: false,
-    preserveViewport: true,
-    autoResize: false
+    preserveViewport: true
   });
   this.addOSDHandlers(this.viewerState, this.renderState);
 
@@ -21,9 +19,11 @@ var OsdRenderer = function(options) {
     });
     self.updateImagePosition(canvasObject.thumbnailResource);
   });
+  this.dispatcher.on('image-removed', function(imageResource) {
+    self.removeThumbnail(imageResource);
+  });
   this.dispatcher.on('image-needed', function(imageResource) {
     self.openTileSource(imageResource);
-    console.log(imageResource.tileSource);
   });
   this.dispatcher.on('image-show', function(imageResource) {
     // Check whether or not this item has been drawn.
@@ -31,7 +31,6 @@ var OsdRenderer = function(options) {
     // and the opacity can be updated.
     if (imageResource.getStatus() === 'drawn') {
       self.updateImageOpacity(imageResource);
-      console.log(imageResource.tileSource);
     }
   });
   this.dispatcher.on('image-hide', function(imageResource) {
@@ -44,67 +43,38 @@ var OsdRenderer = function(options) {
       self.updateImageOpacity(imageResource);
     }
   });
-
   this.dispatcher.on('constraintBoundsUpdated', function(animate) {
     self.setViewerBoundsFromState(animate);
+    if (!animate) {
+      self.viewer.forceRedraw();
+      self.renderState.currentZoom({
+        scale: self.getViewerScale(),
+        center: self.getZoomTranslation()
+      });
+    }
   });
   this.dispatcher.on('overviewScrollPositionUpdated', function() {
     self.setViewerBoundsFromState(false);
   });
-  // this.dispatcher.on('selectCanvas', self.selectCanvas);
-  // this.dispatcher.on('changeViewingMode', self.changeViewingMode);
-  // this.dispatcher.on('changeViewingDirection', self.changeViewingMode);
-  // this.dispatcher.on('translateZoom', self.translateZoom);
+  this.dispatcher.on('selectCanvas', self.selectCanvas);
+  this.dispatcher.on('perspectiveUpdated', self.changePerspective);
 };
 
 OsdRenderer.prototype = {
-  immediateUpdate: function() {
-    // Set the viewport to the correct
-    // zoom level and framing area.
-    this.setViewerBoundsFromState(false);
-    this.viewer.viewport.fitBounds(this.renderState.getState().constraintBounds, false);
-  },
   changePerspective: function(perspective) {
     if (perspective === 'detail') {
-      // enable zooming and stuff
+      // enable zooming
       return;
     }
-    // disable zooming and stuff
+    // disable zooming
   },
-  transitionToOverview: function() {
-    // Zoom out to the overview
-    // target area for the selected
-    // canvas with an animation.
-  },
-  transitionToDetail: function() {
-    // Zoom in to the detail view
-    // target area for the selected
-    // canvas with an animation.
-  },
-  selectCanvas: function() {
-    // Pan and Zoom to the target
-    // area with an animation.
-  },
-  changeViewingMode: function() {
-    // Pan and Zoom to the frame
-    // area with an animation.
-  },
-  changeViewingDirection: function() {
-    // Zoom out to image constraints
-    // for currently selected image.
-  },
-
-  tileSourceConfig: function(imageResource) {
+  selectCanvas: function(canvasObject) {
   },
 
   updateItemIndex: function() {
     if(this.tiledImage && this.viewer.world.getItemCount() > this.zIndex) {
       this.viewer.world.setItemIndex(this.tiledImage, this.zIndex);
     }
-  },
-
-  getTileSourceFromImageResource: function() {
-    return {};
   },
 
   removeThumbnail: function(imageResource) {
@@ -116,10 +86,10 @@ OsdRenderer.prototype = {
     }
   },
 
-  removeTilesource: function(imageResourceID) {
-    if(this.tiledImage) {
-      this.viewer.world.removeItem(this.tiledImage);
-      this.tiledImage = null;
+  removeTilesource: function(imageResource) {
+    if(imageResource.osdTiledImage) {
+      console.log('doing something');
+      this.viewer.world.removeItem(imageResource.osdTiledImage);
     }
   },
 
@@ -206,6 +176,7 @@ OsdRenderer.prototype = {
       bounds = new OpenSeadragon.Rect(bounds.x, bounds.y, bounds.width, bounds.height);
       // the "true" second argument is the "immediately" flag,
       // telling osd not to animate.
+      this.viewer.forceRedraw();
       imageResource.osdTiledImage.setPosition(bounds.getTopLeft(), true);
       imageResource.osdTiledImage.setWidth(bounds.width, true);
     }
@@ -301,6 +272,7 @@ OsdRenderer.prototype = {
         state.constraintBounds.width,
         state.constraintBounds.height
       );
+      console.log(constraintBounds);
 
       // Change the below to check a local variable for
       // whether the request to update is different. If
@@ -343,10 +315,12 @@ OsdRenderer.prototype = {
           changed = true;
         }
 
+        console.log('made it');
         if (changed) {
-          self.renderState.inZoomConstraints(false);
-          self.viewer.viewport.fitBounds(constraintBounds, false);
+          console.log('changed');
           self.renderState.inZoomConstraints(true);
+          self.viewer.viewport.fitBounds(constraintBounds, false);
+          self.renderState.inZoomConstraints(false);
         }
       }
 
@@ -359,6 +333,7 @@ OsdRenderer.prototype = {
     };
 
     this.viewer.addHandler('animation', function(event) {
+      self.viewer.forceRedraw();
       self.renderState.currentZoom({
         scale: self.getViewerScale(),
         center: self.getZoomTranslation()
@@ -367,7 +342,7 @@ OsdRenderer.prototype = {
 
     this.viewer.addHandler('zoom', function(event) {
       if (self.viewerState.getState().perspective === 'detail') {
-        // _applyConstraints();
+        _applyConstraints();
       }
       // getting the center won't work if there isn't a tilesource
       // already opened, because openseadragon doesn't have a concept
@@ -378,7 +353,7 @@ OsdRenderer.prototype = {
 
     this.viewer.addHandler('pan', function(event) {
       if (self.viewerState.getState().perspective === 'detail') {
-        // _applyConstraints();
+        _applyConstraints();
       }
       var zoom = self.viewer.viewport.getZoom();
       _semanticZoom(zoom, event.center);

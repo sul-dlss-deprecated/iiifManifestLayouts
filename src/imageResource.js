@@ -102,6 +102,10 @@ ImageResource.prototype = {
     return this.status;
   },
 
+  remove: function() {
+    this.dispatcher.emit('image-removed', this);
+  },
+
   moveToIndex: function(index) {
     this.parent.moveToIndex(this, index);
   },

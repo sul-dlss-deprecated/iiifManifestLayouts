@@ -1,4 +1,5 @@
 var ImageResource = require('./ImageResource');
+var ThumbnailFactory = require('./ThumbnailFactory');
 
 var _getRectFromStringArray = function(arr) {
   var rectArray = arr.map(function(number) {
@@ -58,7 +59,7 @@ var _buildImageConfig = function(resource) {
     }
   };
 
-  var imageTileSource =  _getImageTilesource();
+  var imageTileSource = _getImageTilesource();
 
   return {
     // the ID is to use in the DOM, so remove special characters. The URL may not be unique, so add a salt.
@@ -66,7 +67,8 @@ var _buildImageConfig = function(resource) {
     label: resource.label,
     tileSource: imageTileSource,
     clipRegion: _getSegmentFromUrl(id),
-    dynamic: isDynamic
+    dynamic: isDynamic,
+    // thumbnailUrl: ThumbnailFactory({images:[resource]}).tileSource.levels[0].url
   };
 };
 

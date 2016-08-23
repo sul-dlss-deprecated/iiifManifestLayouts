@@ -38,14 +38,6 @@ var manifestor = function(options) {
     labelClass: options.labelClass || 'label'
   });
 
-  // function scrollHandler(event) {
-  //   if (viewerState.getState().perspective === 'overview' && renderState.getState().zooming === false) {
-  //     renderState.setState({ lastScrollPosition: $(this).scrollTop() });
-  //     osd.setViewerBoundsFromState(true);
-  //   }
-  // }
-
-
   // Do we really want to expose this?
   function setState(state) {
     viewerState.setState(state);
@@ -177,10 +169,10 @@ var manifestor = function(options) {
   }
 
   function resize() {
-    viewerState.setState({
-      width: options.container.offsetWidth,
-      height: options.container.offsetHeight
-    });
+    viewerState.size(
+      options.container.offsetWidth,
+      options.container.offsetHeight
+    );
   }
 
   function updateThumbSize(scaleFactor) {
@@ -190,24 +182,92 @@ var manifestor = function(options) {
     dispatcher.emit('scaleFactorUpdated');
   }
 
-  function _navigate(forward) {
-    // var state = viewerState.getState();
-    // var currentCanvasIndex = viewerState.selectedCanvasObject().index;
-    // var incrementValue = forward ? 1 : -1;
+  function navigate(forward) {
+    var state = viewerState.getState();
+    var currentCanvasIndex = viewerState.selectedCanvasObject().index;
+    var incrementValue = forward ? 1 : -1;
+    console.log(viewerState.selectedCanvasObject());
 
-    // if(state.viewingMode === 'paged') {
-    //   canvasUtils.navigatePaged(currentCanvasIndex, incrementValue);
-    // } else {
-    //   canvasUtils.navigateIndividual(currentCanvasIndex, incrementValue);
-    // }
+    if(state.viewingMode === 'paged') {
+      navigatePaged(currentCanvasIndex, incrementValue);
+    } else {
+      navigateIndividual(currentCanvasIndex, incrementValue);
+    }
+  }
+
+  function navigateIndividual(currentIndex, incrementValue) {
+    var newIndex = currentIndex + incrementValue;
+    console.log(newIndex);
+
+    // do nothing if newIndex is out of range
+    if (viewerState.isValidCanvasIndex(newIndex)) {
+      selectCanvasForIndex(newIndex);
+    }
+  }
+
+  function navigatePaged(currentIndex, incrementValue) {
+    // Simply set which ones are "needed", let osd do the rest.
+    var newIndex = currentIndex + incrementValue;
+
+    if (currentIndex % 2 !== 0) {
+      newIndex = currentIndex + (2 * incrementValue);
+    }
+
+    // return if newIndex is out of range
+    if (!viewerState.isValidCanvasIndex(newIndex)) {
+      return;
+    }
+
+    var getCanvasByIndex = function(index) {
+      var canvasId = viewerState.canvases[index]['@id'];
+      return self.canvasObjects[canvasId];
+    };
+
+    // Do not select non-paged canvases in paged mode. Instead, find the next available
+    // canvas that does not have that viewingHint.
+    var newCanvas = getCanvasByIndex(newIndex);
+    while(newCanvas.viewingHint === 'non-paged' && viewerState.isValidCanvasIndex(newIndex)) {
+      newIndex += incrementValue;
+      newCanvas = getCanvasByIndex(newIndex);
+    }
+
+    // this.loadTileSourceForIndex(newIndex);
+
+    // Load tilesource for the non-selected side of the pair, if it exists
+    var facingPageIndex = newIndex + incrementValue;
+    if(viewerState.isValidCanvasIndex(facingPageIndex)) {
+      // this.loadTileSourceForIndex(facingPageIndex);
+    }
+
+    selectCanvasForIndex(newIndex);
+  }
+
+  function selectCanvasForIndex(index) {
+    var canvasId = viewerState.getState().canvases[index]['@id'];
+    viewerState.selectedCanvasObject(canvasId);
   }
 
   function next() {
-    _navigate(true);
+    navigate(true);
   }
 
   function previous() {
-    _navigate(false);
+    navigate(false);
+  }
+
+  function destroy() {
+    if (osdRenderer.osd) {
+      osdRenderer.osd.destroy();
+    }
+
+    while (options.container.firstChild) {
+      options.container.removeChild(
+        options.container.firstChild
+      );
+    }
+
+    viewerState = null;
+    renderState = null;
   }
 
   return {
@@ -232,7 +292,8 @@ var manifestor = function(options) {
       return viewerState.getState();
     },
     setState: setState,
-    osd: osdRenderer.viewer
+    osd: osdRenderer.viewer,
+    destroy: destroy
   };
 };
 
