@@ -16,7 +16,11 @@ var App = {
       {url:'http://manifests.ydc2.yale.edu/manifest/Osbornfa1v2.json', label: "Yale Osborn with choice (see 53r)"},
       {url: 'http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', label: 'Stanford DMS Manuscript (example of typical object)'},
       {url: 'http://iiif.ub.uni-leipzig.de/0000000001/manifest.json', label: 'Leipzig Scroll'},
-      {url: 'http://oculus-dev.harvardx.harvard.edu/manifests/drs:5981093', label: 'Harvard Richardson 7'}
+      {url: 'http://oculus-dev.harvardx.harvard.edu/manifests/drs:5981093', label: 'Harvard Richardson 7'},
+      {url: 'https://data.ucd.ie/api/img/manifests/ucdlib:33064', label: 'University College Dublin (dcterms)'},
+      {url: 'http://www2.dhii.jp/nijl/NIJL0018/099-0014/manifest_tags.json', label: 'National Institute of Japanese Literature (rtl)'},
+      {url: 'http://digi.vatlib.it/iiif/MSS_Vat.lat.3225/manifest.json', label: 'Vatican Library (URL formatting)'},
+      {url: 'http://media.nga.gov/public/manifests/nga_highlights.json', label: 'NGA Highlights'}
     ].forEach(function(fixture) {
       $('<option>')
         .val(fixture.url)
@@ -184,12 +188,10 @@ var App = {
       };
 
       self.viewer.on('image-hide', function(e) {
-        console.log(e);
         _setCheckbox(e.id, e.getVisible());
       });
 
       self.viewer.on('image-show', function(e) {
-        console.log(e);
         _setCheckbox(e.id, e.getVisible());
       });
 
@@ -239,7 +241,6 @@ var App = {
           listItem.prepend(layerThumb);
           if (image.getStatus() === 'drawn') {
             layerThumb.attr('src', image.tileSource.url);
-            console.log(image);
           }
           listItem.prepend(checkbox);
           // listItem.append(sliderLabel);

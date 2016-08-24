@@ -73,6 +73,26 @@ var viewerState = function(config) {
     if (!arguments.length) {
       return state.canvasObjects[state.selectedCanvas];
     } else  {
+      var sourcePerspective = state.perspective;
+      if (sourcePerspective === 'detail') {
+        setState({
+          selectedCanvas: newCanvas
+        });
+
+        // Mark all canvases as "needed" that may be in a view with this canvas
+        // This is accomplished by means of the "show" method on its image resources.
+        var canvas = state.canvasObjects[state.selectedCanvas];
+        canvas.images.filter(function(image) {
+          return (image.getImageType() === 'main');
+        }).forEach(function(image) {
+          image.show();
+        });
+        
+        canvas.thumbnailResource.remove();
+        dispatcher.emit('selectedCanvasUpdated', {from: sourcePerspective});
+        return state.canvasObjects[state.selectedCanvas];
+      }
+
       setState({
         selectedCanvas: newCanvas,
         perspective: 'detail'
@@ -88,7 +108,7 @@ var viewerState = function(config) {
       });
 
       canvas.thumbnailResource.remove();
-      dispatcher.emit('selectedCanvasUpdated');
+      dispatcher.emit('selectedCanvasUpdated', {from: sourcePerspective});
       return state.canvasObjects[state.selectedCanvas];
     }
   }
@@ -146,7 +166,7 @@ var viewerState = function(config) {
 
   function isValidCanvasIndex(index) {
     console.log(index);
-    return(index > 0 && index < state.canvases.length);
+    return(index >= 0 && index <= state.canvases.length);
   }
 
   // Listen for actions. This wrapper responds to asynchronous

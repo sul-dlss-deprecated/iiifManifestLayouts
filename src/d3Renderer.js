@@ -124,6 +124,7 @@ var d3Renderer = function(config) {
       enableOverviewScrollEvents();
     }
   }
+
   function changePerspective() {
     if (viewerState.getState().perspective === 'detail') {
       transitionToDetail();
@@ -131,26 +132,32 @@ var d3Renderer = function(config) {
     }
     transitionToOverview();
   }
+
   function scrollOverview() {
   }
+
   function transitionToOverview() {
     var stage1layout = calculateLayout('intermediate')(),
         stage2layout = calculateLayout('overview')(),
+        stage1viewBounds = stage1layout.filter(function(frame) {
+          return frame.canvas.selected;
+        })[0].vantage,
         stage2viewBounds = stage2layout.filter(function(frame) {
           return frame.canvas.selected;
         })[0].vantage;
 
-    renderState.constraintBounds(stage2viewBounds, true);
     d3.select('.manifest-layouts-DOM-container')
       .transition()
       .style('opacity', 1);
 
+    renderState.constraintBounds(stage1viewBounds, false);
     renderLayout(stage1layout, false, function() {
-      renderLayout(stage2layout, true);
       renderState.constraintBounds(stage2viewBounds, true);
+      renderLayout(stage2layout, true);
       enableOverviewScrollEvents();
     });
   }
+
   function transitionToDetail() {
     var stage1layout = calculateLayout('intermediate')(),
         stage2layout = calculateLayout('detail')(),

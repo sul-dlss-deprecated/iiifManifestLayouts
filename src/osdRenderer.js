@@ -20,7 +20,7 @@ var OsdRenderer = function(options) {
     self.updateImagePosition(canvasObject.thumbnailResource);
   });
   this.dispatcher.on('image-removed', function(imageResource) {
-    self.removeThumbnail(imageResource);
+    self.removeTilesource(imageResource);
   });
   this.dispatcher.on('image-needed', function(imageResource) {
     self.openTileSource(imageResource);
@@ -87,8 +87,9 @@ OsdRenderer.prototype = {
   },
 
   removeTilesource: function(imageResource) {
+    console.log('removing');
     if(imageResource.osdTiledImage) {
-      console.log('doing something');
+      console.log('removing for real');
       this.viewer.world.removeItem(imageResource.osdTiledImage);
     }
   },
@@ -272,7 +273,6 @@ OsdRenderer.prototype = {
         state.constraintBounds.width,
         state.constraintBounds.height
       );
-      console.log(constraintBounds);
 
       // Change the below to check a local variable for
       // whether the request to update is different. If
@@ -315,9 +315,7 @@ OsdRenderer.prototype = {
           changed = true;
         }
 
-        console.log('made it');
         if (changed) {
-          console.log('changed');
           self.renderState.inZoomConstraints(true);
           self.viewer.viewport.fitBounds(constraintBounds, false);
           self.renderState.inZoomConstraints(false);

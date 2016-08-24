@@ -123,25 +123,28 @@ var ImageResourceFactory = function(image, parent) {
   };
 
   switch(resourceType) {
-    case 'dctypes:Image':
-      var config = _buildImageConfig(image.resource);
+  case 'dctypes:Image':
+  case 'dcTypes:Image':
+  case 'dcterms:Image':
+  case 'dcTerms:Image':
+    var config = _buildImageConfig(image.resource);
+    return _makeImageFromConfig(config);
+  case 'oa:Choice':
+    var configs = _buildChoiceConfigs(image.resource);
+    return configs.map(function(config) {
       return _makeImageFromConfig(config);
-    case 'oa:Choice':
-      var configs = _buildChoiceConfigs(image.resource);
-      return configs.map(function(config) {
-        return _makeImageFromConfig(config);
-      });
-    case 'oa:SpecificResource':
-      var resource = image.resource;
-      config = _buildImageConfig(resource);
+    });
+  case 'oa:SpecificResource':
+    var resource = image.resource;
+    config = _buildImageConfig(resource);
 
-      if(config && resource.selector && resource.selector.region) {
-        var clipArray = resource.selector.region.split(',');
-        config.clipRegion = _getRectFromStringArray(clipArray);
-      }
-      return _makeImageFromConfig(config);
-    default:
-      throw new Error("Cannot create an image from type " + resourceType);
+    if(config && resource.selector && resource.selector.region) {
+      var clipArray = resource.selector.region.split(',');
+      config.clipRegion = _getRectFromStringArray(clipArray);
+    }
+    return _makeImageFromConfig(config);
+  default:
+    throw new Error("Cannot create an image from type " + resourceType);
   }
 };
 
