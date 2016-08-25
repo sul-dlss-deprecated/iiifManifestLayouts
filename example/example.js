@@ -168,6 +168,44 @@ var App = {
         self.viewer.selectCanvas($(this).data('id'));
       });
 
+      // scrollContainer = d3.select(container).selectAll('.manifest-scroll-container')
+      //   .data([true]);
+
+      // scrollContainer.enter()
+      //   .append('div')
+      //   .attr('class', 'manifest-scroll-container')
+      //   .style({
+      //     width: '100%',
+      //     height: '100%',
+      //     position: 'absolute',
+      //     top: 0,
+      //     left: 0,
+      //     'overflow': 'hidden',
+      //     'overflow-x': 'hidden'
+      //   });
+
+      // scrollContainer.on('scroll', function(event) {
+      //   renderState.overviewScrollPosition(this.scrollTop);
+      // });
+
+      // function enableDetailContinuousScrollEvents(viewingDirection) {
+      //   scrollContainer
+      //     .style('pointer-events', 'all');
+
+      //   if (viewingDirection === 'right-to-left' || viewingDirection === 'left-to-right') {
+      //     scrollContainer
+      //       .style('overflow-x', 'scroll')
+      //       .style('overflow-y', 'hidden');
+      //     return;
+      //   } else {
+      //     scrollContainer
+      //       .style('overflow-x', 'hidden')
+      //       .style('overflow-y', 'scroll');
+      //     return;
+      //   }
+      // }
+
+
       self.$images.sortable({
         stop: function(event, ui) {
           var images = self.selectedCanvas.images.length;

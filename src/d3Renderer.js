@@ -11,7 +11,7 @@ var d3Renderer = function(config) {
       frameClass = config.frameClass,
       labelClass = config.labelClass;
 
-  buildContainers();
+  buildContainer();
   immediateUpdate();
 
   dispatcher.on('currentZoomUpdated', setZoomRegion);
@@ -23,28 +23,8 @@ var d3Renderer = function(config) {
   dispatcher.on('sizeUpdated', immediateUpdate);
   dispatcher.on('image-status-updated', updateThumb);
 
-  function buildContainers() {
-    scrollContainer = d3.select(container).selectAll('.manifest-scroll-container')
-      .data([true]);
-
-    scrollContainer.enter()
-      .append('div')
-      .attr('class', 'manifest-scroll-container')
-      .style({
-        width: '100%',
-        height: '100%',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        'overflow': 'hidden',
-        'overflow-x': 'hidden'
-      });
-
-    scrollContainer.on('scroll', function(event) {
-      renderState.overviewScrollPosition(this.scrollTop);
-    });
-
-    container = scrollContainer.selectAll('.manifest-layouts-DOM-container')
+  function buildContainer() {
+    container = d3.select(container).selectAll('.manifest-layouts-DOM-container')
       .data([true]);
 
     container.enter()
@@ -58,52 +38,17 @@ var d3Renderer = function(config) {
         left: 0,
         'pointer-events': 'none'
       });
-
   }
 
-  function disableScrollEvents() {
-    container
-      .style('pointer-events', 'none');
-
-    scrollContainer
-      .style('pointer-events', 'none')
-      .style('overflow-y', 'hidden');
-  }
-
-  function enableOverviewScrollEvents() {
-    container
-      .style('pointer-events', 'all');
-
-    scrollContainer
-      .style('pointer-events', 'all')
-      .style('overflow-y', 'scroll');
-  }
-
-  function enableDetailContinuousScrollEvents(viewingDirection) {
-    scrollContainer
-      .style('pointer-events', 'all');
-
-    if (viewingDirection === 'right-to-left' || viewingDirection === 'left-to-right') {
-      scrollContainer
-        .style('overflow-x', 'scroll')
-        .style('overflow-y', 'hidden');
-      return;
-    } else {
-      scrollContainer
-        .style('overflow-x', 'hidden')
-        .style('overflow-y', 'scroll');
-      return;
-    }
-  }
   function setZoomRegion() {
-    var scale = renderState.getState().currentZoom.scale;
-    var center = renderState.getState().currentZoom.center;
-    var transform = 'scale(' + scale + ') translate(' + -center.x + 'px,' + -center.y + 'px)';
-
-    container
-      .style('transform', transform)
-      .style('-webkit-transform', transform);
+      var scale = renderState.getState().currentZoom.scale;
+      var center = renderState.getState().currentZoom.center;
+      var transform = 'scale(' + scale + ') translate(' + -center.x + 'px,' + -center.y + 'px)';
+      container
+        .style('transform', transform)
+        .style('-webkit-transform', transform);
   }
+
   function immediateUpdate() {
     // One-step layout of all canvases in the
     // current viewingMode, viewingDirection and perspective.
@@ -112,16 +57,19 @@ var d3Renderer = function(config) {
       return frame.canvas.selected;
     })[0].vantage;
 
+    console.log(layout);
+    console.log(viewBounds);
+
     renderLayout(layout, false);
     renderState.constraintBounds(viewBounds, false);
     if (viewerState.getState().perspective === 'detail') {
-      disableScrollEvents();
-      scrollContainer
+      container
+        .style('pointer-events', 'none')
         .style('opacity', 0);
     } else {
-      scrollContainer
-        .style('opacity', 1);
-      enableOverviewScrollEvents();
+      container
+        .style('opacity', 1)
+        .style('pointer-events', 'all');
     }
   }
 
@@ -131,9 +79,6 @@ var d3Renderer = function(config) {
       return;
     }
     transitionToOverview();
-  }
-
-  function scrollOverview() {
   }
 
   function transitionToOverview() {
@@ -154,7 +99,8 @@ var d3Renderer = function(config) {
     renderLayout(stage1layout, false, function() {
       renderState.constraintBounds(stage2viewBounds, true);
       renderLayout(stage2layout, true);
-      enableOverviewScrollEvents();
+      container
+        .style('pointer-events', 'all');
     });
   }
 
@@ -169,7 +115,6 @@ var d3Renderer = function(config) {
         })[0].vantage;
 
     renderState.constraintBounds(stage1viewBounds, true);
-    disableScrollEvents();
     d3.select('.manifest-layouts-DOM-container')
       .transition()
       .style('opacity', 0);
@@ -187,7 +132,8 @@ var d3Renderer = function(config) {
       return frame.canvas.selected;
     })[0].vantage;
     renderState.constraintBounds(stage1viewBounds, true);
-    disableScrollEvents();
+    container
+      .style('pointer-events', 'none');
     d3.select(container[0][0])
       .transition()
       .style('opacity', 0);
