@@ -54,9 +54,17 @@ var OsdRenderer = function(options) {
     }
   });
   this.dispatcher.on('overviewScrollPositionUpdated', function() {
-    self.setViewerBoundsFromState(false);
+
+    var rState = self.renderState.getState();
+    var viewBounds = new OpenSeadragon.Rect(
+      rState.constraintBounds.x,
+      rState.scrollPosition + rState.constraintBounds.y,
+      rState.constraintBounds.width,
+      rState.constraintBounds.height
+    );
+
+    self.viewer.viewport.fitBounds(viewBounds, true);
   });
-  this.dispatcher.on('selectCanvas', self.selectCanvas);
   this.dispatcher.on('perspectiveUpdated', self.changePerspective);
 };
 
@@ -64,11 +72,11 @@ OsdRenderer.prototype = {
   changePerspective: function(perspective) {
     if (perspective === 'detail') {
       // enable zooming
+      // this.enableZoomAndPan();
       return;
     }
     // disable zooming
-  },
-  selectCanvas: function(canvasObject) {
+    // this.disableZoomAndPan();
   },
 
   updateItemIndex: function() {

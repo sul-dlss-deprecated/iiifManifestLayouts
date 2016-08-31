@@ -3,7 +3,7 @@ var renderState = function(config) {
     zooming: false,
     constraintBounds: config.constraintBounds,
     inZoomConstraints: config.inZoomConstraints,
-    scrollPosition: config.lastScrollPosition,
+    scrollPosition: 0,
     overviewLeft: config.overviewLeft,
     overviewTop: config.overviewTop
   },
@@ -51,11 +51,21 @@ var renderState = function(config) {
     }
   }
 
+  function scrollPosition(scrollPosition) {
+    if (!arguments.length) {
+      return state.scrollPosition;
+    } else  {
+      state.scrollPosition = scrollPosition;
+      dispatcher.emit('overviewScrollPositionUpdated');
+      return state.scrollPosition;
+    }
+  }
+
   return {
     zooming: zooming,
     constraintBounds: constraintBounds,
     inZoomConstraints: inZoomConstraints,
-    scrollPosition: 0,
+    scrollPosition: scrollPosition,
     overviewLeft: 0,
     overviewTop: 0,
     getState: getState,

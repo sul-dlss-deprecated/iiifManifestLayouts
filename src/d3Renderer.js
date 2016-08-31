@@ -16,7 +16,8 @@ var d3Renderer = function(config) {
 
   dispatcher.on('currentZoomUpdated', setZoomRegion);
   dispatcher.on('perspectiveUpdated', changePerspective);
-  dispatcher.on('selectedCanvasUpdated', selectCanvas);
+  dispatcher.on('canvasNavigated', navigateCanvas);
+  dispatcher.on('newCanvasSelected', selectCanvas);
   dispatcher.on('viewingModeUpdated', changeViewingMode);
   dispatcher.on('changeViewingDirection', changeViewingDirection);
   dispatcher.on('scaleFactorUpdated', immediateUpdate);
@@ -41,10 +42,7 @@ var d3Renderer = function(config) {
       });
 
     scrollContainer.on('scroll', function(event) {
-      var newBounds = renderState.constraintBounds();
-      newBounds.y = this.scrollTop;
-      console.log(this.scrollTop);
-      renderState.constraintBounds(newBounds, false);
+      renderState.scrollPosition(this.scrollTop);
     });
 
     container = scrollContainer.selectAll('.manifest-layouts-DOM-container')
@@ -61,7 +59,6 @@ var d3Renderer = function(config) {
         left: 0,
         'pointer-events': 'none'
       });
-
   }
 
   function disableScrollEvents() {
@@ -99,14 +96,14 @@ var d3Renderer = function(config) {
     }
   }
   function setZoomRegion() {
-    // if (!renderState.getState().zooming && viewerState.getState().perspective === 'overview') {
-    //   // We don't want OSD to drive in overview mode.
-    //   // D3 takes over in ovweview mode, so we do
-    //   // nothing in response to openseadragon readjusting itself,
-    //   // which would create a circular loop of
-    //   // events triggering events triggering events.
-    //   return;
-    // }
+    if (!renderState.zooming() && viewerState.getState().perspective === 'overview') {
+      // We don't want OSD to drive in overview mode.
+      // D3 takes over in ovweview mode, so we do
+      // nothing in response to openseadragon readjusting itself,
+      // which would create a circular loop of
+      // events triggering events triggering events.
+      return;
+    }
     var scale = renderState.getState().currentZoom.scale;
     var center = renderState.getState().currentZoom.center;
     var transform = 'scale(' + scale + ') translate(' + -center.x + 'px,' + -center.y + 'px)';
@@ -122,10 +119,18 @@ var d3Renderer = function(config) {
     viewBounds = layout.filter(function(frame) {
       return frame.canvas.selected;
     })[0].vantage;
-    viewBounds.y = 0;
 
     renderLayout(layout, false);
     renderState.constraintBounds(viewBounds, false);
+
+    var scale = renderState.getState().currentZoom.scale;
+    var center = renderState.getState().currentZoom.center;
+    var transform = 'scale(' + scale + ') translate(' + -center.x + 'px,' + -center.y + 'px)';
+
+    container
+      .style('transform', transform)
+      .style('-webkit-transform', transform);
+
     if (viewerState.getState().perspective === 'detail') {
       disableScrollEvents();
       scrollContainer
@@ -145,9 +150,6 @@ var d3Renderer = function(config) {
     transitionToOverview();
   }
 
-  function scrollOverview() {
-  }
-
   function transitionToOverview() {
     var stage1layout = calculateLayout('intermediate')(),
         stage2layout = calculateLayout('overview')(),
@@ -164,6 +166,7 @@ var d3Renderer = function(config) {
     d3.select('.manifest-layouts-DOM-container')
       .transition()
       .style('opacity', 1);
+    renderState.zooming(true);
 
     // Run stage 1 of the animation
     renderLayout(stage1layout, false, function() {
@@ -212,11 +215,46 @@ var d3Renderer = function(config) {
       });
     });
   }
+  function anchorFrames(frames) {
+  }
   function selectCanvas() {
+    // Setting up the keyFrame target parameters for
+    // the animation stages.
+    var stage1layout = calculateLayout('intermediate')(),
+        stage2layout = calculateLayout('detail')(),
+        stage1viewBounds = stage1layout.filter(function(frame) {
+          return frame.canvas.selected;
+        })[0].vantage,
+        stage2viewBounds = stage2layout.filter(function(frame) {
+          return frame.canvas.selected;
+        })[0].vantage;
+
+    // Some initial event sending and setup to start the
+    // animation sequence.
+    renderState.constraintBounds(stage1viewBounds, true);
+    renderState.zooming(true);
+    disableScrollEvents();
+    d3.select('.manifest-layouts-DOM-container')
+      .transition()
+      .style('opacity', 0);
+
+    // Run stage 1 of the animation
+    renderLayout(stage1layout, true, function() {
+      // this callback does setup for stage 2 of the animation
+      // and then kicks it off.
+      renderState.constraintBounds(stage2viewBounds, false);
+
+      renderLayout(stage2layout, false, function() {
+        // This callback signals the end of the transition.
+        renderState.zooming(false);
+      });
+    });
+  }
+  function navigateCanvas() {
     var stage1layout = calculateLayout('detail')(),
-    stage1viewBounds = stage1layout.filter(function(frame) {
-      return frame.canvas.selected;
-    })[0].vantage;
+        stage1viewBounds = stage1layout.filter(function(frame) {
+          return frame.canvas.selected;
+        })[0].vantage;
     renderState.constraintBounds(stage1viewBounds, true);
     disableScrollEvents();
     d3.select(container[0][0])

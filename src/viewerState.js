@@ -91,6 +91,7 @@ var viewerState = function(config) {
           canvas.show();
         });
 
+        dispatcher.emit('canvasNavigated', {from: sourcePerspective});
         dispatcher.emit('selectedCanvasUpdated', {from: sourcePerspective});
         return state.canvasObjects[state.selectedCanvas];
       }
@@ -106,6 +107,7 @@ var viewerState = function(config) {
       adjacentCanvases = state.canvasObjects.indexOf(canvas);
       canvas.show();
 
+      dispatcher.emit('newCanvasSelected', {from: sourcePerspective});
       dispatcher.emit('selectedCanvasUpdated', {from: sourcePerspective});
       return state.canvasObjects[state.selectedCanvas];
     }
@@ -115,7 +117,11 @@ var viewerState = function(config) {
     var self = this;
     console.log(this);
     var canvasIndex = state.canvasObjects.indexOf(canvas);
-    var neededIndices = [canvasIndex - 1, canvasIndex + 1, canvasIndex + 2];
+    var neededIndices = canvasIndex > 0 ? [canvasIndex - 1, canvasIndex + 1] : [ canvasIndex + 1];
+
+    if (canvasIndex === state.canvasObjects.length - 1) {
+      neededIndices = [canvasIndex -2, canvasIndex - 1];
+    }
     return neededIndices.map(function(index){
       return state.canvasObjects[index];
     });

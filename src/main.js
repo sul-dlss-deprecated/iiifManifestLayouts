@@ -2,7 +2,8 @@ var viewerStateStore = require('./viewerState'),
     renderStateStore = require('./renderState'),
     OsdRenderer = require('./osdRenderer'),
     D3Renderer = require('./d3Renderer'),
-    events = require('events');
+    events = require('events'),
+    d3 = require('./lib/d3-slim-dist');
 
 var manifestor = function(options) {
   'use strict';
