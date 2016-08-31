@@ -163,10 +163,13 @@ var d3Renderer = function(config) {
     // Some initial event sending and setup to start the
     // animation sequence.
     renderState.constraintBounds(stage1viewBounds, false);
-    d3.select('.manifest-layouts-DOM-container')
+    renderState.zooming(true);
+    scrollContainer
       .transition()
       .style('opacity', 1);
-    renderState.zooming(true);
+    container
+      .transition()
+      .style('opactiy', 1);
 
     // Run stage 1 of the animation
     renderLayout(stage1layout, false, function() {
@@ -199,9 +202,11 @@ var d3Renderer = function(config) {
     renderState.constraintBounds(stage1viewBounds, true);
     renderState.zooming(true);
     disableScrollEvents();
-    d3.select('.manifest-layouts-DOM-container')
-      .transition()
+    scrollContainer
       .style('opacity', 0);
+    container
+      .transition()
+      .style('opactiy', 0);
 
     // Run stage 1 of the animation
     renderLayout(stage1layout, true, function() {
@@ -234,9 +239,11 @@ var d3Renderer = function(config) {
     renderState.constraintBounds(stage1viewBounds, true);
     renderState.zooming(true);
     disableScrollEvents();
-    d3.select('.manifest-layouts-DOM-container')
-      .transition()
+    scrollContainer
       .style('opacity', 0);
+    container
+      .transition()
+      .style('opactiy', 0);
 
     // Run stage 1 of the animation
     renderLayout(stage1layout, true, function() {
@@ -257,9 +264,6 @@ var d3Renderer = function(config) {
         })[0].vantage;
     renderState.constraintBounds(stage1viewBounds, true);
     disableScrollEvents();
-    d3.select(container[0][0])
-      .transition()
-      .style('opacity', 0);
 
     renderLayout(stage1layout, true, function() {
     });
@@ -375,14 +379,10 @@ var d3Renderer = function(config) {
 
         canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
 
-        if (state.selectedCanvas !== canvasImageState.canvas.id) {
+        if (state.selectedCanvas !== canvasImageState.canvas['@id']) {
           canvasImageState.getThumbnailResource().show();
         } else {
-          canvasImageState.images.filter(function(image) {
-            return (image.getImageType() === 'main');
-          }).forEach(function(image) {
-            image.show();
-          });
+          canvasImageState.show();
         }
       });
 

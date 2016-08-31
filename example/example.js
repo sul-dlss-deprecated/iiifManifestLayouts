@@ -145,7 +145,7 @@ var App = {
       self.viewer = manifestor({
         manifest: manifest,
         container: $('#example-container')[0],
-        perspective:  'overview',
+        perspective:  'detail',
         canvasClass: 'canvas', //default set to 'canvas'
         frameClass: 'frame', //default set to 'frame'
         labelClass: 'label', //default set to 'label'
