@@ -9,7 +9,7 @@ var manifestor = function(options) {
 
   var viewerState,
       renderState,
-      d3Renderer, // todo: name this better
+      d3Renderer,
       osdRenderer,
       dispatcher = new events.EventEmitter();
 
@@ -186,7 +186,6 @@ var manifestor = function(options) {
     var state = viewerState.getState();
     var currentCanvasIndex = viewerState.selectedCanvasObject().index;
     var incrementValue = forward ? 1 : -1;
-    console.log(viewerState.selectedCanvasObject());
 
     if(state.viewingMode === 'paged') {
       navigatePaged(currentCanvasIndex, incrementValue);
@@ -197,7 +196,6 @@ var manifestor = function(options) {
 
   function navigateIndividual(currentIndex, incrementValue) {
     var newIndex = currentIndex + incrementValue;
-    console.log(newIndex);
 
     // do nothing if newIndex is out of range
     if (viewerState.isValidCanvasIndex(newIndex)) {
@@ -206,11 +204,11 @@ var manifestor = function(options) {
   }
 
   function navigatePaged(currentIndex, incrementValue) {
-    // Simply set which ones are "needed", let osd do the rest.
     var newIndex = currentIndex + incrementValue;
 
     if (currentIndex % 2 !== 0) {
       newIndex = currentIndex + (2 * incrementValue);
+      if (newIndex < 0) newIndex = 0;
     }
 
     // return if newIndex is out of range
@@ -219,8 +217,8 @@ var manifestor = function(options) {
     }
 
     var getCanvasByIndex = function(index) {
-      var canvasId = viewerState.canvases[index]['@id'];
-      return self.canvasObjects[canvasId];
+      var canvasId = viewerState.getState().canvases[index]['@id'];
+      return viewerState.getState().canvasObjects[canvasId];
     };
 
     // Do not select non-paged canvases in paged mode. Instead, find the next available
@@ -231,14 +229,8 @@ var manifestor = function(options) {
       newCanvas = getCanvasByIndex(newIndex);
     }
 
-    // this.loadTileSourceForIndex(newIndex);
-
     // Load tilesource for the non-selected side of the pair, if it exists
     var facingPageIndex = newIndex + incrementValue;
-    if(viewerState.isValidCanvasIndex(facingPageIndex)) {
-      // this.loadTileSourceForIndex(facingPageIndex);
-    }
-
     selectCanvasForIndex(newIndex);
   }
 
@@ -272,7 +264,6 @@ var manifestor = function(options) {
 
   return {
     // Actions to update the internal state.
-    // setScrollPosition: setScrollPosition,
     next: next,
     previous: previous,
     resize: resize,

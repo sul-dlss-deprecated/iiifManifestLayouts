@@ -79,6 +79,11 @@ var ThumbnailFactory = function(canvas, parent) {
   if(canvas.images) {
     try {
       var config = _makeThumbnailConfig(canvas.images[0].resource, parent);
+
+      if(config.tileSource.type !== 'legacy-image-pyramid') {
+        console.log(canvas.images);
+        console.log(config.tileSource);
+      }
       return new ImageResource(config);
     } catch (error){
       // If we can't use LegacyTileSource to build the thumbnail, don't build a thumbnail.

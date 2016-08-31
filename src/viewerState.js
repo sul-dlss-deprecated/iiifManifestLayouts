@@ -70,10 +70,13 @@ var viewerState = function(config) {
   }
 
   function selectedCanvasObject(newCanvas) {
+
     if (!arguments.length) {
       return state.canvasObjects[state.selectedCanvas];
     } else  {
-      var sourcePerspective = state.perspective;
+      var canvas,
+          adjacentCanvases,
+          sourcePerspective = state.perspective;
       if (sourcePerspective === 'detail') {
         setState({
           selectedCanvas: newCanvas
@@ -81,14 +84,13 @@ var viewerState = function(config) {
 
         // Mark all canvases as "needed" that may be in a view with this canvas
         // This is accomplished by means of the "show" method on its image resources.
-        var canvas = state.canvasObjects[state.selectedCanvas];
-        canvas.images.filter(function(image) {
-          return (image.getImageType() === 'main');
-        }).forEach(function(image) {
-          image.show();
+        canvas = state.canvasObjects[state.selectedCanvas];
+        adjacentCanvases = getNeededCanvases(canvas);
+        canvas.show();
+        adjacentCanvases.forEach(function(canvas){
+          canvas.show();
         });
-        
-        canvas.thumbnailResource.remove();
+
         dispatcher.emit('selectedCanvasUpdated', {from: sourcePerspective});
         return state.canvasObjects[state.selectedCanvas];
       }
@@ -100,17 +102,23 @@ var viewerState = function(config) {
 
       // Mark all canvases as "needed" that may be in a view with this canvas
       // This is accomplished by means of the "show" method on its image resources.
-      var canvas = state.canvasObjects[state.selectedCanvas];
-      canvas.images.filter(function(image) {
-        return (image.getImageType() === 'main');
-      }).forEach(function(image) {
-        image.show();
-      });
+      canvas = state.canvasObjects[state.selectedCanvas];
+      adjacentCanvases = state.canvasObjects.indexOf(canvas);
+      canvas.show();
 
-      canvas.thumbnailResource.remove();
       dispatcher.emit('selectedCanvasUpdated', {from: sourcePerspective});
       return state.canvasObjects[state.selectedCanvas];
     }
+  }
+
+  function getNeededCanvases(canvas) {
+    var self = this;
+    console.log(this);
+    var canvasIndex = state.canvasObjects.indexOf(canvas);
+    var neededIndices = [canvasIndex - 1, canvasIndex + 1, canvasIndex + 2];
+    return neededIndices.map(function(index){
+      return state.canvasObjects[index];
+    });
   }
 
   function canvases(canvases) {
@@ -119,7 +127,7 @@ var viewerState = function(config) {
     } else  {
       state.canvases = state.canvases;
       state.selectedCanvas = canvases.some(function(canvas){
-        return
+        return;
       }) ? state.selectedCanvas : canvases[0]['@id'];
       dispatcher.emit('canvasesUpdated');
       return state.canvases;
@@ -131,7 +139,16 @@ var viewerState = function(config) {
       return state.perspective;
     } else  {
       state.perspective = perspective;
+      if (perspective === 'detail') {
+        var canvas = state.canvasObjects[state.selectedCanvas];
+        canvas.images.filter(function(image) {
+          return (image.getImageType() === 'main');
+        }).forEach(function(image) {
+          image.show();
+        });
 
+        canvas.thumbnailResource.remove();
+      }
       dispatcher.emit('perspectiveUpdated');
       return state.perspective;
     }

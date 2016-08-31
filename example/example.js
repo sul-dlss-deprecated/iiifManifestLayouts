@@ -12,9 +12,9 @@ var App = {
 
     // Some choice fixture objects with real content.
     [
+      {url: 'http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', label: 'Stanford DMS Manuscript (example of typical object)'},
       {url: 'http://demos.biblissima-condorcet.fr/iiif/metadata/BVMM/chateauroux/manifest.json', label: 'BNF Detail Images Demo (Chateauroux)'},
       {url:'http://manifests.ydc2.yale.edu/manifest/Osbornfa1v2.json', label: "Yale Osborn with choice (see 53r)"},
-      {url: 'http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', label: 'Stanford DMS Manuscript (example of typical object)'},
       {url: 'http://iiif.ub.uni-leipzig.de/0000000001/manifest.json', label: 'Leipzig Scroll'},
       {url: 'http://oculus-dev.harvardx.harvard.edu/manifests/drs:5981093', label: 'Harvard Richardson 7'},
       {url: 'https://data.ucd.ie/api/img/manifests/ucdlib:33064', label: 'University College Dublin (dcterms)'},
@@ -168,25 +168,9 @@ var App = {
         self.viewer.selectCanvas($(this).data('id'));
       });
 
-      // scrollContainer = d3.select(container).selectAll('.manifest-scroll-container')
-      //   .data([true]);
-
-      // scrollContainer.enter()
-      //   .append('div')
-      //   .attr('class', 'manifest-scroll-container')
-      //   .style({
-      //     width: '100%',
-      //     height: '100%',
-      //     position: 'absolute',
-      //     top: 0,
-      //     left: 0,
-      //     'overflow': 'hidden',
-      //     'overflow-x': 'hidden'
-      //   });
-
-      // scrollContainer.on('scroll', function(event) {
-      //   renderState.overviewScrollPosition(this.scrollTop);
-      // });
+      $('.scrollContainer').on('scroll', function(event) {
+        self.viewer.setScrollPosition(this.scrollTop);
+      });
 
       // function enableDetailContinuousScrollEvents(viewingDirection) {
       //   scrollContainer

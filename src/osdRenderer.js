@@ -77,20 +77,14 @@ OsdRenderer.prototype = {
     }
   },
 
-  removeThumbnail: function(imageResource) {
-    if(imageResource.thumbnail){
-      imageResource.thumbnail.fade(0);
-      imageResource.thumbnail.removeFromCanvas();
-      imageResource.thumbnail.destroy();
-      delete imageResource.thumbnail;
-    }
-  },
-
   removeTilesource: function(imageResource) {
-    console.log('removing');
+    var self = this;
+
     if(imageResource.osdTiledImage) {
-      console.log('removing for real');
-      this.viewer.world.removeItem(imageResource.osdTiledImage);
+      self.fadeTilesource(imageResource.osdTiledImage, imageResource.osdTiledImage.getOpacity(), 0, function() {
+        // When the tilesource is visually removed, remove it from the scene stack.
+        self.viewer.world.removeItem(imageResource.osdTiledImage);
+      });
     }
   },
 
@@ -183,10 +177,10 @@ OsdRenderer.prototype = {
     }
   },
 
-  fadeTilesource: function(startingOpacity, targetOpacity, callback) {
+  fadeTilesource: function(tileSource, startingOpacity, targetOpacity, callback) {
     var self = this;
 
-    var step = (targetOpacity - currentOpacity) / 30;
+    var step = (targetOpacity - startingOpacity) / 30;
     if (step === 0) {
       if (callback) callback();
       return;
@@ -195,12 +189,12 @@ OsdRenderer.prototype = {
     var frame = function() {
       startingOpacity += step;
       if ((step > 0 && startingOpacity >= targetOpacity) || (step < 0 && startingOpacity <= targetOpacity)) {
-        self.setOpacity(targetOpacity);
+        tileSource.setOpacity(targetOpacity);
         if (callback) callback();
         return;
       }
 
-      self.setOpacity(startingOpacity);
+      tileSource.setOpacity(startingOpacity);
       OpenSeadragon.requestAnimationFrame(frame);
     };
     OpenSeadragon.requestAnimationFrame(frame);

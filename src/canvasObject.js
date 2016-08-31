@@ -35,7 +35,7 @@ var CanvasObject = function(config) {
 };
 
 CanvasObject.prototype = {
-  //Assumes that the point parameter is already in viewport coordinates.
+  // Assumes that the point parameter is already in viewport coordinates.
   containsPoint: function(point) {
     var rectRight = this.bounds.x + this.bounds.width;
     var rectBottom = this.bounds.y + this.bounds.height;
@@ -47,16 +47,12 @@ CanvasObject.prototype = {
     return this.images.filter(function(image) { return image.visible === true; });
   },
 
-  getDetailImages: function() {
-    return this.images.filter(function(image) { return image.imageType === "detail"; });
-  },
-
   getAlternateImages: function() {
     return this.images.filter(function(image) { return image.imageType === "alternate"; });
   },
 
-  getMainImage: function() {
-    return this.images.filter(function(image) { return image.imageType === "main"; })[0];
+  getMainImages: function() {
+    return this.images.filter(function(image) { return image.imageType === "main"; });
   },
 
   getImageById: function(id) {
@@ -122,16 +118,35 @@ CanvasObject.prototype = {
   },
 
   show: function(timeout) {
+    var self = this;
+
     if (!this.needed) {
       this.setNeeded(true);
     }
+
     this.visible = true;
-    this.dispatcher.emit('image-show', this);
+    this.getMainImages().forEach(function(image) {
+
+      image.show();
+
+      function removeThumb() {
+        if (image.getStatus() === 'drawn') {
+          console.log(image.status);
+
+          self.thumbnailResource.remove();
+        }
+        console.log(image.status);
+      }
+
+      self.dispatcher.on('image-status-updated', removeThumb);
+    });
+
+    this.dispatcher.emit('canvas-show', this);
   },
 
   hide: function(timeout) {
     this.visible = false;
-    this.dispatcher.emit('image-hide', this);
+    this.dispatcher.emit('canvas-hide', this);
   },
 
   getVisible: function() {
