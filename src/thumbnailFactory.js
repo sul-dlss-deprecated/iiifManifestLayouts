@@ -68,7 +68,7 @@ var _makeThumbnailConfig = function(resource, parent) {
 
 var ThumbnailFactory = function(canvas, parent) {
   // The canvas has a thumbnail object.
-  if(canvas.thumbnail) {
+  if(canvas.thumbnail && canvas.thumbnail.service) {
     console.log('There is a canvas thumbnail');
     return new ImageResource(_makeThumbnailConfig(canvas.thumbnail, parent));
   }

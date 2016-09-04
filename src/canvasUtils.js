@@ -88,7 +88,7 @@ CanvasUtils.prototype = {
       this.loadTileSourceForIndex(facingPageIndex);
     }
 
-    self.electCanvasForIndex(newIndex);
+    self.selectCanvasForIndex(newIndex);
   },
 
   navigateIndividual: function(currentIndex, incrementValue) {
