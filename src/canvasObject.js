@@ -1,4 +1,3 @@
-'use strict';
 
 require('openseadragon');
 var ImageResource = require('./ImageResource');
@@ -6,6 +5,7 @@ var ImageResourceFactory = require('./ImageResourceFactory');
 var ThumbnailFactory = require('./ThumbnailFactory');
 
 var CanvasObject = function(config) {
+  'use strict';
   var self = this;
   this.clipRegion = config.clipRegion;
   this.opacity = config.opacity || 1;
@@ -157,6 +157,8 @@ CanvasObject.prototype = {
     this._floatImagesToBottom();
     var oldIndex = this.images.indexOf(image);
 
+    console.log("old index: " + oldIndex);
+    console.log("index: " + index);
     if (index === oldIndex || oldIndex === -1 ) {
         return;
     }
@@ -204,7 +206,7 @@ CanvasObject.prototype = {
 
   moveDownOne: function(image) {
     this.insertBelowResource(image, image);
-  },
+  }
 };
 
 module.exports = CanvasObject;
