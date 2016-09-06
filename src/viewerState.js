@@ -115,7 +115,6 @@ var viewerState = function(config) {
 
   function getNeededCanvases(canvas) {
     var self = this;
-    console.log(this);
     var canvasIndex = state.canvasObjects.indexOf(canvas);
     var neededIndices = canvasIndex > 0 ? [canvasIndex - 1, canvasIndex + 1] : [ canvasIndex + 1];
 
@@ -188,7 +187,6 @@ var viewerState = function(config) {
   }
 
   function isValidCanvasIndex(index) {
-    console.log(index);
     return(index >= 0 && index <= state.canvases.length);
   }
 

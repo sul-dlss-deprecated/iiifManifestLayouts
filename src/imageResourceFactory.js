@@ -68,7 +68,7 @@ var _buildImageConfig = function(resource) {
     tileSource: imageTileSource,
     clipRegion: _getSegmentFromUrl(id),
     dynamic: isDynamic,
-    // thumbnailUrl: ThumbnailFactory({images:[resource]}).tileSource.levels[0].url
+    thumbUrl: ThumbnailFactory.getThumbUrl(resource, 200)
   };
 };
 
@@ -127,7 +127,7 @@ var ImageResourceFactory = function(image, parent) {
   case 'dcTypes:Image':
   case 'dcterms:Image':
   case 'dcTerms:Image':
-    var config = _buildImageConfig(image.resource);
+    var config = _buildImageConfig(image.resource, parent);
     return _makeImageFromConfig(config);
   case 'oa:Choice':
     var configs = _buildChoiceConfigs(image.resource);

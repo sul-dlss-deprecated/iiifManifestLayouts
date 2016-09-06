@@ -59,13 +59,6 @@ body {
       background-color: lightgray;
       box-shadow: 0 0 12px white;
     }
-    // &.blank {
-    //   background:red;
-    //   box-shadow: none;
-    //   border:none;
-    // }
-    // &.prohibited {
-    // }
     img {
       position:absolute;
       left:0;
@@ -75,16 +68,26 @@ body {
       width:100%;
       opacity:1;
       transition: all 0.2s ease-out;
-      // &.loading {
-      //   opacity:0;
-      //   transition: all 0.2s ease-out;
-      // }
     }
-    // &.blank {
-    //   background-color: transparent;
-    //   border: 2px dashed gray;
-    //   border-radius: 
-    // }
+    img.loading {
+      opacity:0;
+      transition: all 0.2s ease-out;
+    }
+}
+
+.canvas.blank {
+  background-color: transparent;
+  border: 2px dashed gray;
+  border-radius: 3px;
+}
+
+.canvas.blank:after {
+    content:"";
+    position:absolute;
+    border-top:1px solid red;
+    width:40px;
+    transform: rotate(45deg);
+    transform-origin: 0% 0%;
 }
 
 .frame {
@@ -189,9 +192,8 @@ input[type=range]::-moz-range-track {
     .layerthumb {
       margin-top: 10px;
       margin-bottom: 10px;
-      height:100%;
-      width: 25px;
-      height: 25px;
+      max-height:70%;
+      max-width: 25px;
       border: 1px solid gray;
       float:left;
       background: gray;

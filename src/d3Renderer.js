@@ -167,9 +167,9 @@ var d3Renderer = function(config) {
     scrollContainer
       .transition()
       .style('opacity', 1);
-    container
-      .transition()
-      .style('opactiy', 1);
+    // container
+    //   .transition()
+    //   .style('opactiy', 1);
 
     // Run stage 1 of the animation
     renderLayout(stage1layout, false, function() {
@@ -203,10 +203,8 @@ var d3Renderer = function(config) {
     renderState.zooming(true);
     disableScrollEvents();
     scrollContainer
-      .style('opacity', 0);
-    container
       .transition()
-      .style('opactiy', 0);
+      .style('opacity', 0);
 
     // Run stage 1 of the animation
     renderLayout(stage1layout, true, function() {
@@ -380,7 +378,10 @@ var d3Renderer = function(config) {
         canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
 
         if (state.selectedCanvas !== canvasImageState.canvas['@id']) {
-          canvasImageState.getThumbnailResource().show();
+          if (canvasImageState.getThumbnailResource()){
+            console.log(canvasImageState.getThumbnailResource() );
+            canvasImageState.getThumbnailResource().show();
+          }
         } else {
           canvasImageState.show();
         }
@@ -421,6 +422,7 @@ var d3Renderer = function(config) {
     }
   }
 
+  // Various Utilities
   function getWidthInPx(d) {
     return d.width + 'px';
   }
@@ -458,8 +460,20 @@ var d3Renderer = function(config) {
   }
 
   function getClass(d) {
-    var selected = d.canvas.selected;
-    return selected ? canvasClass + ' selected' : canvasClass;
+    var canvasObject = viewerState.getState().canvasObjects[d.canvas.id],
+        selected = d.canvas.selected ? ' selected': '',
+        blank = canvasObject.images.length < 1 ? ' blank': '',
+        loading = '',
+        failed = '',
+        locked = '';
+
+    if (canvasObject.getThumbnailResource()) {
+      loading = canvasObject.getThumbnailResource().getStatus() === 'requested' ? ' loading': '';
+      failed = canvasObject.getThumbnailResource().getStatus() === 'failed' ? ' failed': '';
+      locked = canvasObject.getThumbnailResource().getStatus() === 'failed' ? ' locked': '';
+    }
+
+    return canvasClass + selected + blank + loading + failed + locked;
   }
 
   function endall(transition, callback) {

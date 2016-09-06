@@ -14,10 +14,12 @@ var OsdRenderer = function(options) {
   this.addOSDHandlers(this.viewerState, this.renderState);
 
   this.dispatcher.on('canvas-position-updated', function(canvasObject) {
-    canvasObject.images.forEach(function(imageResource) {
-      self.updateImagePosition(imageResource);
-    });
-    self.updateImagePosition(canvasObject.thumbnailResource);
+    if (canvasObject.images.length > 0) {
+      canvasObject.images.forEach(function(imageResource) {
+        self.updateImagePosition(imageResource);
+      });
+      self.updateImagePosition(canvasObject.thumbnailResource);
+    }
   });
   this.dispatcher.on('image-removed', function(imageResource) {
     self.removeTilesource(imageResource);
