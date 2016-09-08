@@ -10,6 +10,7 @@ var ImageResource = function(config) {
   this.bounds = config.bounds || {x:0, y:0, width:1,height:1};
   this.zIndex = config.zIndex;
   this.tileSource = config.tileSource;
+  this.thumbUrl = config.thumbUrl;
   this.dynamic = config.dynamic || false;
   this.imageType = config.imageType || "main"; // can be 'main', 'alternate', 'detail' or 'thumbnail'
   this.status = 'initialized'; // can be 'requested', 'pending','shown', or 'failed'

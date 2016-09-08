@@ -59,16 +59,16 @@ var _buildImageConfig = function(resource) {
     }
   };
 
-  var imageTileSource = _getImageTilesource();
+  console.log(_getImageTilesource());
 
   return {
     // the ID is to use in the DOM, so remove special characters. The URL may not be unique, so add a salt.
     id: id.replace(/[^a-z0-9-_]+/gi, "") + Math.floor(Math.random() * 1000),
     label: resource.label,
-    tileSource: imageTileSource,
+    tileSource: _getImageTilesource(),
     clipRegion: _getSegmentFromUrl(id),
     dynamic: isDynamic,
-    // thumbnailUrl: ThumbnailFactory({images:[resource]}).tileSource.levels[0].url
+    thumbUrl: ThumbnailFactory.getThumbUrl(resource, 200)
   };
 };
 
@@ -127,7 +127,7 @@ var ImageResourceFactory = function(image, parent) {
   case 'dcTypes:Image':
   case 'dcterms:Image':
   case 'dcTerms:Image':
-    var config = _buildImageConfig(image.resource);
+    var config = _buildImageConfig(image.resource, parent);
     return _makeImageFromConfig(config);
   case 'oa:Choice':
     var configs = _buildChoiceConfigs(image.resource);

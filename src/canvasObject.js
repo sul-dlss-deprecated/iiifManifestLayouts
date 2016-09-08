@@ -131,11 +131,8 @@ CanvasObject.prototype = {
 
       function removeThumb() {
         if (image.getStatus() === 'drawn') {
-          console.log(image.status);
-
           self.thumbnailResource.remove();
         }
-        console.log(image.status);
       }
 
       self.dispatcher.on('image-status-updated', removeThumb);
@@ -187,8 +184,6 @@ CanvasObject.prototype = {
     this._floatImagesToBottom();
     var oldIndex = this.images.indexOf(image);
 
-    console.log("old index: " + oldIndex);
-    console.log("index: " + index);
     if (index === oldIndex || oldIndex === -1 ) {
       // Index either is invalid or is the same
       // as the previous index, requiring no change.

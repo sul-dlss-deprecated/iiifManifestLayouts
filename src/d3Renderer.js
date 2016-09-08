@@ -14,7 +14,7 @@ var d3Renderer = function(config) {
   buildContainers();
   immediateUpdate();
 
-  dispatcher.on('currentZoomUpdated', setZoomRegion);
+  // dispatcher.on('currentZoomUpdated', setZoomRegion);
   dispatcher.on('perspectiveUpdated', changePerspective);
   dispatcher.on('canvasNavigated', navigateCanvas);
   dispatcher.on('newCanvasSelected', selectCanvas);
@@ -108,6 +108,8 @@ var d3Renderer = function(config) {
     var center = renderState.getState().currentZoom.center;
     var transform = 'scale(' + scale + ') translate(' + -center.x + 'px,' + -center.y + 'px)';
 
+    scrollContainer.node().scrollTop = center.y;
+
     container
       .style('transform', transform)
       .style('-webkit-transform', transform);
@@ -160,13 +162,16 @@ var d3Renderer = function(config) {
           return frame.canvas.selected;
         })[0].vantage;
 
+    stage2viewBounds.width = viewerState.getState().width;
+    stage2viewBounds.height = viewerState.getState().height;
+
     // Some initial event sending and setup to start the
     // animation sequence.
     renderState.constraintBounds(stage1viewBounds, false);
-    d3.select('.manifest-layouts-DOM-container')
+    renderState.zooming(true);
+    scrollContainer
       .transition()
       .style('opacity', 1);
-    renderState.zooming(true);
 
     // Run stage 1 of the animation
     renderLayout(stage1layout, false, function() {
@@ -178,6 +183,11 @@ var d3Renderer = function(config) {
         // This callback signals the end of the transition.
         renderState.zooming(false);
         enableOverviewScrollEvents();
+        // var transform = 'scale(1) translate(0,0)';
+
+        // container
+        //   .style('transform', transform)
+        //   .style('-webkit-transform', transform);
       });
     });
   }
@@ -199,7 +209,7 @@ var d3Renderer = function(config) {
     renderState.constraintBounds(stage1viewBounds, true);
     renderState.zooming(true);
     disableScrollEvents();
-    d3.select('.manifest-layouts-DOM-container')
+    scrollContainer
       .transition()
       .style('opacity', 0);
 
@@ -212,10 +222,27 @@ var d3Renderer = function(config) {
       renderLayout(stage2layout, false, function() {
         // This callback signals the end of the transition.
         renderState.zooming(false);
+        dispatcher.emit('transitionComplete');
       });
     });
   }
-  function anchorFrames(frames) {
+  function anchorFrames(frames, anchor) {
+    var offsetx = 0;
+    var offsety = 0;
+
+    frames.foreach(function(frame) {
+      if (frame.canvas.selected) {
+        offsetx = anchor.x - (frame.x + frame.canvas.localx);
+        offsety = anchor.y - (frame.y + frame.canvas.localy);
+      }
+    });
+
+    frames.foreach(function(frame) {
+      frame.x += offsetx;
+      frame.y += offsety;
+    });
+
+    return frames;
   }
   function selectCanvas() {
     // Setting up the keyFrame target parameters for
@@ -234,9 +261,11 @@ var d3Renderer = function(config) {
     renderState.constraintBounds(stage1viewBounds, true);
     renderState.zooming(true);
     disableScrollEvents();
-    d3.select('.manifest-layouts-DOM-container')
-      .transition()
+    scrollContainer
       .style('opacity', 0);
+    container
+      .transition()
+      .style('opactiy', 0);
 
     // Run stage 1 of the animation
     renderLayout(stage1layout, true, function() {
@@ -247,6 +276,7 @@ var d3Renderer = function(config) {
       renderLayout(stage2layout, false, function() {
         // This callback signals the end of the transition.
         renderState.zooming(false);
+        dispatcher.emit('transitionComplete');
       });
     });
   }
@@ -257,21 +287,35 @@ var d3Renderer = function(config) {
         })[0].vantage;
     renderState.constraintBounds(stage1viewBounds, true);
     disableScrollEvents();
-    d3.select(container[0][0])
-      .transition()
-      .style('opacity', 0);
 
     renderLayout(stage1layout, true, function() {
     });
   }
   function changeViewingMode() {
-    var layout = calculateLayout(viewerState.getState().perspective)(),
-    viewBounds = layout.filter(function(frame) {
-      return frame.canvas.selected;
-    })[0].vantage;
+    var layout,
+        viewBounds;
 
-    renderState.constraintBounds(viewBounds, true);
-    renderLayout(layout, true);
+    if (viewerState.getState.perspective === 'overview') {
+      layout = calculateLayout(viewerState.getState().perspective)();
+      viewBounds = layout.filter(function(frame) {
+        return frame.canvas.selected;
+      })[0].vantage;
+
+      renderState.constraintBounds(viewBounds, true);
+      renderLayout(layout, true, function() {
+        dispatcher.emit('transitionComplete');
+      });
+    } else {
+      layout = calculateLayout(viewerState.getState().perspective)();
+      viewBounds = layout.filter(function(frame) {
+        return frame.canvas.selected;
+      })[0].vantage;
+
+      renderState.constraintBounds(viewBounds, true);
+      renderLayout(layout, true, function() {
+        dispatcher.emit('transitionComplete');
+      });
+    }
   }
   function changeViewingDirection() {
     var layout = calculateLayout(viewerState.getState().perspective)(),
@@ -279,7 +323,9 @@ var d3Renderer = function(config) {
       return frame.canvas.selected;
     })[0].vantage;
     renderState.constraintBounds(viewBounds,false);
-    renderLayout(layout,false);
+    renderLayout(layout, false, function() {
+      dispatcher.emit('transitionComplete');
+    });
   }
 
   function calculateLayout(layoutType) {
@@ -375,14 +421,12 @@ var d3Renderer = function(config) {
 
         canvasImageState.setBounds(canvasData.x, canvasData.y, canvasData.width, canvasData.height);
 
-        if (state.selectedCanvas !== canvasImageState.canvas.id) {
-          canvasImageState.getThumbnailResource().show();
+        if (state.selectedCanvas !== canvasImageState.canvas['@id']) {
+          if (canvasImageState.getThumbnailResource()){
+            canvasImageState.getThumbnailResource().show();
+          }
         } else {
-          canvasImageState.images.filter(function(image) {
-            return (image.getImageType() === 'main');
-          }).forEach(function(image) {
-            image.show();
-          });
+          canvasImageState.show();
         }
       });
 
@@ -421,6 +465,7 @@ var d3Renderer = function(config) {
     }
   }
 
+  // Various Utilities
   function getWidthInPx(d) {
     return d.width + 'px';
   }
@@ -458,8 +503,20 @@ var d3Renderer = function(config) {
   }
 
   function getClass(d) {
-    var selected = d.canvas.selected;
-    return selected ? canvasClass + ' selected' : canvasClass;
+    var canvasObject = viewerState.getState().canvasObjects[d.canvas.id],
+        selected = d.canvas.selected ? ' selected': '',
+        blank = canvasObject.images.length < 1 ? ' blank': '',
+        loading = '',
+        failed = '',
+        locked = '';
+
+    if (canvasObject.getThumbnailResource()) {
+      loading = canvasObject.getThumbnailResource().getStatus() === 'requested' ? ' loading': '';
+      failed = canvasObject.getThumbnailResource().getStatus() === 'failed' ? ' failed': '';
+      locked = canvasObject.getThumbnailResource().getStatus() === 'failed' ? ' locked': '';
+    }
+
+    return canvasClass + selected + blank + loading + failed + locked;
   }
 
   function endall(transition, callback) {

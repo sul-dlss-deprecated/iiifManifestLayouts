@@ -14,15 +14,18 @@ var OsdRenderer = function(options) {
   this.addOSDHandlers(this.viewerState, this.renderState);
 
   this.dispatcher.on('canvas-position-updated', function(canvasObject) {
-    canvasObject.images.forEach(function(imageResource) {
-      self.updateImagePosition(imageResource);
-    });
-    self.updateImagePosition(canvasObject.thumbnailResource);
+    if (canvasObject.images.length > 0) {
+      canvasObject.images.forEach(function(imageResource) {
+        self.updateImagePosition(imageResource);
+      });
+      self.updateImagePosition(canvasObject.thumbnailResource);
+    }
   });
   this.dispatcher.on('image-removed', function(imageResource) {
     self.removeTilesource(imageResource);
   });
   this.dispatcher.on('image-needed', function(imageResource) {
+    console.log(imageResource);
     self.openTileSource(imageResource);
   });
   this.dispatcher.on('image-show', function(imageResource) {
@@ -65,18 +68,24 @@ var OsdRenderer = function(options) {
 
     self.viewer.viewport.fitBounds(viewBounds, true);
   });
-  this.dispatcher.on('perspectiveUpdated', self.changePerspective);
+  this.dispatcher.on('perspectiveUpdated', function() {
+    self.changePerspective(self.viewerState.getState().perspective);
+  });
+  this.dispatcher.on('transitionComplete', function() {
+    if(self.viewerState.getState().perspective === 'detail') {
+      self.enableZoomAndPan();
+    }
+  });
 };
 
 OsdRenderer.prototype = {
   changePerspective: function(perspective) {
-    if (perspective === 'detail') {
-      // enable zooming
-      // this.enableZoomAndPan();
+    var self = this;
+    if (perspective === 'overview') {
+      // disable zooming
+      self.disableZoomAndPan();
       return;
     }
-    // disable zooming
-    // this.disableZoomAndPan();
   },
 
   updateItemIndex: function() {
