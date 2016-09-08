@@ -59,13 +59,13 @@ var _buildImageConfig = function(resource) {
     }
   };
 
-  var imageTileSource = _getImageTilesource();
+  console.log(_getImageTilesource());
 
   return {
     // the ID is to use in the DOM, so remove special characters. The URL may not be unique, so add a salt.
     id: id.replace(/[^a-z0-9-_]+/gi, "") + Math.floor(Math.random() * 1000),
     label: resource.label,
-    tileSource: imageTileSource,
+    tileSource: _getImageTilesource(),
     clipRegion: _getSegmentFromUrl(id),
     dynamic: isDynamic,
     thumbUrl: ThumbnailFactory.getThumbUrl(resource, 200)

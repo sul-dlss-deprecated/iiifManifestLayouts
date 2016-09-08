@@ -25,6 +25,7 @@ var OsdRenderer = function(options) {
     self.removeTilesource(imageResource);
   });
   this.dispatcher.on('image-needed', function(imageResource) {
+    console.log(imageResource);
     self.openTileSource(imageResource);
   });
   this.dispatcher.on('image-show', function(imageResource) {
@@ -67,18 +68,24 @@ var OsdRenderer = function(options) {
 
     self.viewer.viewport.fitBounds(viewBounds, true);
   });
-  this.dispatcher.on('perspectiveUpdated', self.changePerspective);
+  this.dispatcher.on('perspectiveUpdated', function() {
+    self.changePerspective(self.viewerState.getState().perspective);
+  });
+  this.dispatcher.on('transitionComplete', function() {
+    if(self.viewerState.getState().perspective === 'detail') {
+      self.enableZoomAndPan();
+    }
+  });
 };
 
 OsdRenderer.prototype = {
   changePerspective: function(perspective) {
-    if (perspective === 'detail') {
-      // enable zooming
-      // this.enableZoomAndPan();
+    var self = this;
+    if (perspective === 'overview') {
+      // disable zooming
+      self.disableZoomAndPan();
       return;
     }
-    // disable zooming
-    // this.disableZoomAndPan();
   },
 
   updateItemIndex: function() {

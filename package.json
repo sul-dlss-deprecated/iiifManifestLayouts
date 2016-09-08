@@ -16,7 +16,7 @@
     "d3"
   ],
   "dependencies": {
-    "iiif-layout-functions": "0.0.1-alpha.1.4",
+    "iiif-layout-functions": "0.0.2-alpha",
     "openseadragon": "^2.1.0"
   },
   "devDependencies": {

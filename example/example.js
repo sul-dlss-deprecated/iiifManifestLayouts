@@ -12,8 +12,8 @@ var App = {
 
     // Some choice fixture objects with real content.
     [
+      {url: 'https://purl.stanford.edu/jr903ng8662/iiif/manifest.json', label: 'Stanford DMS Manuscript (example of typical object)'},
       {url: 'http://demos.biblissima-condorcet.fr/iiif/metadata/florus-dispersus/manifest.json', label: 'BNF Lacunae'},
-      {url: 'http://dms-data.stanford.edu/data/manifests/BnF/jr903ng8662/manifest.json', label: 'Stanford DMS Manuscript (example of typical object)'},
       {url: 'http://demos.biblissima-condorcet.fr/iiif/metadata/BVMM/chateauroux/manifest.json', label: 'BNF Detail Images Demo (Chateauroux)'},
       {url:'http://manifests.ydc2.yale.edu/manifest/Osbornfa1v2.json', label: "Yale Osborn with choice (see 53r)"},
       {url: 'http://iiif.ub.uni-leipzig.de/0000000001/manifest.json', label: 'Leipzig Scroll'},
@@ -151,7 +151,7 @@ var App = {
         frameClass: 'frame', //default set to 'frame'
         labelClass: 'label', //default set to 'label'
         viewportPadding: {  // in detail view, make sure this area is clear
-          top: 0,
+          top: 10,
           left: 10,
           right: 10,
           bottom: 20 // units in % of pixel height of viewport

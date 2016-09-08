@@ -85,6 +85,7 @@ var makeThumbnailConfig = function(resource, parent) {
 var ThumbnailFactory = function(canvas, parent) {
   // The canvas has a thumbnail object.
   if(canvas.thumbnail) {
+
     return new ImageResource(makeThumbnailConfig(canvas.thumbnail, parent));
   }
 
@@ -93,7 +94,6 @@ var ThumbnailFactory = function(canvas, parent) {
   if(canvas.images) {
     try {
       var config = makeThumbnailConfig(canvas.images[0].resource, parent);
-
       return new ImageResource(config);
     } catch (error){
       // If we can't use LegacyTileSource to build the thumbnail, don't build a thumbnail.

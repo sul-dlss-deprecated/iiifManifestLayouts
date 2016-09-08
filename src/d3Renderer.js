@@ -14,7 +14,7 @@ var d3Renderer = function(config) {
   buildContainers();
   immediateUpdate();
 
-  dispatcher.on('currentZoomUpdated', setZoomRegion);
+  // dispatcher.on('currentZoomUpdated', setZoomRegion);
   dispatcher.on('perspectiveUpdated', changePerspective);
   dispatcher.on('canvasNavigated', navigateCanvas);
   dispatcher.on('newCanvasSelected', selectCanvas);
@@ -108,6 +108,8 @@ var d3Renderer = function(config) {
     var center = renderState.getState().currentZoom.center;
     var transform = 'scale(' + scale + ') translate(' + -center.x + 'px,' + -center.y + 'px)';
 
+    scrollContainer.node().scrollTop = center.y;
+
     container
       .style('transform', transform)
       .style('-webkit-transform', transform);
@@ -160,6 +162,9 @@ var d3Renderer = function(config) {
           return frame.canvas.selected;
         })[0].vantage;
 
+    stage2viewBounds.width = viewerState.getState().width;
+    stage2viewBounds.height = viewerState.getState().height;
+
     // Some initial event sending and setup to start the
     // animation sequence.
     renderState.constraintBounds(stage1viewBounds, false);
@@ -167,9 +172,6 @@ var d3Renderer = function(config) {
     scrollContainer
       .transition()
       .style('opacity', 1);
-    // container
-    //   .transition()
-    //   .style('opactiy', 1);
 
     // Run stage 1 of the animation
     renderLayout(stage1layout, false, function() {
@@ -181,6 +183,11 @@ var d3Renderer = function(config) {
         // This callback signals the end of the transition.
         renderState.zooming(false);
         enableOverviewScrollEvents();
+        // var transform = 'scale(1) translate(0,0)';
+
+        // container
+        //   .style('transform', transform)
+        //   .style('-webkit-transform', transform);
       });
     });
   }
@@ -215,10 +222,27 @@ var d3Renderer = function(config) {
       renderLayout(stage2layout, false, function() {
         // This callback signals the end of the transition.
         renderState.zooming(false);
+        dispatcher.emit('transitionComplete');
       });
     });
   }
-  function anchorFrames(frames) {
+  function anchorFrames(frames, anchor) {
+    var offsetx = 0;
+    var offsety = 0;
+
+    frames.foreach(function(frame) {
+      if (frame.canvas.selected) {
+        offsetx = anchor.x - (frame.x + frame.canvas.localx);
+        offsety = anchor.y - (frame.y + frame.canvas.localy);
+      }
+    });
+
+    frames.foreach(function(frame) {
+      frame.x += offsetx;
+      frame.y += offsety;
+    });
+
+    return frames;
   }
   function selectCanvas() {
     // Setting up the keyFrame target parameters for
@@ -252,6 +276,7 @@ var d3Renderer = function(config) {
       renderLayout(stage2layout, false, function() {
         // This callback signals the end of the transition.
         renderState.zooming(false);
+        dispatcher.emit('transitionComplete');
       });
     });
   }
@@ -267,13 +292,30 @@ var d3Renderer = function(config) {
     });
   }
   function changeViewingMode() {
-    var layout = calculateLayout(viewerState.getState().perspective)(),
-    viewBounds = layout.filter(function(frame) {
-      return frame.canvas.selected;
-    })[0].vantage;
+    var layout,
+        viewBounds;
 
-    renderState.constraintBounds(viewBounds, true);
-    renderLayout(layout, true);
+    if (viewerState.getState.perspective === 'overview') {
+      layout = calculateLayout(viewerState.getState().perspective)();
+      viewBounds = layout.filter(function(frame) {
+        return frame.canvas.selected;
+      })[0].vantage;
+
+      renderState.constraintBounds(viewBounds, true);
+      renderLayout(layout, true, function() {
+        dispatcher.emit('transitionComplete');
+      });
+    } else {
+      layout = calculateLayout(viewerState.getState().perspective)();
+      viewBounds = layout.filter(function(frame) {
+        return frame.canvas.selected;
+      })[0].vantage;
+
+      renderState.constraintBounds(viewBounds, true);
+      renderLayout(layout, true, function() {
+        dispatcher.emit('transitionComplete');
+      });
+    }
   }
   function changeViewingDirection() {
     var layout = calculateLayout(viewerState.getState().perspective)(),
@@ -281,7 +323,9 @@ var d3Renderer = function(config) {
       return frame.canvas.selected;
     })[0].vantage;
     renderState.constraintBounds(viewBounds,false);
-    renderLayout(layout,false);
+    renderLayout(layout, false, function() {
+      dispatcher.emit('transitionComplete');
+    });
   }
 
   function calculateLayout(layoutType) {
@@ -379,7 +423,6 @@ var d3Renderer = function(config) {
 
         if (state.selectedCanvas !== canvasImageState.canvas['@id']) {
           if (canvasImageState.getThumbnailResource()){
-            console.log(canvasImageState.getThumbnailResource() );
             canvasImageState.getThumbnailResource().show();
           }
         } else {
