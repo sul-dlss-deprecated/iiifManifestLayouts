@@ -25,7 +25,6 @@ var OsdRenderer = function(options) {
     self.removeTilesource(imageResource);
   });
   this.dispatcher.on('image-needed', function(imageResource) {
-    console.log(imageResource);
     self.openTileSource(imageResource);
   });
   this.dispatcher.on('image-show', function(imageResource) {
@@ -49,7 +48,6 @@ var OsdRenderer = function(options) {
   this.dispatcher.on('constraintBoundsUpdated', function(animate) {
     self.setViewerBoundsFromState(animate);
     if (!animate) {
-      self.viewer.forceRedraw();
       self.renderState.currentZoom({
         scale: self.getViewerScale(),
         center: self.getZoomTranslation()
@@ -74,6 +72,8 @@ var OsdRenderer = function(options) {
   this.dispatcher.on('transitionComplete', function() {
     if(self.viewerState.getState().perspective === 'detail') {
       self.enableZoomAndPan();
+    } else {
+      self.viewer.canvas.style.display = 'none';
     }
   });
 };
@@ -85,6 +85,8 @@ OsdRenderer.prototype = {
       // disable zooming
       self.disableZoomAndPan();
       return;
+    } else {
+      self.viewer.canvas.style.display = 'block';
     }
   },
 
@@ -188,7 +190,6 @@ OsdRenderer.prototype = {
       bounds = new OpenSeadragon.Rect(bounds.x, bounds.y, bounds.width, bounds.height);
       // the "true" second argument is the "immediately" flag,
       // telling osd not to animate.
-      this.viewer.forceRedraw();
       imageResource.osdTiledImage.setPosition(bounds.getTopLeft(), true);
       imageResource.osdTiledImage.setWidth(bounds.width, true);
     }
@@ -342,7 +343,6 @@ OsdRenderer.prototype = {
     };
 
     this.viewer.addHandler('animation', function(event) {
-      self.viewer.forceRedraw();
       self.renderState.currentZoom({
         scale: self.getViewerScale(),
         center: self.getZoomTranslation()

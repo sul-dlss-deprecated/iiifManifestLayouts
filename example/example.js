@@ -90,13 +90,13 @@ var App = {
       self.cycleViewingModes();
     });
 
-    key('h, left', function() {
+    key('h, shift+left', function() {
       if (self.viewer) {
         self.viewer.previous();
       }
     });
 
-    key('l, right', function() {
+    key('l, shift+right', function() {
       if (self.viewer) {
         self.viewer.next();
       }
@@ -146,7 +146,7 @@ var App = {
       self.viewer = manifestor({
         manifest: manifest,
         container: $('#example-container')[0],
-        perspective:  'detail',
+        perspective:  'overview',
         canvasClass: 'canvas', //default set to 'canvas'
         frameClass: 'frame', //default set to 'frame'
         labelClass: 'label', //default set to 'label'

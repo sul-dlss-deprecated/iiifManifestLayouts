@@ -75,13 +75,12 @@ var viewerState = function(config) {
       return state.canvasObjects[state.selectedCanvas];
     } else  {
       var canvas,
-          adjacentCanvases,
-          sourcePerspective = state.perspective;
-      if (sourcePerspective === 'detail') {
+          adjacentCanvases;
         setState({
           selectedCanvas: newCanvas
         });
 
+      if (state.perspective === 'detail') {
         // Mark all canvases as "needed" that may be in a view with this canvas
         // This is accomplished by means of the "show" method on its image resources.
         canvas = state.canvasObjects[state.selectedCanvas];
@@ -91,15 +90,11 @@ var viewerState = function(config) {
           canvas.show();
         });
 
-        dispatcher.emit('canvasNavigated', {from: sourcePerspective});
-        dispatcher.emit('selectedCanvasUpdated', {from: sourcePerspective});
+        dispatcher.emit('canvasNavigated');
+        dispatcher.emit('selectedCanvasUpdated');
         return state.canvasObjects[state.selectedCanvas];
       }
 
-      setState({
-        selectedCanvas: newCanvas,
-        perspective: 'detail'
-      });
 
       // Mark all canvases as "needed" that may be in a view with this canvas
       // This is accomplished by means of the "show" method on its image resources.
@@ -107,8 +102,7 @@ var viewerState = function(config) {
       adjacentCanvases = state.canvasObjects.indexOf(canvas);
       canvas.show();
 
-      dispatcher.emit('newCanvasSelected', {from: sourcePerspective});
-      dispatcher.emit('selectedCanvasUpdated', {from: sourcePerspective});
+      selectedPerspective('detail');
       return state.canvasObjects[state.selectedCanvas];
     }
   }

@@ -14,10 +14,9 @@ var d3Renderer = function(config) {
   buildContainers();
   immediateUpdate();
 
-  // dispatcher.on('currentZoomUpdated', setZoomRegion);
+  dispatcher.on('currentZoomUpdated', setZoomRegion);
   dispatcher.on('perspectiveUpdated', changePerspective);
   dispatcher.on('canvasNavigated', navigateCanvas);
-  dispatcher.on('newCanvasSelected', selectCanvas);
   dispatcher.on('viewingModeUpdated', changeViewingMode);
   dispatcher.on('changeViewingDirection', changeViewingDirection);
   dispatcher.on('scaleFactorUpdated', immediateUpdate);
@@ -162,9 +161,6 @@ var d3Renderer = function(config) {
           return frame.canvas.selected;
         })[0].vantage;
 
-    stage2viewBounds.width = viewerState.getState().width;
-    stage2viewBounds.height = viewerState.getState().height;
-
     // Some initial event sending and setup to start the
     // animation sequence.
     renderState.constraintBounds(stage1viewBounds, false);
@@ -173,22 +169,30 @@ var d3Renderer = function(config) {
       .transition()
       .style('opacity', 1);
 
+    var scale = renderState.getState().currentZoom.scale;
+    var center = renderState.getState().currentZoom.center;
+    var transform = 'scale(' + scale + ') translate(' + -center.x + 'px,' + -center.y + 'px)';
+
+    container
+      .style('transform', transform)
+      .style('-webkit-transform', transform);
+
     // Run stage 1 of the animation
     renderLayout(stage1layout, false, function() {
       // this callback does setup for stage 2 of the animation
       // and then kicks it off.
-      renderState.constraintBounds(stage2viewBounds, true);
 
       renderLayout(stage2layout, true, function() {
         // This callback signals the end of the transition.
         renderState.zooming(false);
+        dispatcher.emit('transitionComplete');
         enableOverviewScrollEvents();
-        // var transform = 'scale(1) translate(0,0)';
-
-        // container
-        //   .style('transform', transform)
-        //   .style('-webkit-transform', transform);
+        var transform = 'scale(1) translate(0,0)';
+        container
+          .style('transform', transform)
+          .style('-webkit-transform', transform);
       });
+      renderState.constraintBounds(stage2viewBounds, true);
     });
   }
 
@@ -212,18 +216,20 @@ var d3Renderer = function(config) {
     scrollContainer
       .transition()
       .style('opacity', 0);
+    container
+      .transition()
+      .style('opactiy', 0);
 
     // Run stage 1 of the animation
     renderLayout(stage1layout, true, function() {
       // this callback does setup for stage 2 of the animation
       // and then kicks it off.
-      renderState.constraintBounds(stage2viewBounds, false);
-
       renderLayout(stage2layout, false, function() {
         // This callback signals the end of the transition.
         renderState.zooming(false);
         dispatcher.emit('transitionComplete');
       });
+      renderState.constraintBounds(stage2viewBounds, false);
     });
   }
   function anchorFrames(frames, anchor) {
@@ -243,42 +249,6 @@ var d3Renderer = function(config) {
     });
 
     return frames;
-  }
-  function selectCanvas() {
-    // Setting up the keyFrame target parameters for
-    // the animation stages.
-    var stage1layout = calculateLayout('intermediate')(),
-        stage2layout = calculateLayout('detail')(),
-        stage1viewBounds = stage1layout.filter(function(frame) {
-          return frame.canvas.selected;
-        })[0].vantage,
-        stage2viewBounds = stage2layout.filter(function(frame) {
-          return frame.canvas.selected;
-        })[0].vantage;
-
-    // Some initial event sending and setup to start the
-    // animation sequence.
-    renderState.constraintBounds(stage1viewBounds, true);
-    renderState.zooming(true);
-    disableScrollEvents();
-    scrollContainer
-      .style('opacity', 0);
-    container
-      .transition()
-      .style('opactiy', 0);
-
-    // Run stage 1 of the animation
-    renderLayout(stage1layout, true, function() {
-      // this callback does setup for stage 2 of the animation
-      // and then kicks it off.
-      renderState.constraintBounds(stage2viewBounds, false);
-
-      renderLayout(stage2layout, false, function() {
-        // This callback signals the end of the transition.
-        renderState.zooming(false);
-        dispatcher.emit('transitionComplete');
-      });
-    });
   }
   function navigateCanvas() {
     var stage1layout = calculateLayout('detail')(),
@@ -353,7 +323,7 @@ var d3Renderer = function(config) {
     // you need a general understanding of d3 selections,
     // and you will want to read about nested
     // selections in particular: http://bost.ocks.org/mike/nest/
-    var animationTiming = animate ? 1000 : 0,
+    var animationTiming = animate ? 1300 : 0,
         frame = container.selectAll('.' + frameClass).data(layoutData);
 
     // Update Existing Frame Elements
